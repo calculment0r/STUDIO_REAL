@@ -1,0 +1,17 @@
+{
+  "name": "studio-real-figurants-serveur",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Prototype P0.5 figurants : pages statiques + WebSocket /ws + orchestrateur des figurants",
+  "type": "module",
+  "main": "index.mjs",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "node test-bout-en-bout.mjs",
+    "mesures": "node mesures.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

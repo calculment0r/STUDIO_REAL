@@ -1,0 +1,108 @@
+# Liste de SECOURS du serveur, TOUJOURS chargée en plus de banques/interdits.txt (jamais à la place).
+# Syntaxe : une entrée par ligne ; [section] ; mot* = préfixe ; +mot = mot autorisé (faux positif) ; =mot = exact seulement.
+# Les entrées sont normalisées comme le texte (minuscules, sans accents, leet, lettres répétées réduites).
+
+[insultes]
+con
+conne
+connard*
+connasse*
+salaud*
+salope*
+pute*
+putain de
+enculé*
+encule*
+batard*
+bâtard*
+nique ta
+ntm
+fdp
+fils de p*
+tg
+ta gueule
+ferme ta gueule
+abruti*
+débile*
+crétin*
+mongol*
+attardé
+attardée
+triso*
+gogol*
+pd
+pédé*
+tapette*
+gouine*
+bouffon*
+clochard*
++salopette
++concombre
++conférence
++contrebasse
++baisse
++baisser
++baissé
++succès
++succes
++château
+
+[haine]
+sale arabe*
+sale noir*
+sale juif*
+sale blanc*
+sale race
+bougnoul*
+négro*
+nègre*
+youpin*
+bicot*
+raton*
+chinetoque*
+niakoué*
+rebeu de merde
+retourne dans ton pays
+heil
+sieg heil
+nazi*
+88 heil
+
+[sexualite]
+bite*
+=chatte
+couille*
+nichon*
+seins nus
+baise*
+baiser ta
+suce
+suceu*
+sucer
+pipe
+sodomi*
+porno*
+xxx
+nude*
+nudes
+sexe*
+cul
+viol
+violer
+violée
+violeur*
+pédophile*
+pedo*
+
+[menaces]
+je vais te tuer
+je vais te buter
+je te bute
+va crever
+va mourir
+tue toi
+tue-toi
+suicide toi
+suicide-toi
+on sait où tu habites
+je sais où tu habites

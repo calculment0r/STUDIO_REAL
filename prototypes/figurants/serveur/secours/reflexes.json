@@ -1,0 +1,23 @@
+{
+  "_note": "Banque N0 de SECOURS (réflexes). Clés d'humeur + mots-clés + réponses génériques aux questions + relances.",
+  "humeurs": {
+    "neutre": ["👀", "ah", "ok ok", "intéressant", "on suit", "hmm", "d'accord", "go", "la suite", "je regarde", "on est là"],
+    "hype": ["LETS GOOO", "🔥🔥", "PogU", "INCROYABLE", "allez allez", "c'est énorme", "trop fort", "le boss", "GG", "ouiiii"],
+    "moqueuse": ["KEKW", "mdrrr", "le malaise 😭", "ptdr", "oh non 💀", "il a cru", "LUL", "la honte", "mais nonnn"],
+    "inquiete": ["oh non", "😬", "attention", "aïe", "ça sent mauvais", "fais gaffe", "hmm bof", "🥺"],
+    "calme": ["👍", "sympa", "pas mal", "cool", "ça va", "tranquille", "on prend le temps"],
+    "triste": ["😢", "dommage", "nooon", "c'est triste", "aïe aïe"]
+  },
+  "mots": {
+    "religieuse": ["LA RELIGIEUSE", "prends la religieuse", "religieuse team"],
+    "chouquette": ["chouquettes > tout", "les chouquettes !!", "team chouquettes"],
+    "chouquettes": ["chouquettes > tout", "les chouquettes !!", "team chouquettes"],
+    "boulangère": ["la boulangère 👀", "elle cache un truc"],
+    "porte": ["la porte !!", "ouvre ouvre"],
+    "bonjour": ["bonjour !", "yo", "salut chef", "coucou"],
+    "salut": ["salut !", "yo", "coucou 👋"],
+    "merci": ["de rien", "❤️", "avec plaisir"]
+  },
+  "question": ["oui", "nan", "OUI", "jsp", "bien sûr", "non jamais", "carrément", "aucune idée", "50/50", "ouiii", "nooon", "vas-y", "fais le", "trop pas"],
+  "relance": ["et maintenant ?", "on fait quoi chef ?", "tu vas faire quoi ?", "allez raconte", "et la suite ?", "tu tentes ?"]
+}

@@ -1,0 +1,523 @@
+{
+  "version": 1,
+  "langue": "fr",
+  "note": "Banque N0 : réflexes instantanés, sans IA. Schéma et règles de correspondance des motifs : banques/README.md §2.",
+  "humeurs": {
+    "hype": {
+      "centre": { "valence": 0.8, "energie": 0.9 },
+      "stylisable": true,
+      "emotes": ["PogU", "POGGERS", "HYPERS", "catJAM", "EZ", "peepoClap"],
+      "variantes": [
+        "LETS GOOO", "GOOOO", "allez allez allez", "c'est énorme", "trop fort", "le niveau", "masterclass",
+        "incroyable", "on est là", "ça part en vrille", "je hurle", "j'adore", "le meilleur live",
+        "il est chaud", "en feu", "oh la la", "c'est parti", "j'y crois", "vas-y", "énorme",
+        "quel moment", "historique", "je suis debout", "ça monte", "on y croit", "magnifique",
+        "🔥🔥🔥", "🎉🎉", "trop bien", "le chat est en feu", "c'est le moment", "oui oui oui"
+      ]
+    },
+    "calme": {
+      "centre": { "valence": 0.3, "energie": 0.2 },
+      "stylisable": true,
+      "emotes": ["Hmm", "FeelsOkayMan", "<3"],
+      "variantes": [
+        "tranquille", "posé", "j'aime bien ce rythme", "ok", "d'accord", "pas mal", "sympa",
+        "on est bien là", "chill", "je regarde", "ça va", "on suit", "oui", "mmh", "ah ok",
+        "intéressant", "pourquoi pas", "c'est cool", "j'écoute", "on t'écoute", "doucement",
+        "petit moment calme", "bonne ambiance", "😌", "🙂", "tranquillou"
+      ]
+    },
+    "moqueuse": {
+      "centre": { "valence": 0.2, "energie": 0.7 },
+      "stylisable": true,
+      "emotes": ["KEKW", "OMEGALUL", "LUL", "Kappa"],
+      "variantes": [
+        "mdrrr", "ptdr", "le malaise", "il est perdu", "la honte", "non mais regardez-le",
+        "c'est gênant", "je suis mort", "aïe aïe aïe", "il a cru", "oups", "bien joué... ou pas",
+        "le plan parfait lol", "on y croit (non)", "jpp", "le flop", "ça commence bien",
+        "il fait le malin", "je meurs", "on a vu", "trop fort (non)", "il a glissé",
+        "😂😂", "💀", "🤡", "le cringe", "on est sur un exploit là", "c'est raté chef"
+      ]
+    },
+    "inquiete": {
+      "centre": { "valence": -0.5, "energie": 0.6 },
+      "stylisable": true,
+      "emotes": ["monkaS", "NotLikeThis", "D:"],
+      "variantes": [
+        "oh non", "attention", "fais gaffe", "j'aime pas ça", "ça sent mauvais", "aïe",
+        "non non non", "fais attention chef", "j'ai peur", "stress", "ça craint",
+        "pas bon ça", "eh oh", "doucement", "réfléchis", "pars de là", "😬", "😰",
+        "je stresse pour lui", "mauvaise idée", "hmm non", "j'ose pas regarder", "noooon",
+        "c'est tendu", "le suspense", "je tremble"
+      ]
+    },
+    "tendre": {
+      "centre": { "valence": 0.9, "energie": 0.3 },
+      "stylisable": true,
+      "emotes": ["<3", "peepoHappy"],
+      "variantes": [
+        "trop mignon", "💛", "🥺", "🫶", "on t'aime chef", "c'est beau", "j'ai le cœur qui fond",
+        "ce moment", "trop chou", "merci pour ça", "ça fait du bien", "adorable", "❤️❤️",
+        "on est avec toi", "t'es génial", "tellement doux", "je suis émue", "bravo",
+        "trop touchant", "le plus beau moment du live", "✨", "c'est tout doux", "gros cœur",
+        "j'ai les larmes"
+      ]
+    },
+    "mefiante": {
+      "centre": { "valence": -0.3, "energie": 0.4 },
+      "stylisable": true,
+      "emotes": ["monkaHmm", "Hmm", "monkaS"],
+      "variantes": [
+        "louche", "c'est louche", "hmm", "je le sens pas", "bizarre", "y a un truc",
+        "méfie-toi", "pas net", "c'est chelou", "attends", "on nous cache un truc",
+        "suspect", "🤨", "👀", "🔍", "pourquoi elle fait ça", "trop facile",
+        "c'est un piège", "regarde bien", "mouais", "ça cache quelque chose", "pas clair",
+        "je crois pas", "il y a anguille sous roche"
+      ]
+    }
+  },
+  "declencheurs": [
+    {
+      "id": "bonjour",
+      "motifs": ["bonjour", "salut", "coucou", "bonsoir", "hello", "re:\\bsalut (le chat|les gars|tout le monde)\\b", "re:\\b(on est|je suis) en (direct|live)\\b"],
+      "priorite": "normale",
+      "nb": [3, 8],
+      "delai_s": [0.8, 4.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "salut chef", "coucou", "yo", "bonsoir", "hello", "salut tout le monde", "wesh", "slt",
+        "coucou 👋", "bonsoir bonsoir", "yooo", "re", "salut salut", "bien ou quoi", "le retour",
+        "enfin le live", "présent", "présente", "première fois ici", "salut à tous", "hey",
+        "coucou le chat", "👋👋", "on est là", "bonsoir l'équipe", "j'arrive pile"
+      ],
+      "par_humeur": {
+        "hype": ["ENFIN", "LE LIVE EST LÀ", "il est là 🔥"],
+        "moqueuse": ["en retard comme d'hab", "il s'est réveillé"]
+      }
+    },
+    {
+      "id": "au_revoir",
+      "motifs": ["au revoir", "a plus", "a bientot", "ciao", "bye", "bonne nuit", "re:\\b(je vous laisse|on se quitte|c'est la fin)\\b"],
+      "priorite": "normale",
+      "nb": [3, 8],
+      "delai_s": [0.8, 4.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "bye", "ciao", "à plus", "bonne nuit", "merci pour le live", "déjà ??", "nooon reste",
+        "à la prochaine", "bisous", "a+", "bye bye", "salut chef", "c'était trop bien",
+        "on se revoit quand ?", "o7", "merci chef", "à demain", "trop court", "👋",
+        "reviens vite", "bonne soirée", "ciao ciao", "gg pour le live", "déjà fini 😭",
+        "merci pour ce moment"
+      ],
+      "par_humeur": {
+        "tendre": ["merci pour tout 💛", "prends soin de toi"],
+        "moqueuse": ["il fuit", "enfin libres lol"]
+      }
+    },
+    {
+      "id": "question_chat",
+      "motifs": ["le chat", "les gars", "les amis", "dites moi", "en commentaire", "re:\\bvous (savez|connaissez|avez deja)\\b", "re:\\b(quelqu'un|qui) (sait|connait)\\b", "re:\\bvous\\b[^.?!]*\\?$"],
+      "priorite": "haute",
+      "nb": [3, 8],
+      "delai_s": [1.0, 4.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "oui", "non", "ouiii", "aucune idée", "jsp", "bonne question", "euh", "pourquoi pas",
+        "ça dépend", "évidemment", "bien sûr", "jamais", "carrément", "ah ça", "on te dit oui",
+        "on te dit non", "à toi de voir", "nan", "grave", "je sais", "moi je sais",
+        "qui sait", "mystère", "50/50", "je dirais oui", "je dirais non", "écoute ton cœur",
+        "?", "??", "réponds pas, c'est un piège"
+      ],
+      "par_humeur": {
+        "moqueuse": ["tu demandes au chat ? lol", "le chat sait pas non plus"],
+        "mefiante": ["c'est une question piège", "réponds pas"]
+      }
+    },
+    {
+      "id": "avis",
+      "motifs": ["vous en pensez quoi", "votre avis", "je fais quoi", "j'en fais quoi", "qu'est ce que je fais", "re:\\b(c'est|c est) (bien|une bonne idee)\\b.*\\?", "re:\\bje (dois|devrais)\\b.*\\?"],
+      "priorite": "haute",
+      "nb": [3, 8],
+      "delai_s": [1.2, 5.0],
+      "stylisable": true,
+      "segments_exclus": ["vote"],
+      "variantes": [
+        "fonce", "fais-le", "vas-y", "non surtout pas", "réfléchis bien", "fais pas ça",
+        "go", "je le sens bien", "je le sens pas", "écoute pas le chat", "oui", "non",
+        "fais ce que tu veux", "suis ton instinct", "tente", "carrément", "jamais de la vie",
+        "c'est toi le chef", "mauvaise idée", "bonne idée", "moi je dis oui",
+        "moi je dis non", "on te suit", "pas sûr", "lance-toi"
+      ],
+      "par_humeur": {
+        "hype": ["FONCE", "GO GO GO"],
+        "inquiete": ["fais pas ça 😬", "trop risqué"]
+      }
+    },
+    {
+      "id": "oui_non",
+      "motifs": ["oui ou non", "re:\\b(j'y vais|je le fais|je tente|j'ose|on y va)\\s*\\?", "re:\\bou pas\\s*\\?"],
+      "priorite": "haute",
+      "nb": [3, 8],
+      "delai_s": [0.8, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["vote"],
+      "variantes": [
+        "OUI", "NON", "oui", "non", "ouiii", "nooon", "oui oui", "non non", "évidemment",
+        "jamais", "go", "vas-y", "ose", "tente", "fais-le", "nope", "yes", "carrément",
+        "bien sûr que oui", "bien sûr que non", "mais OUI", "mais non", "oui !!", "nan"
+      ]
+    },
+    {
+      "id": "rire",
+      "motifs": ["haha", "hahaha", "mdr", "je rigole", "c'est drole", "trop drole", "re:\\b(ha){2,}\\b", "re:\\bje suis mort\\b"],
+      "priorite": "normale",
+      "nb": [3, 10],
+      "delai_s": [0.6, 3.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "mdr", "mdrrr", "ptdr", "😂", "😂😂", "🤣", "💀", "jpp", "je meurs", "hahaha",
+        "MDRRR", "pfff", "il rigole tout seul", "trop drôle", "j'ai craché mon eau",
+        "je pleure", "le fou rire", "KEKW", "LUL", "lol", "xD", "ahahah", "c'est contagieux",
+        "pourquoi je rigole aussi", "le rire 😭"
+      ]
+    },
+    {
+      "id": "peur",
+      "motifs": ["j'ai peur", "flippe", "flipper", "ca fait peur", "chelou", "bizarre", "angoisse", "re:\\bil (me|nous) (suit|regarde)\\b", "re:\\bc'est (louche|glauque)\\b"],
+      "priorite": "haute",
+      "nb": [3, 8],
+      "delai_s": [0.8, 3.5],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "😱", "😬", "monkaS", "oh non", "j'ai peur aussi", "pars de là", "fais gaffe",
+        "c'est flippant", "non non non", "je regarde entre mes doigts", "ça me stresse",
+        "change de trottoir", "rentre chez toi", "j'aime pas du tout", "frissons",
+        "j'ai des frissons", "mais c'est qui ??", "le stress", "reste calme chef",
+        "respire", "eh oh", "ça devient chaud", "bouge pas", "me fais pas ça"
+      ],
+      "par_humeur": {
+        "moqueuse": ["il a peur mdr", "le courage du chef 😂"],
+        "mefiante": ["je le savais", "c'était évident"]
+      }
+    },
+    {
+      "id": "nourriture",
+      "motifs": ["manger", "faim", "croissant", "religieuse", "chouquette", "chouquettes", "pain au chocolat", "chocolatine", "baguette", "gateau", "eclair", "boulangerie", "re:\\b(j'ai|on a) faim\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.5],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "j'ai faim", "🥐", "🤤", "miam", "donne", "j'en veux", "chouquettes !!",
+        "on dit chocolatine", "on dit pain au chocolat", "le débat est relancé", "goûte",
+        "ça a l'air trop bon", "partage", "et pour nous ?", "j'ai faim maintenant",
+        "prends-en deux", "la religieuse 😍", "miam miam", "🥖", "le gourmand",
+        "ramène-nous des chouquettes", "c'est l'heure du goûter", "mon ventre a grogné"
+      ]
+    },
+    {
+      "id": "argent",
+      "motifs": ["argent", "euros", "euro", "payer", "paye", "portefeuille", "porte monnaie", "carte bleue", "monnaie", "cher", "prix", "combien ca coute", "re:\\b\\d+\\s*(€|euros?)\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.5],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "💸", "c'est cher", "abusé le prix", "t'as de la monnaie ?", "radin", "paye chef",
+        "il est fauché", "💰", "l'inflation", "ça va, c'est pas cher", "rends la monnaie",
+        "t'as ton portefeuille ?", "il a pas d'argent", "on cotise ?", "c'est donné",
+        "négocie", "le budget", "aïe le porte-monnaie", "chef est ruiné", "fais un crédit lol"
+      ]
+    },
+    {
+      "id": "chiffres",
+      "motifs": ["combien", "re:\\bdevinez\\b", "re:\\bquel (age|numero|chiffre|nombre)\\b"],
+      "priorite": "normale",
+      "nb": [3, 8],
+      "delai_s": [1.0, 4.0],
+      "stylisable": true,
+      "segments_exclus": ["vote"],
+      "variantes": [
+        "3", "7", "12", "42", "100", "trop", "zéro", "au moins 10", "1000", "deux",
+        "un seul", "beaucoup", "aucune idée", "plus que ça", "moins", "5 ?", "genre 20",
+        "infini", "la moitié", "pile 50", "j'ai dit 7 en premier", "3 et demi"
+      ]
+    },
+    {
+      "id": "prenoms",
+      "motifs": ["re:\\b(il|elle|je|tu) (s'appelle|m'appelle|t'appelles)\\b", "madame", "monsieur", "re:\\bc'est qui\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [1.0, 4.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "c'est qui ?", "on la connaît ?", "on le connaît ?", "joli prénom", "présente-nous",
+        "elle a l'air sympa", "il a l'air sympa", "c'est qui lui ??", "salut à elle",
+        "salut à lui", "dis-lui bonjour de notre part", "nouveau personnage", "👀",
+        "elle est dans le live ?", "on veut savoir", "dis bonjour au chat", "ah c'est elle",
+        "on se méfie ?"
+      ]
+    },
+    {
+      "id": "merci",
+      "motifs": ["merci", "re:\\bc'est gentil\\b", "re:\\bvous etes (trop )?(geniaux|adorables|les meilleurs)\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "de rien", "<3", "💛", "avec plaisir", "c'est nous", "merci à toi", "toujours là",
+        "on t'aime", "normal", "pas de quoi", "❤️", "c'est le chat qui régale", "force à toi",
+        "on est là pour ça", "t'inquiète", "🫶", "merci chef", "merci à toi surtout"
+      ]
+    },
+    {
+      "id": "echec",
+      "motifs": ["rate", "mince", "zut", "oh non", "c'est mort", "j'ai perdu", "c'est fini", "re:\\b(non|nan) (non|nan)\\b", "re:\\bca a pas marche\\b"],
+      "priorite": "normale",
+      "nb": [3, 10],
+      "delai_s": [0.6, 3.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "F", "F", "RIP", "aïe", "😭", "Sadge", "PepeHands", "noooon", "c'était pas loin",
+        "la prochaine fois", "dommage", "oh nooon", "rip chef", "c'est la vie", "aïe aïe",
+        "NotLikeThis", "pas grave", "on y croyait", "o7", "courage", "c'est mort", "ouch",
+        "F dans le chat"
+      ],
+      "par_humeur": {
+        "moqueuse": ["prévisible", "on l'avait dit KEKW", "le flop"],
+        "tendre": ["c'est pas grave 💛", "t'as tout donné"]
+      }
+    },
+    {
+      "id": "victoire",
+      "motifs": ["j'ai reussi", "gagne", "yes", "trop fort", "c'est bon", "on l'a", "je l'ai", "re:\\bon a (reussi|gagne)\\b"],
+      "priorite": "normale",
+      "nb": [4, 12],
+      "delai_s": [0.6, 3.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "GG", "GG", "gg", "EZ", "LETS GOOO", "PogU", "BRAVO", "incroyable", "le boss",
+        "🎉", "🔥", "masterclass", "GG chef", "j'y croyais", "trop fort", "il l'a fait",
+        "IL L'A FAIT", "légendaire", "clip ça", "historique", "peepoClap", "👏👏👏",
+        "on est fiers", "GGWP"
+      ],
+      "par_humeur": {
+        "moqueuse": ["coup de chance", "même pas mal joué lol"],
+        "tendre": ["trop fière de toi 🥺", "bravo 💛"]
+      }
+    },
+    {
+      "id": "attente",
+      "motifs": ["attendez", "deux secondes", "une seconde", "une minute", "bougez pas", "je reviens", "re:\\b(2|deux) (sec|min)\\b"],
+      "priorite": "basse",
+      "nb": [2, 5],
+      "delai_s": [1.0, 4.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "⏳", "on attend", "on bouge pas", "ok", "je bouge pas", "on est là", "pas de souci",
+        "je vais chercher à boire", "on t'attend", "prends ton temps", "dépêche",
+        "le suspense", "PauseChamp", "ça dure", "toujours là", "j'attends", "tic tac",
+        "on patiente"
+      ]
+    },
+    {
+      "id": "technique",
+      "motifs": ["vous m'entendez", "vous me voyez", "ca marche", "ca capte", "ca coupe", "re:\\b(le son|l'image|la camera|le micro)\\b"],
+      "priorite": "haute",
+      "nb": [3, 7],
+      "delai_s": [1.0, 3.5],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "oui on t'entend", "on t'entend", "on te voit", "oui", "c'est bon", "nickel",
+        "ça marche", "parfait", "on te voit bien", "le son est bon", "un peu fort le son",
+        "c'est ok", "image nickel", "tout est bon chef", "oui oui", "👍", "carré",
+        "on te reçoit", "5 sur 5"
+      ]
+    },
+    {
+      "id": "depart",
+      "motifs": ["on y va", "c'est parti", "go", "allez", "let's go", "re:\\bj'y vais\\b(?!\\s*\\?)"],
+      "priorite": "normale",
+      "nb": [3, 10],
+      "delai_s": [0.6, 3.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "GOOO", "let's go", "LETS GOOO", "allez", "on est avec toi", "go go go", "en avant",
+        "à l'attaque", "fonce", "🚀", "🔥", "c'est parti", "en route", "go chef",
+        "vas-y", "on te suit", "ALLEZ", "PogU", "c'est le moment", "go go"
+      ]
+    },
+    {
+      "id": "surprise",
+      "motifs": ["regardez", "c'est pas possible", "incroyable", "oh la la", "c'est quoi ca", "re:\\bmais (c'est|qu'est ce que c'est)\\b", "re:\\bnon mais\\b"],
+      "priorite": "normale",
+      "nb": [3, 9],
+      "delai_s": [0.6, 3.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "QUOI", "quoi ??", "😱", "nooon", "c'est pas vrai", "oh", "OH", "WutFace",
+        "la surprise", "sérieux ??", "j'y crois pas", "attends quoi", "?!", "hein",
+        "qu'est-ce que", "D:", "omg", "wow", "WOW", "c'est quoi ça", "je viens de voir quoi",
+        "rembobine"
+      ]
+    },
+    {
+      "id": "promesse",
+      "motifs": ["je vous jure", "promis", "je vous promets", "croyez moi", "re:\\bfaites moi confiance\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [1.0, 3.5],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "on te croit 🙄", "c'est noté", "screen", "on a les preuves", "mouais", "promis juré ?",
+        "on va voir", "on retient", "je note", "📝", "Kappa", "à vérifier", "on te croit (pas)",
+        "c'est enregistré", "on t'a à l'œil", "parole de chef ?", "ok on te fait confiance"
+      ]
+    },
+    {
+      "id": "secret",
+      "motifs": ["un secret", "entre nous", "chut", "le dites a personne", "re:\\bje vais vous (dire|avouer)\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.0],
+      "stylisable": true,
+      "segments_exclus": [],
+      "variantes": [
+        "👀", "on dit rien", "chuuut", "🤫", "motus", "bouche cousue", "dis dis dis",
+        "on écoute", "le chat sait garder un secret", "promis on dit rien", "on est tout ouïe",
+        "ça sent le potin", "raconte", "le scoop", "allez dis", "👂"
+      ]
+    },
+    {
+      "id": "tapez_1",
+      "motifs": ["tapez 1", "mettez un 1", "mettez 1", "ecrivez 1", "re:\\b(tapez|mettez|ecrivez) (un )?1\\b"],
+      "priorite": "haute",
+      "nb": [4, 10],
+      "delai_s": [0.6, 2.5],
+      "stylisable": false,
+      "segments_exclus": ["vote"],
+      "note": "Exemple pour le public (étude §2.1). Jamais pendant un vote réel : les figurants ne votent pas.",
+      "variantes": ["1", "1", "1", "11", "1 !", "1111", "1 bien sûr", "1"]
+    }
+  ],
+  "vagues": [
+    {
+      "id": "rire",
+      "cle": "😂",
+      "taille": [6, 14],
+      "etalement_s": [0.5, 4.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["😂😂😂", "😂", "😂😂", "🤣🤣", "KEKW", "KEKW KEKW", "mdrrrr", "😂😂😂😂", "💀💀", "OMEGALUL", "ptdrrr", "😂🤣😂"]
+    },
+    {
+      "id": "f",
+      "cle": "F",
+      "taille": [6, 16],
+      "etalement_s": [0.5, 4.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["F", "F", "F", "F", "f", "FFF", "F 😭", "F chef", "o7", "RIP", "F dans le chat"]
+    },
+    {
+      "id": "gg",
+      "cle": "GG",
+      "taille": [6, 16],
+      "etalement_s": [0.5, 4.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["GG", "GG", "GG", "gg", "GG WP", "GGGG", "GG chef", "GG 🔥", "EZ", "PogU GG", "GG !!!", "ggwp"]
+    },
+    {
+      "id": "plus1",
+      "cle": "+1",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["+1", "+1", "+1", "+ 1", "+1000", "pareil", "+1 !", "+2", "même avis", "+1 obligé"]
+    },
+    {
+      "id": "coeurs",
+      "cle": "❤️",
+      "taille": [6, 14],
+      "etalement_s": [0.5, 4.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["❤️", "❤️❤️", "💛", "💖", "🫶", "<3", "<3 <3", "❤️❤️❤️", "💕", "🥺❤️"]
+    },
+    {
+      "id": "feu",
+      "cle": "🔥",
+      "taille": [6, 16],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["🔥", "🔥🔥", "🔥🔥🔥", "PogU", "HYPERS", "LETS GOOO", "🔥🔥🔥🔥", "catJAM", "🔥 PogU 🔥"]
+    },
+    {
+      "id": "peur",
+      "cle": "😱",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["😱", "😱😱", "monkaS", "😬", "D:", "monkaS monkaS", "😰", "NotLikeThis", "😱😱😱"]
+    },
+    {
+      "id": "salut_o7",
+      "cle": "o7",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 3.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["o7", "o7", "o7", "o7 chef", "🫡", "o7 o7"]
+    },
+    {
+      "id": "il_a_ose",
+      "cle": "IL A OSÉ",
+      "taille": [6, 12],
+      "etalement_s": [0.5, 3.0],
+      "stylisable": false,
+      "copie_exacte": true,
+      "ordonnee": false,
+      "note": "Copypasta voulue : le même texte en chœur (exception à l'anti-répétition).",
+      "variantes": ["IL A OSÉ"]
+    },
+    {
+      "id": "compte_a_rebours",
+      "cle": "3-2-1",
+      "taille": [8, 20],
+      "etalement_s": [0.0, 4.0],
+      "stylisable": false,
+      "copie_exacte": true,
+      "ordonnee": true,
+      "note": "Séquence : chaque étape est envoyée par plusieurs figurants, environ 1 s entre deux étapes.",
+      "variantes": ["3", "2", "1", "GOOO"]
+    }
+  ]
+}

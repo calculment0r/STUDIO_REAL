@@ -1,0 +1,437 @@
+{
+ "_note": "Jeu de SECOURS du serveur (utilisé seulement si banques/personas.json est absent ou illisible). Personas fictifs. Convention banques/README : voix.accents = probabilité de GARDER les accents.",
+ "personas": [
+  {
+   "id": "p_kev",
+   "pseudo": "kev_lamouette",
+   "couleur": "--coral-2",
+   "type": "recurrent",
+   "archetype": "fan",
+   "bio": "Fan du stream depuis le début, croit à tous les plans du streamer, s'emballe vite.",
+   "voix": {
+    "longueur": [
+     2,
+     45
+    ],
+    "casse": "minuscules",
+    "fautes": 0.3,
+    "accents": 0.3,
+    "abreviations": [
+     "mdr",
+     "jpp",
+     "pk",
+     "frr"
+    ],
+    "emojis": [
+     "😭",
+     "🔥",
+     "🙏"
+    ],
+    "emojis_par_msg": 0.5,
+    "emotes": [
+     "PogU"
+    ],
+    "tic": "chef",
+    "tic_max": 0.2,
+    "exemples": [
+     "chef t'es un génie",
+     "NON MAIS IL OSE 😭",
+     "vas y vas y vas y"
+    ]
+   },
+   "rythme": {
+    "reaction_s": [
+     0.8,
+     2.5
+    ],
+    "frappe_cps": 4,
+    "activite": 0.8,
+    "rafale": 0.3
+   }
+  },
+  {
+   "id": "p_lucie",
+   "pseudo": "lucie_doute",
+   "couleur": "--cy",
+   "type": "recurrent",
+   "archetype": "sceptique",
+   "bio": "Sceptique, pose des questions, ne croit rien sans preuve, pique gentiment.",
+   "voix": {
+    "longueur": [
+     8,
+     60
+    ],
+    "casse": "normale",
+    "fautes": 0.05,
+    "accents": 0.9,
+    "abreviations": [],
+    "emojis": [
+     "🤨",
+     "🙄"
+    ],
+    "emojis_par_msg": 0.2,
+    "exemples": [
+     "euh t'es sûr de ça ?",
+     "ou alors elle te teste",
+     "moi j'y crois pas trop"
+    ]
+   },
+   "rythme": {
+    "reaction_s": [
+     1.5,
+     4
+    ],
+    "frappe_cps": 3.2,
+    "activite": 0.6,
+    "rafale": 0.1
+   }
+  },
+  {
+   "id": "p_momo",
+   "pseudo": "momo_du_93",
+   "couleur": "--or",
+   "type": "recurrent",
+   "archetype": "blagueur",
+   "bio": "Blagueur, fait des jeux de mots, rebondit sur tout.",
+   "voix": {
+    "longueur": [
+     4,
+     50
+    ],
+    "casse": "minuscules",
+    "fautes": 0.2,
+    "accents": 0.4,
+    "abreviations": [
+     "ptdr",
+     "mdrr",
+     "wsh"
+    ],
+    "emojis": [
+     "😂",
+     "💀"
+    ],
+    "emojis_par_msg": 0.6,
+    "emotes": [
+     "KEKW"
+    ],
+    "exemples": [
+     "ptdr la tête qu'il fait",
+     "il a pas les codes 💀",
+     "wsh c'est quoi ce plan"
+    ]
+   },
+   "rythme": {
+    "reaction_s": [
+     0.9,
+     2.2
+    ],
+    "frappe_cps": 3.8,
+    "activite": 0.7,
+    "rafale": 0.3
+   }
+  },
+  {
+   "id": "p_nadia",
+   "pseudo": "nadiaaa_b",
+   "couleur": "--grn",
+   "type": "recurrent",
+   "archetype": "bienveillante",
+   "bio": "Bienveillante, encourage le streamer, s'inquiète pour lui.",
+   "voix": {
+    "longueur": [
+     6,
+     50
+    ],
+    "casse": "minuscules",
+    "fautes": 0.1,
+    "accents": 0.7,
+    "abreviations": [
+     "tkt"
+    ],
+    "emojis": [
+     "❤️",
+     "🥺",
+     "💪"
+    ],
+    "emojis_par_msg": 0.5,
+    "exemples": [
+     "courage t'y es presque",
+     "oh nonnn fais attention",
+     "on est avec toi ❤️"
+    ]
+   },
+   "rythme": {
+    "reaction_s": [
+     1.2,
+     3
+    ],
+    "frappe_cps": 3.3,
+    "activite": 0.6,
+    "rafale": 0.15
+   }
+  },
+  {
+   "id": "p_gege",
+   "pseudo": "gege_ronchon",
+   "couleur": "--amb",
+   "type": "recurrent",
+   "archetype": "râleur doux",
+   "bio": "Râleur mais attaché au stream, trouve que c'était mieux avant, jamais méchant.",
+   "voix": {
+    "longueur": [
+     6,
+     55
+    ],
+    "casse": "normale",
+    "fautes": 0.15,
+    "accents": 0.8,
+    "abreviations": [],
+    "emojis": [
+     "😒"
+    ],
+    "emojis_par_msg": 0.15,
+    "exemples": [
+     "c'était mieux la semaine dernière",
+     "bon on avance ou pas",
+     "encore ce plan là..."
+    ]
+   },
+   "rythme": {
+    "reaction_s": [
+     2,
+     5
+    ],
+    "frappe_cps": 2.6,
+    "activite": 0.4,
+    "rafale": 0.05
+   }
+  },
+  {
+   "id": "s_ado1",
+   "pseudo": "tomzer_",
+   "couleur": "--coral-3",
+   "type": "silhouette",
+   "archetype": "ado rapide",
+   "voix": {
+    "longueur": [
+     2,
+     25
+    ],
+    "casse": "CRIS",
+    "fautes": 0.4,
+    "accents": 0.1,
+    "abreviations": [
+     "jpp",
+     "mdr",
+     "wsh"
+    ],
+    "emojis": [
+     "💀",
+     "😭"
+    ],
+    "emojis_par_msg": 0.5,
+    "emotes": [
+     "KEKW",
+     "OMEGALUL"
+    ]
+   },
+   "rythme": {
+    "reaction_s": [
+     0.6,
+     1.6
+    ],
+    "frappe_cps": 4.5,
+    "activite": 0.8,
+    "rafale": 0.4
+   }
+  },
+  {
+   "id": "s_ado2",
+   "pseudo": "lilou.mp4",
+   "couleur": "--spec-3",
+   "type": "silhouette",
+   "archetype": "ado rapide",
+   "voix": {
+    "longueur": [
+     2,
+     30
+    ],
+    "casse": "minuscules",
+    "fautes": 0.35,
+    "accents": 0.1,
+    "abreviations": [
+     "jpp",
+     "ptdr"
+    ],
+    "emojis": [
+     "😭",
+     "✨"
+    ],
+    "emojis_par_msg": 0.6
+   },
+   "rythme": {
+    "reaction_s": [
+     0.7,
+     1.8
+    ],
+    "frappe_cps": 4.2,
+    "activite": 0.7,
+    "rafale": 0.3
+   }
+  },
+  {
+   "id": "s_adulte1",
+   "pseudo": "Fred_Lyon",
+   "couleur": "--ink2",
+   "type": "silhouette",
+   "archetype": "adulte posé",
+   "voix": {
+    "longueur": [
+     8,
+     60
+    ],
+    "casse": "normale",
+    "fautes": 0.05,
+    "accents": 1,
+    "emojis": [],
+    "emojis_par_msg": 0
+   },
+   "rythme": {
+    "reaction_s": [
+     2,
+     5
+    ],
+    "frappe_cps": 2.8,
+    "activite": 0.4,
+    "rafale": 0.05
+   }
+  },
+  {
+   "id": "s_emote",
+   "pseudo": "zZz_kappa",
+   "couleur": "--grn2",
+   "type": "silhouette",
+   "archetype": "émoteur",
+   "voix": {
+    "longueur": [
+     2,
+     15
+    ],
+    "casse": "normale",
+    "fautes": 0,
+    "emojis": [
+     "😂",
+     "🔥",
+     "👀"
+    ],
+    "emojis_par_msg": 0.8,
+    "emotes": [
+     "KEKW",
+     "PogU",
+     "LUL"
+    ]
+   },
+   "rythme": {
+    "reaction_s": [
+     0.5,
+     1.4
+    ],
+    "frappe_cps": 5,
+    "activite": 0.8,
+    "rafale": 0.5
+   }
+  },
+  {
+   "id": "s_lurk",
+   "pseudo": "anonyme_42",
+   "couleur": "--ink3",
+   "type": "silhouette",
+   "archetype": "lurker",
+   "voix": {
+    "longueur": [
+     2,
+     30
+    ],
+    "casse": "minuscules",
+    "fautes": 0.2,
+    "accents": 0.2,
+    "emojis": [
+     "👀"
+    ],
+    "emojis_par_msg": 0.3
+   },
+   "rythme": {
+    "reaction_s": [
+     1.5,
+     4
+    ],
+    "frappe_cps": 3,
+    "activite": 0.25,
+    "rafale": 0.05
+   }
+  },
+  {
+   "id": "s_ado3",
+   "pseudo": "yanis_off",
+   "couleur": "--rouge",
+   "type": "silhouette",
+   "archetype": "ado rapide",
+   "voix": {
+    "longueur": [
+     2,
+     30
+    ],
+    "casse": "minuscules",
+    "fautes": 0.4,
+    "accents": 0.1,
+    "abreviations": [
+     "wsh",
+     "frr",
+     "mdr"
+    ],
+    "emojis": [
+     "😂"
+    ],
+    "emojis_par_msg": 0.3
+   },
+   "rythme": {
+    "reaction_s": [
+     0.7,
+     1.8
+    ],
+    "frappe_cps": 4.2,
+    "activite": 0.7,
+    "rafale": 0.3
+   }
+  },
+  {
+   "id": "s_adulte2",
+   "pseudo": "Marion_R",
+   "couleur": "--coral-1",
+   "type": "silhouette",
+   "archetype": "adulte posé",
+   "voix": {
+    "longueur": [
+     6,
+     55
+    ],
+    "casse": "normale",
+    "fautes": 0.05,
+    "accents": 0.95,
+    "emojis": [
+     "😄"
+    ],
+    "emojis_par_msg": 0.2
+   },
+   "rythme": {
+    "reaction_s": [
+     1.8,
+     4.5
+    ],
+    "frappe_cps": 3,
+    "activite": 0.45,
+    "rafale": 0.1
+   }
+  }
+ ]
+}

@@ -1,0 +1,37 @@
+{
+  "_note": "Banque N1 de SECOURS (répliques écrites par segment). quand: 'debut' (à l'entrée du segment), 'mot:xxx' (sur mot-clé entendu), absent = ambiance.",
+  "segments": {
+    "accueil": {
+      "consigne": "Début du live. Le streamer dit bonjour et annonce qu'il va en ville acheter des gâteaux.",
+      "repliques": [
+        { "quand": "debut", "persona": "p_kev", "texte": "LE LIVE EST LÀ" },
+        { "quand": "debut", "texte": "premier !" },
+        { "texte": "ça va chef ?" },
+        { "texte": "on fait quoi aujourd'hui ?" },
+        { "persona": "p_lucie", "texte": "t'as dormi ou pas ? t'as une tête" },
+        { "texte": "le son est bon" },
+        { "texte": "yo tout le monde" },
+        { "persona": "p_gege", "texte": "enfin, t'es en retard" },
+        { "texte": "bonne ambiance ce soir" },
+        { "quand": "mot:gâteaux", "persona": "p_momo", "texte": "il pense qu'à manger lui" }
+      ]
+    },
+    "boulangerie": {
+      "consigne": "Le streamer doit convaincre la boulangère de lui vendre la dernière religieuse. La salle soupçonne que la boulangère ment.",
+      "repliques": [
+        { "quand": "debut", "texte": "ça sent le pain chaud d'ici" },
+        { "quand": "mot:religieuse", "persona": "p_lucie", "texte": "elle va JAMAIS te la vendre" },
+        { "quand": "mot:religieuse", "persona": "p_kev", "texte": "la religieuse c'est pour toi chef" },
+        { "texte": "elle a l'air de cacher un truc" },
+        { "texte": "regarde derrière le comptoir" },
+        { "persona": "p_momo", "texte": "demande lui son prénom au moins" },
+        { "texte": "achète des chouquettes en plus" },
+        { "persona": "p_nadia", "texte": "sois poli elle a l'air fatiguée" },
+        { "texte": "elle ment c'est sûr" },
+        { "texte": "négocie !!" },
+        { "persona": "p_gege", "texte": "bon tu la prends ou pas cette religieuse" },
+        { "texte": "elle a croisé les bras, mauvais signe" }
+      ]
+    }
+  }
+}

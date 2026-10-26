@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Régie figurants P0.5</title>
+<link rel="stylesheet" href="../../../../design/tokens.css">
+<link rel="stylesheet" href="../../../../design/base.css">
+<link rel="stylesheet" href="../commun/commun.css">
+<link rel="stylesheet" href="regie.css">
+</head>
+<body class="rg">
+
+<div class="rg-coupe-bandeau" id="bandeauCoupe" role="alert" hidden>
+  Coupe active : aucun figurant n'écrit. Échap pour reprendre.
+</div>
+
+<header class="rg-haut">
+  <div class="rg-titre">
+    <b>FIGURANTS</b>
+    <span class="ws-pill" id="ws" data-etat="connexion"><i></i><span id="wsTxt">connexion…</span></span>
+  </div>
+  <div class="rg-stats" id="stats" aria-label="Télémétrie des figurants (toutes les 5 s)">
+    <div class="st st-four"><span class="et">fournisseur</span><b id="stFour"><i class="st-dot"></i><span id="stFourTxt">—</span></b></div>
+    <div class="st"><span class="et">total p50 / p95</span><b id="stTotal">—</b></div>
+    <div class="st"><span class="et">1er jeton</span><b id="stJeton">—</b></div>
+    <div class="st"><span class="et">ligne</span><b id="stLigne">—</b></div>
+    <div class="st"><span class="et">filtre</span><b id="stFiltre">—</b></div>
+    <div class="st"><span class="et">asr → décision</span><b id="stDecision">—</b></div>
+    <div class="st"><span class="et">rejets</span><b id="stRejets">—</b></div>
+    <div class="st"><span class="et">coût</span><b id="stCout">—</b></div>
+    <div class="st"><span class="et">réel / fig.</span><b id="stPart">—</b></div>
+    <div class="st"><span class="et">débit</span><b id="stDebit">—</b></div>
+  </div>
+</header>
+
+<main class="rg-main">
+
+  <!-- ===== colonne A : commandes ===== -->
+  <section class="rg-col rg-cmd">
+
+    <div class="pn">
+      <div class="pn-t"><span class="et">densité</span><span class="et kb">touches 1 à 5</span></div>
+      <div class="dens" id="dens" role="group" aria-label="Densité"></div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-t"><span class="et">humeur</span><span class="et" id="humTxt"></span></div>
+      <label class="curs"><span class="et">valence</span>
+        <input type="range" id="valence" min="-1" max="1" step="0.05" value="0">
+        <output id="valenceV">0,00</output></label>
+      <label class="curs"><span class="et">énergie</span>
+        <input type="range" id="energie" min="0" max="1" step="0.05" value="0.5">
+        <output id="energieV">0,50</output></label>
+      <div class="puces" id="etiquettes" aria-label="Étiquettes d'humeur"></div>
+      <form class="ajout" id="formEtiq" autocomplete="off">
+        <input class="champ" id="nouvEtiq" list="etiqSuggestions" maxlength="24" placeholder="ajouter une étiquette">
+        <datalist id="etiqSuggestions">
+          <option value="moqueuse"><option value="hype"><option value="inquiète"><option value="méfiante">
+          <option value="tendre"><option value="ironique"><option value="choquée"><option value="admirative">
+        </datalist>
+        <button class="bt" type="submit">+</button>
+      </form>
+    </div>
+
+    <div class="pn">
+      <div class="pn-t"><span class="et">actions</span><span class="et kb">espace = relance · échap = coupe</span></div>
+      <div class="acts">
+        <button class="bt cy" id="bRelance" type="button">Relance</button>
+        <button class="bt cy" id="bVague" type="button">Vague <span id="vagueEmoji">😂</span></button>
+        <button class="bt cy" id="bChut" type="button">Chut</button>
+      </div>
+      <div class="emojis" id="emojis" role="group" aria-label="Emoji de la vague"></div>
+      <button class="coupe" id="bCoupe" type="button" aria-pressed="false">COUPE</button>
+    </div>
+
+    <div class="pn">
+      <div class="pn-t"><span class="et">réglages</span></div>
+      <div class="regl">
+        <label><span class="et">fournisseur</span>
+          <select class="champ" id="fournisseur">
+            <option value="auto">auto (Haiku › Qwen › banque)</option>
+            <option value="ollama">ollama</option>
+            <option value="anthropic">anthropic</option>
+            <option value="banque">banque</option>
+          </select></label>
+        <div><span class="et">marquage</span>
+          <div class="seg" id="marquage" role="group" aria-label="Marquage dans la vue du comédien">
+            <button class="bt" type="button" data-v="masque">masqué</button>
+            <button class="bt" type="button" data-v="discret">discret</button>
+          </div></div>
+        <form class="ajout" id="formSegment" autocomplete="off">
+          <label class="gr"><span class="et">segment</span>
+            <input class="champ" id="segment" maxlength="40" placeholder="id du segment"></label>
+          <button class="bt" type="submit">OK</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-t"><span class="et">souffleur</span></div>
+      <form class="souff" id="formSouff" autocomplete="off">
+        <input class="champ" id="intention" maxlength="200" placeholder="lui dire qu'il a oublié son portefeuille" aria-label="Intention">
+        <div class="souff-bas">
+          <label class="mini"><span class="et">nb</span>
+            <select class="champ" id="nb"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
+          <label class="case"><input type="checkbox" id="valider" checked><span class="et">valider</span></label>
+          <button class="bt go" type="submit">Envoyer</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="pn" id="pnAttente">
+      <div class="pn-t"><span class="et">à valider <b id="nbAttente">0</b></span></div>
+      <div class="attente" id="attente"><p class="vide" id="attenteVide">rien en attente</p></div>
+    </div>
+
+    <div class="pn">
+      <div class="pn-t"><span class="et">personnages</span></div>
+      <ul class="pers" id="personas"><li class="vide">en attente du serveur…</li></ul>
+      <form class="main" id="formMain" autocomplete="off" hidden>
+        <span class="et">tu écris comme <b id="mainQui"></b></span>
+        <div class="ajout">
+          <input class="champ" id="mainTexte" maxlength="200" placeholder="texte du message" aria-label="Texte du persona">
+          <button class="bt go" type="submit">Dire</button>
+          <button class="bt" type="button" id="mainFin">Rendre</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== colonne B : le chat complet ===== -->
+  <section class="rg-col rg-chat">
+    <div class="pn pn-plein">
+      <div class="pn-t"><span class="et">chat complet · origine au badge, latences au survol</span><span class="et" id="comptes"></span></div>
+      <div class="lignes" id="chat" aria-live="off"></div>
+    </div>
+  </section>
+
+  <!-- ===== colonne C : transcription + journal ===== -->
+  <section class="rg-col rg-droite">
+    <div class="pn pn-moitie">
+      <div class="pn-t"><span class="et">transcription en direct</span></div>
+      <div class="lignes trans" id="trans"><p class="partiel" id="partiel"></p></div>
+    </div>
+    <div class="pn pn-moitie">
+      <div class="pn-t"><span class="et">journal</span></div>
+      <div class="lignes jour" id="journal"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="rg-pied">
+  <span class="et">Espace relance · Échap coupe/reprend · 1 à 5 densité</span>
+  <span class="et" id="horloge">horloge : —</span>
+</footer>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script type="module" src="regie.js"></script>
+</body>
+</html>

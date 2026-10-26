@@ -1,0 +1,19 @@
+/* Chat « public » plein écran, style Twitch vertical. Aucune indication d'origine. */
+body.ch { overflow: hidden; }
+.ch-flux {
+  position: fixed; inset: 0;
+  padding: 3vmin 3.5vmin 3.5vmin;
+  font-size: clamp(22px, 3.6vmin, 60px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, var(--ink) 16%);
+          mask-image: linear-gradient(to bottom, transparent 0, var(--ink) 16%);
+}
+.ch-flux.cv-liste .lg {
+  padding: .26em .1em;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.ch-flux.cv-pops { font-size: clamp(22px, 3.2vmin, 52px); -webkit-mask-image: none; mask-image: none; }
+.ch-hors {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  max-width: 80vw;
+}
+body.ch.fond-libre, body.ch.fond-libre .ch-flux { background: transparent; }

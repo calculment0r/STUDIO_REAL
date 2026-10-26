@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Comédien P0.5</title>
+<link rel="stylesheet" href="../../../../design/tokens.css">
+<link rel="stylesheet" href="../../../../design/base.css">
+<link rel="stylesheet" href="../commun/commun.css">
+<link rel="stylesheet" href="comedien.css">
+</head>
+<body class="co">
+  <div class="co-app">
+    <aside class="co-cote">
+      <header class="co-tete">
+        <span class="et"><b>Comédien</b> · micro</span>
+        <span class="ws-pill" id="ws" data-etat="connexion"><i></i><span id="wsTxt">connexion…</span></span>
+      </header>
+
+      <section class="co-micro">
+        <button class="co-gros" id="micro" type="button">Démarrer le micro</button>
+        <div class="co-etat" id="micEtat" data-etat="arrete" role="status" aria-live="polite">
+          <i class="co-voyant"></i><span id="micTxt">micro arrêté</span>
+        </div>
+        <p class="co-alerte" id="alerte" role="alert" hidden></p>
+      </section>
+
+      <section class="co-trans" aria-label="Ce que le micro entend">
+        <span class="et">entendu</span>
+        <p class="co-final" id="final">…</p>
+        <p class="co-partiel" id="partiel"></p>
+      </section>
+
+      <form class="co-secours" id="formSecours" autocomplete="off">
+        <label class="et" for="dire">dire au chat (secours, sans micro)</label>
+        <div class="co-ligne">
+          <input class="champ" id="dire" type="text" maxlength="300" placeholder="ce que le comédien aurait dit…" enterkeyhint="send">
+          <button class="bt go" type="submit">Dire</button>
+        </div>
+      </form>
+
+      <p class="et co-marq" id="marq">marquage : <b id="marqVal">masqué</b></p>
+    </aside>
+
+    <main class="co-chat-cadre">
+      <span class="et co-chat-lbl">le chat, vu du streamer</span>
+      <div id="chat" class="co-chat" aria-live="off"></div>
+    </main>
+  </div>
+  <script type="module" src="comedien.js"></script>
+</body>
+</html>

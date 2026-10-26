@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- interactive-widget=resizes-content : Chrome Android réduit la page quand le clavier s'ouvre ;
+     iOS Safari ignore la clé, d'où le repli visualViewport dans telephone.js -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>Téléphone P0.5</title>
+<link rel="stylesheet" href="../../../../design/tokens.css">
+<link rel="stylesheet" href="../../../../design/base.css">
+<link rel="stylesheet" href="../commun/commun.css">
+<link rel="stylesheet" href="telephone.css">
+</head>
+<body class="te">
+  <div class="te-app" id="app">
+
+    <!-- étape 1 : le pseudo -->
+    <form class="te-login" id="login" autocomplete="off">
+      <span class="et">chat de test</span>
+      <h1>Ton pseudo</h1>
+      <input class="champ te-pseudo" id="pseudo" type="text" minlength="2" maxlength="20"
+             autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go"
+             placeholder="2 à 20 caractères" aria-label="Ton pseudo">
+      <button class="bt go te-entrer" type="submit">Entrer dans le chat</button>
+      <p class="te-note" id="loginNote" role="alert"></p>
+    </form>
+
+    <!-- étape 2 : le chat + la saisie -->
+    <div class="te-chatvue" id="vue" hidden>
+      <header class="te-haut">
+        <span class="te-moi" id="moi"></span>
+        <span class="ws-pill" id="ws" data-etat="connexion"><i></i><span id="wsTxt">connexion…</span></span>
+        <button class="te-chg" id="changer" type="button">changer</button>
+      </header>
+      <div id="chat" class="te-flux" aria-live="off" aria-label="Chat"></div>
+      <form class="te-bas" id="form" autocomplete="off" novalidate>
+        <div class="te-champ">
+          <input id="msg" type="text" maxlength="80" enterkeyhint="send" autocomplete="off"
+                 autocapitalize="sentences" spellcheck="false"
+                 placeholder="Écris dans le chat…" aria-label="Ton message (80 caractères max)">
+          <span class="te-compte" id="compte">0/80</span>
+        </div>
+        <button class="te-envoi" id="envoi" type="button" aria-label="Envoyer le message">Envoyer</button>
+      </form>
+    </div>
+  </div>
+  <script type="module" src="telephone.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+# Règles PLUS STRICTES, appliquées aux seuls figurants (étude §8.2) : un doute = rejet (on remplace la réplique, on ne la retient pas).
+# Toujours chargées. Sections « figurant… » = figurants seulement.
+
+[figurant-urgence]
+au feu
+incendie
+pompier*
+appelez la police
+appelle la police
+appeler la police
+appelez les secours
+appelle les secours
+samu
+ambulance
+il fait un malaise
+fait un malaise
+évacuez
+evacuation
+bombe
+attentat
+alerte
+il est blessé
+blessé
+il saigne
+crise cardiaque
+arme
+couteau
+pistolet
+fusil
+
+[figurant-danger]
+saute
+jette toi
+frappe le
+frappe la
+tape le
+tape la
+cogne
+bagarre
+vole le
+vole la
+casse tout
+drogue*
+alcool
+bois cul sec
+
+[figurant-sanction]
+banni
+ban
+bannissez
+exclu
+exclure
+kick
+signalez
+signalé
+modo
+modérateur
+vote
+votez
+voté
+
+[figurant-sexualite]
+sexy
+chaud lapin
+coquin*
+coquine*
+déshabille*
+
+[figurant-haine-et-physique]
+moche
+obèse
+laid*
+laide
+handicapé*
+arabe*
+juif*
+musulman*
+chrétien*
+religion
+racis*
+homo*
+gay
+lesbienne*
+=trans
+immigr*
+migrant*
+politique
+élection*
+président*
+ministre*
+guerre
+terroris*
+israël*
+palestin*
+ukrain*
+russ*
+

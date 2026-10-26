@@ -1,0 +1,48 @@
+# Noms de personnes réelles célèbres : TOUJOURS refusés dans un message de figurant (étude §3.3, §8.2).
+# Chargé en plus de banques/interdits-figurants.txt. Liste courte, à compléter par l'auteur.
+[figurant-celebrites]
+macron
+le pen
+marine le pen
+mélenchon
+zemmour
+bardella
+sarkozy
+hollande
+attal
+trump
+poutine
+putin
+biden
+musk
+zuckerberg
+bezos
+mbappé
+mbappe
+zidane
+benzema
+griezmann
+neymar
+=messi
+ronaldo
+depardieu
+johnny
+squeezie
+inoxtag
+kameto
+gotaga
+amixem
+mcfly
+carlito
+cyprien
+=norman
+tibo inshape
+booba
+jul
+aya nakamura
+dupontmoretti
+dupont-moretti
+bolloré
+hanouna
+cauet
+nabilla
