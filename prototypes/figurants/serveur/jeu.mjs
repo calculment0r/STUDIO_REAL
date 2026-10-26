@@ -106,7 +106,8 @@ export class Jeu {
     return { t: 'fig.stat', ts: Date.now(), fournisseur: o.fournisseur, lat: o.lat, rejets: c.rejets, rejets_figurants: c.rejets_figurants, rejets_humains: c.rejets_humains,
       rejets_par_raison: c.par_raison, cout_usd: o.cout_usd, debit: { reel: d.reel, fig: d.fig }, part_fig: d.part_fig,
       doublons: o.doublons, perimes: o.perimes, appels: o.appels, erreurs: o.erreurs, planifies: o.planifies, attente: o.attente,
-      disjoncteurs: o.disjoncteurs, lat_par_fournisseur: o.lat_par_fournisseur, etat: { densite: this.etat.densite, coupe: this.etat.coupe, segment: this.etat.segment } };
+      disjoncteurs: o.disjoncteurs, lat_par_fournisseur: o.lat_par_fournisseur,
+      machines: this.orchestrateur.fournisseurs?.ollama?.tableau?.() ?? null, etat: { densite: this.etat.densite, coupe: this.etat.coupe, segment: this.etat.segment } };
   }
 
   // ------------------------------------------------------------------ messages entrants

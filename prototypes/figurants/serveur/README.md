@@ -23,6 +23,21 @@ Depuis un PC sans Ollama local : `ssh -N -L 11434:localhost:11434 dgx2` dans un 
 | `BUDGET_USD`, `MAX_APPELS_MIN` | `5`, `30` | plafonds Anthropic (coût cumulé) et appels LLM par minute |
 | `JOURNAUX_DIR`, `BANQUES_DIR` | `serveur/journaux`, `../banques` | journal JSONL du jour ; banques |
 | `JETON_REGIE` | absent | si défini, `hello` régie doit porter `jeton` (hors protocole, facultatif) |
+| `OLLAMA_MACHINES` | absent (= `OLLAMA_URL` seule) | plusieurs machines dans l'ordre de bascule : `nom=url[#modele],…` |
+| `MODE_SPECTACLE` | absent | `1` : modèles gardés en mémoire en permanence (`keep_alive -1`), chauffe de toutes les machines au démarrage, ordre `auto` = nos machines puis Haiku |
+
+### Mode spectacle (les soirs de représentation, les 3 machines sont réservées au spectacle)
+
+```
+MODE_SPECTACLE=1 OLLAMA_MACHINES="3090=http://100.74.134.89:11434,dgx2=http://<dgx2>:11434,dgx1=http://<dgx1>:11434" node index.mjs
+```
+- **Bascule** : chaque machine a son disjoncteur. Si la machine choisie ne répond pas avant d'avoir produit une réplique,
+  **le même appel repart aussitôt sur la suivante**. Ensuite, Haiku si `ANTHROPIC_API_KEY` est définie, puis la banque.
+  Une annulation (COUPE, phrase suivante) n'est jamais comptée comme une panne. Testé par `node test-groupe.mjs`.
+- **Contrôle de chauffe** : au démarrage et avec le bouton de la régie. Il produit, pour chaque machine, son état (prête,
+  injoignable, disjonctée) et la latence d'une vraie petite réplique. La régie affiche la liste dans « réglages ».
+- **Avant le premier soir** : le modèle doit être installé sur chaque machine (`ollama pull qwen3:8b`), y compris sur la 3090,
+  et chaque Ollama doit écouter sur le réseau Tailscale. **Rien de tout cela n'est fait sur la 3090 sans l'accord du propriétaire.**
 
 ## Architecture (en 15 lignes)
 

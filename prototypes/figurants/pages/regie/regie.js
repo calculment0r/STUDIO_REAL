@@ -458,7 +458,27 @@ function recevoirStat(m) {
   } else if (typeof m.debit === 'number') {
     $('stDebit').textContent = virgule(m.debit, 0) + ' /min';
   } else $('stDebit').textContent = '—';
+  if (Array.isArray(m.machines)) afficherMachines(m.machines);
 }
+
+// ---------- machines Ollama (mode spectacle : 3090 › dgx2 › dgx1) ----------
+const ETATS_MACHINE = { pret: 'prête', douteux: 'douteuse', injoignable: 'injoignable', disjoncte: 'disjonctée', inconnu: '…' };
+function afficherMachines(liste) {
+  const ul = $('machines');
+  ul.replaceChildren(...liste.map((x) => {
+    const li = document.createElement('li');
+    li.dataset.etat = x.etat;
+    if (x.active) li.classList.add('active');
+    const lat = x.premier_jeton_ms != null ? `1er mot ${fmtMs(x.premier_jeton_ms)} · réplique ${fmtMs(x.total_ms)}` : '';
+    li.title = [x.raison, x.ts ? 'chauffe ' + new Date(x.ts).toLocaleTimeString('fr-FR') : ''].filter(Boolean).join(' · ');
+    li.innerHTML = '<i></i><b></b><span class="et"></span><small></small>';
+    li.querySelector('b').textContent = `${x.rang}. ${x.machine}`;
+    li.querySelector('.et').textContent = `${x.modele} · ${ETATS_MACHINE[x.etat] || x.etat}${x.active ? ' · active' : ''}`;
+    li.querySelector('small').textContent = lat;
+    return li;
+  }));
+}
+$('bChauffe').addEventListener('click', () => cmd({ chauffe: true }, 'contrôle de chauffe'));
 
 // ---------- raccourcis clavier ----------
 const estSaisie = (t) => t && t.matches && t.matches('input, textarea, select, [contenteditable]');

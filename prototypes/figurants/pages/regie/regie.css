@@ -207,3 +207,15 @@ body.coupe .rg-haut { box-shadow: inset 0 -3px 0 var(--rouge); }
   .rg-chat .lignes, .rg-droite .lignes { max-height: 50vh; }
   .rg-droite { flex-direction: column; }
 }
+
+/* ---------- machines Ollama (mode spectacle) ---------- */
+.machines { display: flex; flex-direction: column; gap: var(--s1); }
+.mach { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.mach li { display: grid; grid-template-columns: 9px auto 1fr; column-gap: var(--s2); align-items: center; padding: 3px 6px; border-radius: var(--r1); }
+.mach li.vide { display: block; color: var(--ink3); }
+.mach li i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink3); }
+.mach li[data-etat="pret"] i { background: var(--grn2); }
+.mach li[data-etat="douteux"] i, .mach li[data-etat="disjoncte"] i { background: var(--amb); }
+.mach li[data-etat="injoignable"] i { background: var(--rouge); }
+.mach li.active { box-shadow: inset 0 0 0 1px var(--line-cy); }
+.mach li small { grid-column: 2 / -1; color: var(--ink3); font-family: var(--f-mono); font-size: 10px; }

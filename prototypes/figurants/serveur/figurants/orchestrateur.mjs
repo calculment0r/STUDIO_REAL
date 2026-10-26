@@ -414,7 +414,7 @@ export class Orchestrateur {
   // ------------------------------------------------------------------ N2 / souffleur
 
   choisirFournisseur() {
-    const ordre = { auto: ['anthropic', 'ollama'], ollama: ['ollama'], anthropic: ['anthropic'], banque: [] }[this.etat.fournisseur] || [];
+    const ordre = { auto: this.config.ordreAuto || ['anthropic', 'ollama'], ollama: ['ollama'], anthropic: ['anthropic'], banque: [] }[this.etat.fournisseur] || [];
     const t = Date.now();
     while (this.appels.length && t - this.appels[0] > 60_000) this.appels.shift();
     if (this.appels.length >= this.config.maxAppelsMin) return null;
@@ -513,7 +513,7 @@ export class Orchestrateur {
         res = await f.generer({ systeme: pr.systeme, utilisateur: pr.utilisateur, nb: aEcrire.length, signal: ctrl.signal, onLigne: onLigne(personas) });
       }
       this.coutUsd += res.cout_usd || 0;
-      this.journal.ecrire({ e: 'n2_appel', fournisseur: f.nom, mode: f.nom === 'ollama' ? this.config.ollamaMode : 'multi', evenement: req.evenement, nb: aEcrire.length, servis: servis.size,
+      this.journal.ecrire({ e: 'n2_appel', fournisseur: f.nom, machine: res.machine ?? null, mode: f.nom === 'ollama' ? this.config.ollamaMode : 'multi', evenement: req.evenement, nb: aEcrire.length, servis: servis.size,
         t_asr: req.tAsr, t_decision: req.tDecision, t_requete: tRequete, t_premier_jeton: Number.isFinite(res.t_premier_jeton) ? res.t_premier_jeton : null, t_premiere_ligne: tPremiereLigne, t_fin: res.t_fin,
         jetons_entree: res.jetons_entree, jetons_sortie: res.jetons_sortie, cout_usd: res.cout_usd || 0, version });
       if (servis.size === 0) {
@@ -774,7 +774,23 @@ export class Orchestrateur {
       return true;
     }
     if ('top' in cmd) { this.top(cmd.top); return true; }
+    if ('chauffe' in cmd) { this.chauffe(); return true; }
     return false;
+  }
+
+  /** Contrôle de chauffe des machines Ollama (avant le lever de rideau, ou sur demande de la régie). */
+  async chauffe() {
+    const f = this.fournisseurs.ollama;
+    if (!f?.chauffe) return [];
+    this.jeu.journalRegie('contrôle de chauffe des machines…');
+    const rs = [].concat(await f.chauffe());
+    this.journal.ecrire({ e: 'chauffe', machines: rs });
+    for (const r of rs) {
+      this.jeu.journalRegie(r.etat === 'pret'
+        ? `${r.machine} (${r.modele}) PRÊTE : 1er mot ${r.premier_jeton_ms} ms, réplique ${r.total_ms} ms`
+        : `${r.machine} (${r.modele}) ${r.etat.toUpperCase()} : ${r.raison || 'réponse inattendue'}`);
+    }
+    return rs;
   }
 
   _annulerAmbiance() {

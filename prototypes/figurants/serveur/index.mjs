@@ -11,7 +11,7 @@ import { Banques } from './banques.mjs';
 import { Moderateur } from './moderation.mjs';
 import { Jeu } from './jeu.mjs';
 import { Orchestrateur, DENSITES } from './figurants/orchestrateur.mjs';
-import { FournisseurOllama, FournisseurAnthropic } from './figurants/fournisseurs.mjs';
+import { FournisseurOllama, FournisseurAnthropic, GroupeOllama } from './figurants/fournisseurs.mjs';
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const RACINE = path.resolve(ICI, '..', '..', '..');
@@ -30,18 +30,29 @@ const CONFIG = {
   journaux: env.JOURNAUX_DIR ? path.resolve(env.JOURNAUX_DIR) : path.join(ICI, 'journaux'),
   banques: env.BANQUES_DIR ? path.resolve(env.BANQUES_DIR) : path.resolve(ICI, '..', 'banques'),
   jetonRegie: env.JETON_REGIE || null,
+  // Mode spectacle : modèles gardés en mémoire en permanence, chauffe de toutes les machines au démarrage.
+  spectacle: ['1', 'oui', 'true'].includes(String(env.MODE_SPECTACLE || '').toLowerCase()),
 };
+// Machines Ollama, dans l'ordre de préférence : OLLAMA_MACHINES="3090=http://100.74.134.89:11434#qwen3:8b,dgx2=http://localhost:11434"
+// (« #modele » facultatif, sinon MODELE_OLLAMA). Sans cette variable : une seule machine, OLLAMA_URL.
+CONFIG.machines = (env.OLLAMA_MACHINES || `ollama=${CONFIG.ollamaUrl}`).split(',').map((s) => s.trim()).filter(Boolean).map((s, i) => {
+  const [nom, reste] = s.includes('=') ? [s.slice(0, s.indexOf('=')), s.slice(s.indexOf('=') + 1)] : ['machine' + (i + 1), s];
+  const [url, modele] = reste.split('#');
+  return { machine: nom.trim(), url: url.trim(), modele: (modele || CONFIG.modeleOllama).trim() };
+});
 
 const journal = new Journal(CONFIG.journaux);
 const banques = new Banques({ dirBanques: CONFIG.banques, dirSecours: path.join(ICI, 'secours'), journal: (e) => journal.ecrire(e) });
 const moderateur = new Moderateur({ liste: banques.liste, journal: (e) => journal.ecrire(e) });
 const fournisseurs = {
-  ollama: new FournisseurOllama({ url: CONFIG.ollamaUrl, modele: CONFIG.modeleOllama }),
+  ollama: new GroupeOllama(CONFIG.machines.map((m) => new FournisseurOllama({ ...m, keepAlive: CONFIG.spectacle ? -1 : '30m' }))),
   anthropic: new FournisseurAnthropic({ budgetUsd: CONFIG.budgetUsd }),
 };
 const jeu = new Jeu({ moderateur, journal, banques, jetonRegie: CONFIG.jetonRegie, etatInitial: { fournisseur: CONFIG.fournisseur, densite: CONFIG.densite } });
 const orch = new Orchestrateur({ banques, moderateur, journal, jeu, fournisseurs,
-  config: { acceleration: CONFIG.acceleration, maxAppelsMin: CONFIG.maxAppelsMin, ollamaMode: CONFIG.ollamaMode } });
+  config: { acceleration: CONFIG.acceleration, maxAppelsMin: CONFIG.maxAppelsMin, ollamaMode: CONFIG.ollamaMode,
+    // en spectacle, nos machines d'abord (3090 › dgx2 › dgx1), Haiku en secours ; en répétition, Haiku d'abord s'il a une clé
+    ordreAuto: CONFIG.spectacle ? ['ollama', 'anthropic'] : ['anthropic', 'ollama'] } });
 jeu.orchestrateur = orch;
 
 // ------------------------------------------------------------------ HTTP statique
@@ -139,15 +150,21 @@ async function santeOllama() {
   if (!['auto', 'ollama'].includes(jeu.etat.fournisseur)) return;
   const f = fournisseurs.ollama;
   const avant = f.joignable;
+  const etatsAvant = f.machines.map((m) => m.joignable);
   const r = await f.sante();
+  f.machines.forEach((m, i) => {
+    if (m.joignable === etatsAvant[i]) return;
+    if (m.joignable) jeu.journalRegie(`Ollama ${m.machine} joignable (${m.modele})`);
+    else if (etatsAvant[i] !== null || f.machines.length > 1) jeu.journalRegie(`Ollama ${m.machine} injoignable ou sans ${m.modele}`);
+  });
   if (r.ok && avant !== true) {
-    jeu.journalRegie(`Ollama joignable (${CONFIG.modeleOllama}) : préchauffage`);
     const t0 = Date.now();
-    const ok = await f.prechauffer();
-    journal.ecrire({ e: 'prechauffage', fournisseur: 'ollama', ok, ms: Date.now() - t0 });
+    if (CONFIG.spectacle) await orch.chauffe();
+    else { jeu.journalRegie('Ollama : préchauffage'); await f.prechauffer(); }
+    journal.ecrire({ e: 'prechauffage', fournisseur: 'ollama', ms: Date.now() - t0 });
     await orch.prechaufferPrompt();
   } else if (!r.ok && avant !== false) {
-    jeu.journalRegie(`Ollama injoignable (${r.raison}) : repli sur ${fournisseurs.anthropic.disponible() ? 'anthropic' : 'banque'}`);
+    jeu.journalRegie(`aucune machine Ollama (${r.raison}) : repli sur ${fournisseurs.anthropic.disponible() ? 'anthropic' : 'banque'}`);
   }
 }
 const minuteurSante = setInterval(santeOllama, 15000);
@@ -159,7 +176,8 @@ serveur.listen(CONFIG.port, CONFIG.hote, async () => {
   journal.ecrire({ e: 'demarrage', port: adr.port, config, banques: banques.sources });
   console.log(`figurants : http://localhost:${adr.port}/  (régie : /prototypes/figurants/pages/regie/)  port=${adr.port}`);
   console.log(`banques : ${JSON.stringify(banques.sources)}`);
-  console.log(`fournisseur : ${CONFIG.fournisseur} · ollama ${CONFIG.ollamaUrl} ${CONFIG.modeleOllama} (${CONFIG.ollamaMode}) · anthropic ${config.anthropic} · journaux ${CONFIG.journaux}`);
+  console.log(`fournisseur : ${CONFIG.fournisseur} · ollama ${CONFIG.machines.map((m) => `${m.machine}=${m.url}#${m.modele}`).join(' › ')} (${CONFIG.ollamaMode})`
+    + ` · anthropic ${config.anthropic} · ${CONFIG.spectacle ? 'MODE SPECTACLE' : 'mode répétition'} · journaux ${CONFIG.journaux}`);
   orch.demarrer();
   await santeOllama();
   console.log('PRET');

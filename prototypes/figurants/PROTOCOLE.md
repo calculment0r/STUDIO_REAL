@@ -48,7 +48,7 @@ Toutes les heures sont en millisecondes. `ts` est l'heure du serveur (`Date.now(
 | `hello` | toutes les pages | `role` (`chat`/`regie`/`comedien`/`telephone`), `pseudo?`, `tc` | identification ; le serveur répond `welcome` |
 | `asr` | comedien | `kind` (`partial`/`final`), `texte`, `tc`, `tFinPhrase?` | transcription au fil de l'eau |
 | `msg` | telephone, regie (prendre la main) | `cseq` (entier croissant par client), `texte`, `persona?` (si la régie parle à la place d'un persona) | message de chat (idempotent par `cseq`) |
-| `fig.cmd` | regie | `cmd` : un objet parmi `{densite: "silence"\|"calme"\|"normal"\|"chaud"\|"folie"}` · `{humeur: {valence: -1..1, energie: 0..1, etiquettes: []}}` · `{dire: {intention, nb: 1..5, validation: bool}}` · `{parle: {persona, texte}}` · `{relance: true}` · `{vague: "😂"}` · `{chut: true}` · `{coupe: bool}` · `{fournisseur: "auto"\|"ollama"\|"anthropic"\|"banque"}` · `{segment: id}` · `{marquage: "masque"\|"discret"}` | commandes de la régie |
+| `fig.cmd` | regie | `cmd` : un objet parmi `{densite: "silence"\|"calme"\|"normal"\|"chaud"\|"folie"}` · `{humeur: {valence: -1..1, energie: 0..1, etiquettes: []}}` · `{dire: {intention, nb: 1..5, validation: bool}}` · `{parle: {persona, texte}}` · `{relance: true}` · `{vague: "😂"}` · `{chut: true}` · `{coupe: bool}` · `{fournisseur: "auto"\|"ollama"\|"anthropic"\|"banque"}` · `{segment: id}` · `{marquage: "masque"\|"discret"}` · `{chauffe: true}` (contrôle de chauffe des machines Ollama) | commandes de la régie |
 | `fig.valide` | regie | `id`, `ok` (bool), `texte?` (version corrigée) | décision sur une réplique en attente |
 | `ping` | toutes | `tc` | synchronisation d'horloge ; réponse `pong {tc, ts}` |
 
@@ -58,7 +58,7 @@ Toutes les heures sont en millisecondes. `ts` est l'heure du serveur (`Date.now(
 | `welcome` | l'émetteur | `ts`, `etat` (segment, densité, humeur, marquage, personas actifs), `historique` (30 derniers `chat`) | état initial / reprise |
 | `chat` | tous | `id`, `pseudo`, `couleur` (nom de jeton CSS, ex. `--coral-2`), `texte`, `ts` + **pour `regie` seulement** : `origine` (`humain`/`N0`/`N1`/`N2`/`souffleur`/`main`), `pid`, `ref`, `lat` (latences par étape) | une ligne de chat. **L'origine n'est jamais envoyée aux pages `chat` et `telephone`**, et à la page `comedien` seulement si `marquage = "discret"`. |
 | `asr` | regie, comedien | `kind`, `texte`, `ts` | écho de la transcription |
-| `fig.stat` | regie | `fournisseur`, `lat` `{asr_decision, premier_jeton, ligne, filtre, total}` en p50/p95 sur les 100 dernières, `rejets`, `cout_usd`, `debit` (msg/min réels et figurants), `part_fig` | télémétrie, toutes les 5 s |
+| `fig.stat` | regie | `fournisseur`, `lat` `{asr_decision, premier_jeton, ligne, filtre, total}` en p50/p95 sur les 100 dernières, `rejets`, `cout_usd`, `debit` (msg/min réels et figurants), `part_fig`, `machines` (liste `{machine, modele, rang, etat: pret\|douteux\|injoignable\|disjoncte, active, premier_jeton_ms, total_ms, raison}`) | télémétrie, toutes les 5 s |
 | `fig.attente` | regie | `id`, `pid`, `pseudo`, `texte`, `origine` | réplique soumise à validation |
 | `journal` | regie | `ts`, `ligne` | journal lisible |
 | `pong` | l'émetteur | `tc`, `ts` | — |

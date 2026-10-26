@@ -90,10 +90,10 @@ async function* lignes(corps, signal) {
 }
 
 export class FournisseurOllama {
-  constructor({ url, modele, delaiPremierJeton = 3000, delaiTotal = 12000 }) {
-    this.nom = 'ollama'; this.url = url.replace(/\/+$/, ''); this.modele = modele;
-    this.delaiPremierJeton = delaiPremierJeton; this.delaiTotal = delaiTotal;
-    this.disjoncteur = new Disjoncteur('ollama');
+  constructor({ url, modele, delaiPremierJeton = 3000, delaiTotal = 12000, keepAlive = '30m', machine = 'ollama' }) {
+    this.nom = 'ollama'; this.machine = machine; this.url = url.replace(/\/+$/, ''); this.modele = modele;
+    this.delaiPremierJeton = delaiPremierJeton; this.delaiTotal = delaiTotal; this.keepAlive = keepAlive;
+    this.disjoncteur = new Disjoncteur('ollama:' + machine);
     this.joignable = null;
   }
   disponible() { return true; }
@@ -114,9 +114,25 @@ export class FournisseurOllama {
     try {
       const messages = systeme ? [{ role: 'system', content: systeme }, { role: 'user', content: 'ok' }] : [{ role: 'user', content: 'ok' }];
       await fetch(this.url + '/api/chat', { method: 'POST', signal: AbortSignal.timeout(60000),
-        body: JSON.stringify({ model: this.modele, messages, stream: false, think: false, keep_alive: '30m', options: { num_predict: 1 } }) });
+        body: JSON.stringify({ model: this.modele, messages, stream: false, think: false, keep_alive: this.keepAlive, options: { num_predict: 1 } }) });
       return true;
     } catch { return false; }
+  }
+
+  /** Contrôle de chauffe : santé, chargement, puis une vraie petite réplique chronométrée. */
+  async chauffe() {
+    const r = { machine: this.machine, modele: this.modele, ts: Date.now() };
+    const s = await this.sante();
+    if (!s.ok) return { ...r, etat: 'injoignable', raison: s.raison };
+    const t0 = Date.now();
+    if (!(await this.prechauffer())) return { ...r, etat: 'injoignable', raison: 'chargement du modèle impossible' };
+    r.chargement_ms = Date.now() - t0;
+    try {
+      let lignesOk = 0;
+      const res = await this.generer({ systeme: 'Réponds par un objet JSON sur une ligne : {"persona":"p","texte":"<4 mots de chat>"}',
+        utilisateur: 'Le streamer dit : salut le chat !', nb: 1, onLigne: (o) => { if (o) lignesOk++; } });
+      return { ...r, etat: lignesOk ? 'pret' : 'douteux', premier_jeton_ms: res.t_premier_jeton ? res.t_premier_jeton - res.t0 : null, total_ms: res.t_fin - res.t0 };
+    } catch (e) { return { ...r, etat: 'injoignable', raison: String(e.message || e).slice(0, 80) }; }
   }
 
   async generer({ systeme, utilisateur, nb, signal, onLigne }) {
@@ -129,7 +145,7 @@ export class FournisseurOllama {
       const r = await fetch(this.url + '/api/chat', {
         method: 'POST', signal: s.signal, headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          model: this.modele, stream: true, think: false, keep_alive: '30m',
+          model: this.modele, stream: true, think: false, keep_alive: this.keepAlive,
           messages: [{ role: 'system', content: systeme }, { role: 'user', content: utilisateur }],
           options: { temperature: 0.8, top_p: 0.8, top_k: 20, presence_penalty: 1.0, num_predict: 45 * nb + 30 },
         }),
@@ -143,8 +159,77 @@ export class FournisseurOllama {
         if (c) { if (tPremier === null) tPremier = Date.now(); ext.pousser(c); }
         if (j.done) { jetonsEntree = j.prompt_eval_count || 0; jetonsSortie = j.eval_count || 0; }
       }
-      return { t0, t_premier_jeton: tPremier, t_fin: Date.now(), jetons_entree: jetonsEntree, jetons_sortie: jetonsSortie, cout_usd: 0 };
+      return { t0, t_premier_jeton: tPremier, t_fin: Date.now(), jetons_entree: jetonsEntree, jetons_sortie: jetonsSortie, cout_usd: 0, machine: this.machine };
     } finally { clearTimeout(premier); s.fin(); }
+  }
+}
+
+/**
+ * Plusieurs machines Ollama dans un ordre de préférence (mode spectacle : 3090 › dgx2 › dgx1).
+ * Vu de l'orchestrateur, c'est UN fournisseur « ollama » : chaque machine a son disjoncteur, et si la machine
+ * choisie échoue avant d'avoir produit une ligne, le même appel repart aussitôt sur la suivante.
+ * Le disjoncteur exposé ne s'ouvre que si plus aucune machine n'est utilisable (alors repli Anthropic puis banque).
+ */
+export class GroupeOllama {
+  /** @param {FournisseurOllama[]} machines */
+  constructor(machines) {
+    this.nom = 'ollama'; this.machines = machines; this.derniere = null; this.etats = {};
+    const g = this;
+    this.disjoncteur = {
+      peutEssayer: (t = Date.now()) => g.utilisables(t).length > 0,
+      succes: () => null, echec: () => null,
+      resume: () => ({ etat: g.utilisables().length ? 'ferme' : 'ouvert', raison: g.utilisables().length ? '' : 'aucune machine Ollama utilisable', jusqua: null }),
+    };
+  }
+  get modele() { return this.derniere?.modele || this.machines[0]?.modele; }
+  get joignable() { return this.machines.some((m) => m.joignable !== false) ? (this.machines.some((m) => m.joignable) ? true : null) : false; }
+  disponible() { return true; }
+  utilisables(t = Date.now()) { return this.machines.filter((m) => m.joignable !== false && m.disjoncteur.peutEssayer(t)); }
+
+  async sante() {
+    const rs = await Promise.all(this.machines.map((m) => m.sante()));
+    const ok = rs.some((r) => r.ok);
+    return ok ? { ok } : { ok: false, raison: this.machines.map((m, i) => `${m.machine} : ${rs[i].raison}`).join(' ; ') };
+  }
+  async prechauffer(systeme) { return (await Promise.all(this.machines.map((m) => (m.joignable ? m.prechauffer(systeme) : false)))).some(Boolean); }
+
+  /** Contrôle de chauffe de toutes les machines en parallèle ; résultat gardé pour la régie. */
+  async chauffe() {
+    const rs = await Promise.all(this.machines.map((m) => m.chauffe()));
+    for (const r of rs) this.etats[r.machine] = r;
+    return rs;
+  }
+
+  /** État des machines pour la régie (ordre de préférence, disjoncteurs, dernière chauffe). */
+  tableau() {
+    return this.machines.map((m, rang) => {
+      const c = this.etats[m.machine] || {};
+      const d = m.disjoncteur.resume();
+      const etat = m.joignable === false ? 'injoignable' : d.etat === 'ouvert' ? 'disjoncte' : (c.etat || (m.joignable ? 'pret' : 'inconnu'));
+      return { machine: m.machine, modele: m.modele, rang: rang + 1, etat, active: this.derniere === m,
+        premier_jeton_ms: c.premier_jeton_ms ?? null, total_ms: c.total_ms ?? null, chargement_ms: c.chargement_ms ?? null,
+        raison: d.raison || c.raison || '', ts: c.ts ?? null };
+    });
+  }
+
+  async generer(o) {
+    let derniereErreur = null;
+    for (const m of this.utilisables()) {
+      let lignes = 0;
+      try {
+        this.derniere = m;
+        const res = await m.generer({ ...o, onLigne: (...a) => { lignes++; o.onLigne(...a); } });
+        const lat = res.t_premier_jeton ? res.t_premier_jeton - res.t0 : null;
+        m.disjoncteur.succes(lat);
+        return res;
+      } catch (e) {
+        if (o.signal?.aborted) throw e;                       // annulé (COUPE, phrase suivante) : pas une panne
+        m.disjoncteur.echec(String(e.message || e).slice(0, 80));
+        derniereErreur = e;
+        if (lignes > 0) throw e;                              // déjà des répliques servies : on ne recommence pas ailleurs
+      }
+    }
+    throw derniereErreur || new Error('aucune machine Ollama utilisable');
   }
 }
 
