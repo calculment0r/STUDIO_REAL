@@ -43,6 +43,8 @@ re:\b(appelle|appelez|appeler)\s+(le\s+)?(15|17|18|112)\b
 re:\bje\s+vote\b
 re:\bvotez\b
 re:\bvote\s+pour\b
+re:\bvoter\s+(pour|contre)\b
+re:\b(faut|faudrait|allez|venez)\s+voter\b
 # ---------------------------------------------------------------- auto-description d'IA, refus et tics d'assistant
 re:\ben\s+tant\s+qu?\s*(ia|intelligence\s+artificielle|assistant|modele)\b
 re:\bje\s+suis\s+(une?\s+)?(ia|bot|robot|assistant|programme|intelligence\s+artificielle|modele\s+de\s+langage)\b

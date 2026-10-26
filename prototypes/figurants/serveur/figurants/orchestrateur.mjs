@@ -28,7 +28,9 @@ const ANGLES_SOUFFLEUR = ['alerte_amicale', 'constat_bref', 'moquerie_douce', 'q
 const IDS_QUESTION = new Set(['question_chat', 'avis', 'oui_non', 'tapez_1']);
 const RE_QUESTION = [/\b(le chat|les gars|les amis|tout le monde)\b/, /\bvous en pensez quoi\b/, /\b(dites|dis) moi\b/, /\bvotre avis\b/,
   /\bje (fais|prends|choisis|dis) quoi\b/, /\bou pas\b/, /\boui ou non\b/, /\b(est ce que|qu'est ce que) vous\b/,
-  /\bvous (preferez|voulez|croyez|pensez|trouvez|savez|avez)\b/, /\?\s*$/];
+  /\bvous (preferez|voulez|croyez|pensez|trouvez|savez|avez)\b/,
+  // la transcription n'a souvent pas de « ? » : tournures orales de question en fin de phrase
+  /\b(non|hein|ou quoi|ou bien|c est ca)$/, /\bje (le|la|les|l) ?\w+$/, /\bje (fais|prends|goute|suis|y vais|rentre|continue)\b.*$/];
 const MOTS_MAX_IA = 12;
 
 export class Orchestrateur {
@@ -60,6 +62,7 @@ export class Orchestrateur {
     this.variantesUtilisees = new Map(); // `${segment}:${declencheur}` → Set de textes
     this.declencheursRecents = new Map(); // id → ts (pas de redéclenchement avant 8 s)
     this.fileN2 = [];
+    this.reactionsEnVol = new Set();   // générations N2 en réaction à une phrase, interrompues par la phrase suivante
     this.n2EnCours = 0;
     this.appels = [];                // horodatages des appels LLM (plafond / min)
     this.coutUsd = 0;
@@ -360,15 +363,16 @@ export class Orchestrateur {
       this._direN1(r, { tBase: ts, delaiMs: hasard(900, 2500) + e.n1.size * 1200, ref: 'n1:' + r.quand, ignorerEcart: true, t: { asr: ts, decision: tDec } });
     }
     // N2 : question au chat détectée tôt (dès un partiel de 4 mots), sinon fin d'énoncé significative
-    const question = e.question || RE_QUESTION.some((r) => r.test(t));
+    const tq = t.replace(/[\s.!?…]+$/, '');
+    const question = e.question || /\?\s*$/.test(t) || RE_QUESTION.some((r) => r.test(tq));
     if (question && !e.n2 && mots >= 4 && d.q > 0) {
       e.n2 = true;
-      this.demanderN2({ evenement: 'question_au_chat', origine: 'N2', nb: d.q, tAsr: ts, ref: `asr:${kind}`, sur: kind });
+      this.demanderN2({ evenement: 'question_au_chat', origine: 'N2', nb: d.q, tAsr: ts, ref: `asr:${kind}`, sur: kind, texte, reaction: true });
     }
     if (kind === 'final') {
       if (!e.n2 && mots >= 5 && d.e > 0) {
         const nb = Math.floor(d.e) + (proba(d.e % 1) ? 1 : 0);
-        if (nb > 0) { e.n2 = true; this.demanderN2({ evenement: 'fin_enonce', origine: 'N2', nb, tAsr: ts, ref: 'asr:final', sur: kind }); }
+        if (nb > 0) { e.n2 = true; this.demanderN2({ evenement: 'fin_enonce', origine: 'N2', nb, tAsr: ts, ref: 'asr:final', sur: kind, texte, reaction: true }); }
       }
       this._finEnonce(texte, ts);
     } else {
@@ -382,9 +386,10 @@ export class Orchestrateur {
     this.enonce = null;
   }
 
-  texteTranscription() {
-    const parts = this.transcription.map((x) => x.texte);
-    if (this.enonce?.partiel) parts.push(this.enonce.partiel);
+  /** Ce qui a été dit avant ; `sauf` (la phrase à laquelle on réagit) est retirée, elle est donnée à part. */
+  texteTranscription(sauf = '') {
+    const parts = this.transcription.map((x) => x.texte).filter((t) => t !== sauf);
+    if (this.enonce?.partiel && this.enonce.partiel !== sauf) parts.push(this.enonce.partiel);
     return parts.join(' … ').slice(-500);
   }
 
@@ -429,6 +434,12 @@ export class Orchestrateur {
     req.epoch = this.epoch;
     const f = this.choisirFournisseur();
     if (!f) { this._n2Banque(req, null); return; }
+    if (req.reaction) {
+      // une nouvelle phrase du comédien rend obsolètes les réactions à la phrase d'avant :
+      // on vide la file et on interrompt la génération en cours (sauf souffleur), sinon le chat répond en retard
+      this.fileN2 = this.fileN2.filter((x) => !x.reaction);
+      for (const r of this.reactionsEnVol) { r.remplacee = true; r.ctrl.abort(); }
+    }
     if (this.n2EnCours >= 1) {
       // une génération à la fois (Ollama sérialise de toute façon) ; on garde les demandes prioritaires et la plus récente
       this.fileN2 = this.fileN2.filter((x) => x.prioritaire);
@@ -458,23 +469,28 @@ export class Orchestrateur {
     const angles = souffleur ? melanger(ANGLES_SOUFFLEUR) : (req.evenement === 'question_au_chat' ? ['reponse_question', ...melanger(ANGLES)] : (req.evenement === 'relance' ? ['question', 'conseil', 'encouragement'] : melanger(ANGLES)));
     const aEcrire = personas.map((p, i) => ({ persona: p, angle: angles[i % angles.length] }));
     const seg = this.segmentCourant();
+    const dernierePhrase = req.texte || this.transcription.at(-1)?.texte || '';
     const base = {
       type: souffleur ? 'souffleur' : 'n2', segment: seg, humeur: this.etat.humeur,
-      distribution: this.personasActifs(),          // identique pour tous les appels du segment : préfixe système réutilisé (cache)
-      transcription: this.texteTranscription(), evenement: req.evenement,
+      // Anthropic : tous les personas du segment (préfixe système identique, donc en cache) ;
+      // Ollama : seulement ceux de l'appel, un petit modèle se perd dans 19 fiches
+      distribution: f.nom === 'ollama' ? personas : this.personasActifs(),
+      transcription: this.texteTranscription(dernierePhrase), dernierePhrase, evenement: req.evenement,
       chatReel: this.jeu.chatHumainsRecents(12), dejaDit: this.histoFig.slice(-20).map((x) => x.texte), intention: req.intention,
     };
     this.n2EnCours++;
     this.compteurs.appels++;
     this.appels.push(Date.now());
     const ctrl = new AbortController(); this.enVol.add(ctrl);
+    const vol = { ctrl, remplacee: false };
+    if (req.reaction) this.reactionsEnVol.add(vol);
     const epoch = this.epoch;
     const servis = new Set();
     const tRequete = Date.now();
     let tPremiereLigne = null; let version = '';
     req.rang = 0; req.acceptees = 0;
     const onLigne = (lot) => (obj, tLigne, tPremier) => {
-      if (epoch !== this.epoch || this.etat.coupe) return;
+      if (epoch !== this.epoch || this.etat.coupe || vol.remplacee) return;
       const r = lireReplique(obj);
       const p = r && lot.find((x) => x.id === r.persona || x.pseudo === r.persona);
       if (!r || !p || servis.has(p.id)) { this.compteurs.lignes_invalides++; this.journal.ecrire({ e: 'ligne_invalide', fournisseur: f.nom, obj: obj ?? null }); return; }
@@ -511,7 +527,7 @@ export class Orchestrateur {
         this._n2Banque(req, personas);
       }
     } catch (err) {
-      const coupe = epoch !== this.epoch || this.etat.coupe;
+      const coupe = epoch !== this.epoch || this.etat.coupe || vol.remplacee;
       this.journal.ecrire({ e: coupe ? 'n2_annule' : 'n2_erreur', fournisseur: f.nom, erreur: String(err?.message || err).slice(0, 200), servis: servis.size });
       if (!coupe) {
         this.compteurs.erreurs++;
@@ -521,6 +537,7 @@ export class Orchestrateur {
       }
     } finally {
       this.enVol.delete(ctrl);
+      this.reactionsEnVol.delete(vol);
       this.n2EnCours--;
       this._suivantN2();
     }
@@ -549,11 +566,12 @@ export class Orchestrateur {
     req.acceptees++;
     if (souffleur && (req.validation || p.reagit.N2 === 0)) { this.mettreEnAttente(item); return; }
     const rang = req.rang++;
-    // question au chat : les spectateurs tapent déjà pendant la question (anticipation ≤ 2 s, moitié de la frappe)
-    const anticipation = req.evenement === 'question_au_chat' ? Math.min(2000, this.delaiFrappe(p, v.texte) / 2) : 0;
+    // Les vrais spectateurs tapent pendant que le streamer parle : la première réponse sort dès qu'elle est prête,
+    // les suivantes s'étalent (≈ 0,9 s d'écart), et le délai humain simulé est plafonné à 1,8 s + 0,9 s par rang.
+    const humain = Math.min(this.delaiHumain(p, v.texte), 1800 + rang * 900);
     const tAff = souffleur
       ? Math.max(tPret + 100, req.tDecision + [1500, 4000, 7000, 9500, 12000][rang % 5])
-      : Math.max(req.tAsr + this.delaiHumain(p, v.texte) - anticipation, tPret + 100);
+      : Math.max(req.tAsr + humain, tPret + 100 + rang * 600);
     this.planifier(item, tAff);
   }
 

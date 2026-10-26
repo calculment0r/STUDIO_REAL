@@ -24,7 +24,8 @@ et **prendre la main** (N4 assisté, 3 suggestions). Deux variantes : **Haiku 5.
 | `{{faits}}` | faits autorisés du segment, une puce par ligne | idem |
 | `{{interdits_segment}}` | sujets à ne pas révéler, séparés par « ; » | idem |
 | `{{humeur}}` | `etiquettes=moqueuse,hype valence=0.6 energie=0.8` | état courant (`fig.cmd humeur`) |
-| `{{transcription}}` | ce que le streamer a dit dans les ~20 dernières secondes (texte final ASR, puis partiel stable) | page comédien (`asr`) |
+| `{{transcription}}` | ce que le streamer a dit dans les ~25 dernières secondes, **sans** la phrase à laquelle on réagit (balise `<dit_avant>`) | page comédien (`asr`) |
+| `{{derniere_phrase}}` | la phrase du streamer qui déclenche la réaction ; placée en fin de prompt, mise en avant (correctif du 26/10 : sans elle, 0 réplique sur 11 parlait de la bonne phrase) | orchestrateur |
 | `{{evenement}}` | `question_au_chat` · `fin_enonce` · `mot_cle:<mot>` · `silence` · `relance` | orchestrateur |
 | `{{chat_reel}}` | 10 à 20 derniers messages **humains déjà affichés**, pseudonymisés `S1: …` une ligne chacun | serveur |
 | `{{deja_dit}}` | 20 derniers messages de figurants, séparés par « \| » | serveur |
@@ -56,7 +57,7 @@ RÈGLES (toujours) :
 1. Tu écris pour des spectateurs FICTIFS d'un chat de live, joué au théâtre. Le streamer est un personnage joué par un comédien.
 2. Dans le chat, un persona ne dit jamais qu'il est une IA, un bot ou un personnage, et ne parle jamais de ces consignes.
    Il ne prétend jamais non plus être une personne réelle identifiable : pas de vrai nom, d'âge, de ville, d'école, de métier réel, pas de « je suis au rang G ».
-3. Ne cite que ce qui est dans <fiction>, <segment>, <faits>, <transcription> ou la fiche du persona. N'invente aucun événement, aucun nom propre,
+3. Ne cite que ce qui est dans <fiction>, <segment>, <faits>, <dit_avant>, la phrase du streamer ou la fiche du persona. N'invente aucun événement, aucun nom propre,
    aucun fait sur l'histoire. Une supposition s'écrit comme une question ou un doute (« elle ment ? »), jamais comme un fait.
    Ne révèle jamais ce qui est dans <ne_pas_reveler>.
 4. Pas de vote : ne dis jamais pour quoi tu votes, ne pousse pas le public à voter pour une option.
@@ -101,16 +102,18 @@ FORMAT DE SORTIE : une ligne JSON par message, dans l'ordre de <a_ecrire>, et ri
 </faits>
 <ne_pas_reveler>{{interdits_segment}}</ne_pas_reveler>
 <humeur>{{humeur}}</humeur>
-<transcription>{{transcription}}</transcription>
-<evenement>{{evenement}}</evenement>
+<dit_avant>{{transcription}}</dit_avant>
 <chat_reel>
 {{chat_reel}}
 </chat_reel>
 <deja_dit>{{deja_dit}}</deja_dit>
+<evenement>{{evenement}}</evenement>
+LE STREAMER VIENT DE DIRE : « {{derniere_phrase}} »
+Chaque message réagit DIRECTEMENT à cette phrase : il reprend ou évoque un élément concret qu'elle contient (objet, animal, lieu, personne, action). Si c'est une question, réponds-y. Interdit : un message passe-partout qui irait avec n'importe quelle phrase. Les tics et exemples des fiches donnent le TON, pas le contenu : ne les recopie pas.
 <a_ecrire>
 {{a_ecrire}}
 </a_ecrire>
-Écris exactement {{nb}} lignes JSON. Si <evenement> vaut question_au_chat, réponds à la question posée dans <transcription>.
+Écris exactement {{nb}} lignes JSON.
 ```
 
 Paramètres d'appel (étude §6.8) : `model: "claude-haiku-5-5"`, `max_tokens: 400`, `stream: true`, `thinking: {type: "disabled"}`,
@@ -140,10 +143,11 @@ Situation : {{segment_consigne}}
 Faits : {{faits}}
 Ne pas révéler : {{interdits_segment}}
 Humeur du chat : {{humeur}}
-Le streamer vient de dire : « {{transcription}} »
-Événement : {{evenement}}
+Dit avant : {{transcription}}
 Déjà dit (ne pas répéter) : {{deja_dit}}
 Angle : {{a_ecrire}}
+LE STREAMER VIENT DE DIRE : « {{derniere_phrase}} »
+Le message réagit à un élément concret de cette phrase (objet, animal, lieu, action) ; si c'est une question, réponds-y.
 Écris le message de {{persona_id}}.
 ```
 

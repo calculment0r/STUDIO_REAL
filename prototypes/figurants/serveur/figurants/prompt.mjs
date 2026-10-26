@@ -34,16 +34,18 @@ FORMAT DE SORTIE : une ligne JSON par message, dans l'ordre de <a_ecrire>, et ri
 </faits>
 <ne_pas_reveler>{{interdits_segment}}</ne_pas_reveler>
 <humeur>{{humeur}}</humeur>
-<transcription>{{transcription}}</transcription>
-<evenement>{{evenement}}</evenement>
+<dit_avant>{{transcription}}</dit_avant>
 <chat_reel>
 {{chat_reel}}
 </chat_reel>
 <deja_dit>{{deja_dit}}</deja_dit>
+<evenement>{{evenement}}</evenement>
+LE STREAMER VIENT DE DIRE : « {{derniere_phrase}} »
+Chaque message réagit DIRECTEMENT à cette phrase : il reprend ou évoque un élément concret qu'elle contient (objet, animal, lieu, personne, action). Si c'est une question, réponds-y. Interdit : un message passe-partout qui irait avec n'importe quelle phrase. Les tics et exemples des fiches donnent le TON, pas le contenu : ne les recopie pas.
 <a_ecrire>
 {{a_ecrire}}
 </a_ecrire>
-Écris exactement {{nb}} lignes JSON. Si <evenement> vaut question_au_chat, réponds à la question posée dans <transcription>.`,
+Écris exactement {{nb}} lignes JSON.`,
 };
 SECOURS['souffleur.haiku.user'] = SECOURS['n2.haiku.user'].replace('<evenement>{{evenement}}</evenement>', '<intention>{{intention}}</intention>')
   .replace(/Écris exactement[\s\S]*$/, 'Fais passer <intention> sans la recopier : chaque persona la formule à sa façon. Écris exactement {{nb}} lignes JSON.');
@@ -90,6 +92,7 @@ export function construirePrompt(banques, o) {
     interdits_segment: (o.segment?.interdits || []).map((x) => propre(x, 80)).join(' ; '),
     humeur: `etiquettes=${(h.etiquettes || []).map((x) => propre(x, 20)).join(',')} valence=${h.valence ?? 0} energie=${h.energie ?? 0.5}`,
     transcription: propre(o.transcription, 500),
+    derniere_phrase: propre(o.dernierePhrase, 300),
     evenement: o.evenement || 'fin_enonce',
     chat_reel: (o.chatReel || []).map((t, i) => `S${i + 1}: ${propre(t, 80)}`).join('\n'),
     deja_dit: (o.dejaDit || []).map((t) => propre(t, 60)).join(' | '),
