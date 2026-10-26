@@ -1,0 +1,72 @@
+/* ============================================================
+   SHOWRUNNER TOOLS — LE curseur du thème (input type=range)
+
+   Partout : le FADER DE CONSOLE d'ODIO, couché (Cal, 01/10 : « on veut
+   des sliders plus jolis comme on a dans ODIO… remplace-les partout dans
+   les onglets sauf ODIO, ne touche à rien »). Le modèle est le fader de
+   la console et du nodal d'ODIO (musique/nodal.css, .fader / .machine__fader) :
+   un rail creux arrondi (--panel3 sous un filet, un trait fin au milieu),
+   un chapeau plein à l'encre (--ink), rectangle aux coins doux, porté par
+   son ombre (--drop), une encoche au milieu.
+
+   ODIO aussi depuis le 06/10 (Cal : « je ne veux plus aucun de ces sliders
+   avec le rond tout simple ») : ses curseurs à lui sont le fader de la
+   console couché (musique/ui.js, fader({ couche: true })) ; ce qui reste de
+   natif chez lui (les Préférences, l'éditeur de thème) prend celui-ci —
+   plus de pouce rond nulle part.
+
+   Tout curseur natif du portail le prend, sans classe : juste par
+   construction. Chargé par commun/base.css (@import, en tête) — donc par
+   toute page du portail —, et directement par les pages qui gardent leurs
+   propres styles sans base.css (Movie Analysis, diarisation).
+
+   Posé sous :where() (spécificité nulle) : une variante voulue du thème
+   (la tête de la timeline .tl de base.css) le précise sans !important.
+   Chromium et WebKit : ::-webkit-slider-* ; Firefox : ::-moz-range-*
+   (MDN, ::-webkit-slider-thumb, ::-moz-range-thumb, ::-moz-range-progress).
+   Le focus : le contour de tous les champs (commun/base.css).
+   Jetons seulement (commun/tokens.css), les deux thèmes par eux.
+   ============================================================ */
+
+:where(input[type=range]) {
+  -webkit-appearance: none; appearance: none;
+  margin: 0; padding: 0; min-width: 0;
+  background: transparent; cursor: pointer; vertical-align: middle;
+}
+:where(input[type=range]:disabled) { opacity: .35; cursor: not-allowed; }
+
+/* ── le fader : partout ──────────────────────────────────── */
+:where(input[type=range]) { height: 22px; }
+
+/* le rail : creux, arrondi, un trait fin au milieu */
+:where(input[type=range])::-webkit-slider-runnable-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(var(--line), var(--line)) center / calc(100% - 8px) 2px no-repeat, var(--panel3);
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 2px var(--drop);
+}
+:where(input[type=range])::-moz-range-track {
+  height: 8px; border-radius: 999px;
+  background: linear-gradient(var(--line), var(--line)) center / calc(100% - 8px) 2px no-repeat, var(--panel3);
+  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 2px var(--drop);
+}
+:where(input[type=range])::-moz-range-progress { background: transparent; }
+
+/* le chapeau : plein, à l'encre, l'encoche au milieu, porté par son ombre */
+:where(input[type=range])::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 10px; height: 20px; margin-top: -6px; border: none; border-radius: var(--rs);
+  background: linear-gradient(to right, transparent 4px, var(--ink3) 4px 6px, transparent 6px), var(--ink);
+  box-shadow: 0 2px 6px var(--drop), inset 0 0 0 1px var(--line);
+  transition: transform .12s, background-color .12s;
+}
+:where(input[type=range])::-moz-range-thumb {
+  width: 10px; height: 20px; border: none; border-radius: var(--rs);
+  background: linear-gradient(to right, transparent 4px, var(--ink3) 4px 6px, transparent 6px), var(--ink);
+  box-shadow: 0 2px 6px var(--drop), inset 0 0 0 1px var(--line);
+  transition: transform .12s, background-color .12s;
+}
+/* sous la main : le chapeau se soulève un peu ; tenu : il s'enfonce */
+:where(input[type=range]:hover:not(:disabled))::-webkit-slider-thumb { transform: scaleY(1.08); }
+:where(input[type=range]:hover:not(:disabled))::-moz-range-thumb { transform: scaleY(1.08); }
+:where(input[type=range]:active:not(:disabled))::-webkit-slider-thumb { transform: scaleY(.94); }
+:where(input[type=range]:active:not(:disabled))::-moz-range-thumb { transform: scaleY(.94); }

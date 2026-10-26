@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr" data-appareil="mobile">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Banc d'essai — STUDIO_REAL P0.1</title>
+  <meta name="description" content="Teste ce que ton téléphone sait faire (écran, son, vibration, capteurs, caméra...) et partage le rapport.">
+  <meta name="theme-color" content="">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Banc d'essai">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="../../design/tokens.css">
+  <link rel="stylesheet" href="../../design/base.css">
+  <link rel="stylesheet" href="banc.css">
+</head>
+<body>
+  <main id="app">
+
+    <!-- Écran 1 : un seul geste débloque tout -->
+    <section id="accueil" class="accueil">
+      <p class="mono etiquette">STUDIO_REAL · prototype P0.1</p>
+      <h1 class="titre">Banc d'essai du téléphone</h1>
+      <p class="lead">Une trentaine de petits tests pour savoir ce que ton téléphone sait faire pendant un spectacle : couleurs, son, vibration, capteurs, caméra, notifications...</p>
+      <p class="lead">Ça dure environ 10 minutes. Rien n'est envoyé nulle part : à la fin, tu copies ou partages un rapport.</p>
+      <div class="avert" role="note">
+        <b>Lumière</b>
+        Certains tests font changer l'écran de couleur ou clignoter (3 fois par seconde au maximum). Un avertissement s'affiche avant. Saute-les si tu es sensible aux lumières vives.
+      </div>
+      <button id="go" class="btn go gros" type="button">Toucher pour commencer</button>
+      <p class="petit">Ce geste active le son, le plein écran, la veille bloquée et les capteurs de mouvement (ton téléphone peut demander ton accord).</p>
+      <button id="sans" class="btn ghost" type="button">Continuer sans rien autoriser</button>
+      <noscript><p class="avert">Cette page a besoin de JavaScript.</p></noscript>
+    </section>
+
+    <!-- Écran 2 : liste des tests, construite par banc.js -->
+    <section id="banc" hidden>
+      <header class="entete">
+        <div class="entete-titre">
+          <b>Banc d'essai</b>
+          <span id="progres" class="mono">0 test</span>
+        </div>
+        <span id="veille" class="mono puce" data-etat="non">veille libre</span>
+      </header>
+      <div id="contenu" class="contenu"></div>
+    </section>
+  </main>
+  <div id="statut" class="statut" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="banc.js"></script>
+</body>
+</html>

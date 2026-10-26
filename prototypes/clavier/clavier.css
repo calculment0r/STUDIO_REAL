@@ -1,0 +1,325 @@
+/* ============================================================
+   P0.2 - le clavier qui ne mange pas l'ecran
+   Aucune couleur en dur : tout passe par les variables de ../../design/tokens.css.
+   Mise en page : 3 zones dans une boite posee SUR le viewport visible
+   (hauteur et decalage poses par clavier.js depuis visualViewport) ;
+   repli CSS pur = 100dvh (Chrome Android avec interactive-widget=resizes-content).
+   ============================================================ */
+
+/* Chakra Petch n'est pas declaree par base.css : on la declare ici, depuis le depot. */
+@font-face {
+  font-family: 'Chakra Petch';
+  src: url('../../design/fonts/chakra-petch-light.ttf') format('truetype');
+  font-weight: 300 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+html, body {
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;                 /* aucun defilement de page */
+  overscroll-behavior: none;        /* ni rebond, ni tirer-pour-rafraichir */
+  touch-action: manipulation;       /* pas de zoom double-tap */
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+body { font-size: 14px; }
+
+/* ---------- la boite d'application ---------- */
+.k-app {
+  position: fixed;
+  left: 0; right: 0; top: 0;
+  height: 100vh;
+  height: var(--k-h, 100dvh);       /* = visualViewport.height quand le JS tourne */
+  transform: translate3d(0, var(--k-top, 0px), 0);   /* = visualViewport.offsetTop (iOS) */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.k-probe {                          /* sonde invisible : mesure 100dvh pour le panneau de debug */
+  position: fixed; left: 0; top: 0; width: 0;
+  height: 100vh; height: 100dvh;
+  visibility: hidden; pointer-events: none;
+}
+
+/* ---------- ZONE HAUTE ---------- */
+.k-top {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+}
+.k-consigne {
+  flex: 0 0 auto;
+  padding: var(--s3) var(--s4) var(--s2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+}
+.k-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  align-self: flex-start;
+  flex: 0 0 auto;
+  font-family: var(--f-mono);
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--or);
+}
+.k-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--or);
+  animation: k-blink 1.4s ease-in-out infinite;
+}
+.k-consigne-t {
+  margin: 0;
+  font-size: 19px; line-height: 1.22; font-weight: 500;
+  color: var(--ink);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  overflow: hidden;
+  transition: font-size .2s ease;
+}
+/* clavier ouvert : la consigne se COMPACTE en une ligne (elle ne disparait pas) */
+.kbd .k-consigne { flex-direction: row; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4); }
+.kbd .k-consigne-t { font-size: 13px; line-height: 1.3; -webkit-line-clamp: 1; flex: 1 1 auto; min-width: 0; color: var(--ink2); }
+
+.k-stage {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0 var(--s3) var(--s2);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--rl);
+  background-color: var(--panel);
+  background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+  background-size: 14px 14px;
+  isolation: isolate;
+}
+.k-stage::after {                   /* l'eclair d'une reaction forte */
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background: var(--hl-or);
+  opacity: 0; pointer-events: none;
+}
+.k-stage.flash::after { animation: k-flash .5s ease-out; }
+.k-stage-lbl {
+  position: absolute; left: 8px; top: 6px; z-index: 3;
+  font-family: var(--f-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink3);
+}
+.k-stage-empty {
+  position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 1;
+  padding: 0 var(--s5);
+  text-align: center; font-size: 12px; color: var(--ink3);
+  transition: opacity .3s ease;
+}
+.k-stage.used .k-stage-empty { opacity: 0; }
+
+.k-pop {                            /* un message "parti sur scene" */
+  position: absolute; z-index: 2;
+  max-width: calc(100% - 16px);
+  transform: translate(-50%, -50%) rotate(var(--r, 0deg));
+  padding: 6px 12px 7px;
+  border: 1px solid var(--line-cy);
+  border-radius: var(--rxl);
+  background: var(--panel3);
+  box-shadow: 0 6px 18px var(--drop);
+  font-size: 17px; line-height: 1.2; font-weight: 500; color: var(--ink);
+  overflow-wrap: anywhere;
+  animation: k-pop .46s cubic-bezier(.2, 1.7, .4, 1) both;
+}
+.k-pop b {
+  display: block;
+  font-family: var(--f-mono); font-size: 9px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--cy);
+}
+.k-pop.out { animation: k-out .5s ease-in forwards; }
+.k-float {
+  position: absolute; z-index: 2; bottom: 0; line-height: 1;
+  pointer-events: none; will-change: transform, opacity;
+  filter: drop-shadow(0 2px 6px var(--drop));
+}
+
+/* ---------- ZONE MILIEU : les 8 emojis ---------- */
+.k-react {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 3px;
+  padding: var(--s2) var(--s3);
+}
+.k-e {
+  position: relative;
+  height: 48px; min-width: 0; padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r3);
+  background: var(--panel);
+  font-size: 25px; line-height: 1;
+  touch-action: none;               /* l'appui long ne declenche ni defilement ni menu */
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform .42s ease-out, background-color .2s ease, border-color .2s ease;
+}
+.k-e.holding {                      /* la montee d'une reaction forte */
+  transform: scale(1.28);
+  background: var(--or-bg);
+  border-color: var(--line-or);
+  z-index: 1;
+}
+
+/* ---------- ZONE BASSE : collee au clavier ---------- */
+.k-bottom {
+  flex: 0 0 auto;
+  padding: var(--s3) var(--s3) calc(var(--s2) + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.kbd .k-bottom { padding-bottom: var(--s2); }      /* le clavier recouvre deja la zone de securite */
+
+.k-chips {
+  display: flex; gap: var(--s2);
+  margin: 0 calc(var(--s3) * -1) var(--s3);
+  padding: 0 var(--s3);
+  overflow-x: auto; overflow-y: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.k-chips::-webkit-scrollbar { display: none; }
+.k-chip {
+  flex: 0 0 auto;
+  height: 34px; padding: 0 14px;
+  border: 1px solid var(--line-cy);
+  border-radius: 999px;
+  background: var(--cy-bg);
+  color: var(--cy);
+  font-size: 14px; white-space: nowrap;
+  transition: background-color .15s ease;
+}
+.k-chip:active { background: var(--hl-cy); }
+
+.k-form { display: flex; gap: var(--s2); align-items: stretch; }
+.k-field { position: relative; flex: 1 1 auto; min-width: 0; }
+.k-field input {
+  display: block; width: 100%; height: 48px;
+  padding: 0 52px 0 var(--s4);
+  border: 1px solid var(--line-cy);
+  border-radius: var(--rxl);
+  background: var(--panel2);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 16px;                  /* >= 16px : Safari iOS ne zoome pas au focus */
+  -webkit-user-select: text; user-select: text;
+  -webkit-appearance: none; appearance: none;
+  transition: border-color .15s ease;
+}
+.k-field input::placeholder { color: var(--ink3); }
+.k-field input:focus, .k-field input:focus-visible { outline: none; border-color: var(--or); }
+.k-count {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  font-family: var(--f-mono); font-size: 10px; color: var(--ink3);
+  pointer-events: none;
+}
+.k-count.warn { color: var(--amb); }
+.k-count.max  { color: var(--or); }
+
+.k-send {
+  position: relative; overflow: hidden;
+  flex: 0 0 auto; min-width: 96px; height: 48px; padding: 0 var(--s5);
+  border: 0; border-radius: var(--rxl);
+  background: var(--or); color: var(--on-or);
+  font-size: 16px; font-weight: 600;
+  transition: transform .12s ease;
+}
+.k-send span { position: relative; z-index: 1; }
+.k-send:active { transform: scale(.96); }
+.k-send::after {                    /* le balayage de l'anti-spam : se vide en 2 s */
+  content: ""; position: absolute; inset: 0;
+  background: var(--dot-on-or);
+  transform-origin: right center; transform: scaleX(0);
+}
+.k-send.cooling::after { animation: k-cd 2s linear both; }
+.k-send.sent { animation: k-sent .35s ease-out; }
+
+.k-field.shake { animation: k-shake .32s ease-out; }
+
+.k-hint {
+  height: 16px; margin: var(--s1) 2px 0;
+  font-family: var(--f-mono); font-size: 10px; line-height: 16px; letter-spacing: .02em;
+  color: var(--ink3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.k-hint.ok  { color: var(--grn2); }
+.k-hint.err { color: var(--amb); }
+
+/* petits ecrans visibles (clavier + paysage) : on rend de la place au champ */
+.tiny .k-chips { display: none; }
+.tiny .k-hint { display: none; }
+.tiny .k-stage-lbl { display: none; }
+.micro .k-react { display: none; }
+.micro .k-consigne { display: none; }
+
+/* ---------- panneau de debogage ---------- */
+.k-dbg-btn {
+  position: absolute; z-index: 20;
+  right: calc(var(--s2) + env(safe-area-inset-right)); top: calc(var(--s2) + env(safe-area-inset-top));
+  height: 24px; padding: 0 8px;
+  border: 1px solid var(--line-amb); border-radius: var(--r3);
+  background: var(--veil); color: var(--amb);
+  font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em;
+}
+.k-dbg {
+  position: absolute; z-index: 19;
+  left: var(--s2); right: var(--s2);
+  top: calc(32px + env(safe-area-inset-top));
+  max-height: calc(100% - 44px - env(safe-area-inset-top));
+  display: flex; flex-direction: column;
+  border: 1px solid var(--line-amb); border-radius: var(--rl);
+  background: var(--veil);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font-family: var(--f-mono); font-size: 11px;
+  user-select: text; -webkit-user-select: text;
+}
+.k-dbg[hidden] { display: none; }
+.k-dbg-head {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; border-bottom: 1px solid var(--line);
+  color: var(--amb); text-transform: uppercase; letter-spacing: .08em; font-size: 10px;
+}
+.k-dbg-head button {
+  height: 22px; padding: 0 8px;
+  border: 1px solid var(--line-cy); border-radius: var(--r1);
+  color: var(--cy); font-family: var(--f-mono); font-size: 10px;
+}
+.k-dbg dl {
+  margin: 0; padding: 4px 10px 8px; overflow-y: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: auto 1fr; column-gap: var(--s3);
+}
+.k-dbg dt { color: var(--ink3); padding: 1px 0; }
+.k-dbg dd { margin: 0; padding: 1px 0; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.k-dbg dd.hot { color: var(--or); }
+
+/* ---------- animations ---------- */
+@keyframes k-pop   { from { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(.2); opacity: 0; }
+                     to   { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(1);  opacity: 1; } }
+@keyframes k-out   { to   { transform: translate(-50%, -80%) rotate(var(--r, 0deg)) scale(.9); opacity: 0; } }
+@keyframes k-flash { from { opacity: 1; } to { opacity: 0; } }
+@keyframes k-cd    { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes k-sent  { 0% { box-shadow: 0 0 0 0 var(--or-bg2); } 100% { box-shadow: 0 0 0 14px transparent; } }
+@keyframes k-shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); }
+                     60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes k-blink { 50% { opacity: .3; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .k-dot, .k-pop, .k-stage.flash::after, .k-send.sent, .k-field.shake { animation: none; }
+  .k-pop.out { animation: none; opacity: 0; }
+  .k-e { transition: none; }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Banc d'essai STUDIO_REAL",
+  "short_name": "Banc d'essai",
+  "description": "Prototype P0.1 : teste les capacités du téléphone.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone"
+}

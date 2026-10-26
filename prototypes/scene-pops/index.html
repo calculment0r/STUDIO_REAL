@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>P0.4 · Écran scène : pops et réactions</title>
+<meta name="description" content="Prototype P0.4 de STUDIO_REAL : vidéo de streamer et réactions du public en WebGL (PixiJS), sans liste de commentaires.">
+
+<!-- jetons et typographie du studio -->
+<link rel="stylesheet" href="../../design/tokens.css">
+<link rel="stylesheet" href="../../design/base.css">
+<link rel="stylesheet" href="scene.css">
+<!-- Chakra Petch (graisses 500 à 700) : repli sur le fichier local si le CDN est injoignable -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap">
+
+<!-- PixiJS v8 : version EXACTE épinglée, une seule fois, ici -->
+<script type="importmap">
+{ "imports": { "pixi.js": "https://cdn.jsdelivr.net/npm/pixi.js@8.14.3/dist/pixi.min.mjs" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="shake">
+    <div id="video-box">
+      <canvas id="backdrop" aria-label="Vidéo de remplacement"></canvas>
+      <video id="cam" playsinline muted></video>
+      <div id="live-badge">● EN DIRECT</div>
+      <div id="zone" data-edit="0"><span id="zone-label">ZONE PROTÉGÉE</span><i id="zone-handle"></i></div>
+    </div>
+    <div id="pixi"></div>
+  </div>
+
+  <div id="loading">Chargement de PixiJS…</div>
+
+  <div id="hud" aria-live="off">
+    <div id="fps">-- FPS</div>
+    <pre id="info"></pre>
+    <div id="status"></div>
+  </div>
+
+  <aside id="panel" aria-label="Régie">
+    <header>
+      <span class="ttl">Régie · P0.4</span>
+      <button id="panel-toggle" aria-expanded="true" aria-label="Replier la régie"><span class="chev"></span></button>
+    </header>
+    <div class="body">
+      <label class="sl">Débit entrant <output id="o-rate">20</output> msg/s
+        <input id="rate" type="range" min="1" max="60" value="20"></label>
+      <label class="sl">Plafond d'affichage <output id="o-cap">9</output> /s
+        <input id="cap" type="range" min="1" max="40" value="9"></label>
+
+      <div class="grp">Effets continus</div>
+      <div class="grid">
+        <button data-fx="pops" aria-pressed="true"><kbd>1</kbd> Pop</button>
+        <button data-fx="danmaku" aria-pressed="true"><kbd>2</kbd> Danmaku</button>
+        <button data-fx="fireworks" aria-pressed="true"><kbd>4</kbd> Feux d'emojis</button>
+        <button data-fx="hearts" aria-pressed="true"><kbd>5</kbd> Cœurs</button>
+        <button data-fx="gauge" aria-pressed="true"><kbd>6</kbd> Jauge de salle</button>
+      </div>
+      <div class="grp">Déclencheurs</div>
+      <div class="grid">
+        <button data-act="featured"><kbd>3</kbd> Vedette</button>
+        <button data-act="vote"><kbd>7</kbd> Vote</button>
+        <button data-act="burst"><kbd>8</kbd> Rafale d'emojis</button>
+        <button data-act="rocket"><kbd>9</kbd> Fusée</button>
+      </div>
+      <div class="grp">Gabarits</div>
+      <div class="grid three">
+        <button data-preset="calme"><kbd>Q</kbd> Calme</button>
+        <button data-preset="chat"><kbd>W</kbd> Chat</button>
+        <button data-preset="folie"><kbd>E</kbd> Folie</button>
+      </div>
+      <div class="grp">Écran</div>
+      <div class="grid">
+        <button id="btn-zone" data-act="zone" aria-pressed="false"><kbd>Z</kbd> Zone protégée</button>
+        <button id="btn-cam" data-act="cam" aria-pressed="false"><kbd>C</kbd> Caméra</button>
+        <button data-act="full"><kbd>F</kbd> Plein écran</button>
+        <button id="btn-pause" data-act="pause" aria-pressed="false"><kbd>␣</kbd> Pause public</button>
+      </div>
+      <p class="hint"><kbd>↑</kbd><kbd>↓</kbd> débit · <kbd>←</kbd><kbd>→</kbd> plafond · <kbd>P</kbd> replier · <kbd>H</kbd> tout masquer.<br>
+      Zone protégée : <kbd>Z</kbd>, puis glisser le cadre ou sa poignée.</p>
+    </div>
+  </aside>
+</div>
+<script type="module" src="scene.js"></script>
+</body>
+</html>

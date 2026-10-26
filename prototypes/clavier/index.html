@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<!-- interactive-widget=resizes-content : sur Chrome Android (108+) le clavier REDUIT la page (la mise en page se
+     recalcule au-dessus du clavier). iOS Safari ignore cette cle : repli par visualViewport dans clavier.js. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>Clavier P0.2</title>
+<link rel="stylesheet" href="../../design/tokens.css">
+<link rel="stylesheet" href="../../design/base.css">
+<link rel="stylesheet" href="clavier.css">
+</head>
+<body>
+
+<div class="k-app" id="app">
+
+  <!-- ZONE HAUTE : la consigne du moment + la scene simulee -->
+  <section class="k-top">
+    <header class="k-consigne" id="consigne">
+      <span class="k-tag"><i class="k-dot"></i>Chat ouvert</span>
+      <p class="k-consigne-t">Dis au streamer où il doit aller maintenant</p>
+    </header>
+    <div class="k-stage" id="stage" aria-label="Scène simulée">
+      <span class="k-stage-lbl">scène · simulée</span>
+      <span class="k-stage-empty" id="stageEmpty">Ton message et tes réactions apparaissent ici</span>
+    </div>
+  </section>
+
+  <!-- ZONE MILIEU : 8 emojis maison (tap = reaction, appui long = reaction forte) -->
+  <section class="k-react" id="react" aria-label="Réactions"></section>
+
+  <!-- ZONE BASSE : suggestions + champ colle au clavier -->
+  <footer class="k-bottom" id="bottom">
+    <div class="k-chips" id="chips" data-scroll aria-label="Suggestions rapides"></div>
+    <form class="k-form" id="form" autocomplete="off" novalidate>
+      <div class="k-field" id="field">
+        <input id="msg" name="msg" type="text" maxlength="80" enterkeyhint="send"
+               autocomplete="off" autocapitalize="sentences" spellcheck="false"
+               placeholder="Écris au streamer…" aria-label="Ton message (80 caractères max)">
+        <span class="k-count" id="count" aria-live="off">0/80</span>
+      </div>
+      <button class="k-send" id="send" type="submit" aria-label="Envoyer le message"><span>Envoyer</span></button>
+    </form>
+    <p class="k-hint" id="hint" role="status" aria-live="polite"></p>
+  </footer>
+
+  <!-- PANNEAU DE DEBOGAGE (replie par defaut ; ouvert d'office avec ?debug=1) -->
+  <button class="k-dbg-btn" id="dbgBtn" type="button" aria-expanded="false" aria-controls="dbg">DBG</button>
+  <aside class="k-dbg" id="dbg" hidden>
+    <div class="k-dbg-head">
+      <b>Débogage clavier</b>
+      <button type="button" id="dbgCopy">Copier</button>
+    </div>
+    <dl id="dbgList" data-scroll></dl>
+  </aside>
+
+</div>
+
+<div class="k-probe" id="probe" aria-hidden="true"></div>
+<script src="clavier.js"></script>
+</body>
+</html>
