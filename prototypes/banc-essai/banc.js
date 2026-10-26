@@ -5,7 +5,7 @@
 import { creerTests } from './tests.js';
 
 const CLE = 'banc-essai-p01-v1';
-const VERSION_BANC = '0.1.0';
+const VERSION_BANC = '0.1.1';
 
 /* ── petits outils ───────────────────────────────────────── */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -560,6 +560,29 @@ champ), **aperçus de rôle** côte à côte (téléphone · streamer · scène)
   déconnecté (plan B) · **PANIQUE active** (tout le cadre cerné rouge, « REPRENDRE » seul bouton actif) · poste
   **modérateur** (droits réduits : sans GO ni panique, raisons en ambre) · mode **répétition** (bots, ×10).
 
+#### Les data viz de la régie : partir de `7-dataviz-reference/narcisse-et-echo.html`
+Le package contient une page d'étude existante, « Narcisse et Écho », construite **avec les mêmes jetons Showrunner**.
+Ses visualisations sont **la référence** pour toutes les data viz de la régie. Ouvre la page, repère ses composants et
+**reprends-les depuis le code**, sans les redessiner :
+- les planches et les compteurs ;
+- les paliers et les profils ;
+- le graphe de fils qui relie des éléments à des phrases, où la couleur et la hauteur disent l'intensité ;
+- la timeline défilante des moments ;
+- le journal de construction ;
+- le canvas.
+
+À produire dans ce style :
+- participation en direct (présents, actifs, ayant répondu) ;
+- quorum du gate ;
+- votes qui bougent ;
+- carte de chaleur de la salle par zone ;
+- débit du chat et des réactions ;
+- énergie des capteurs (secousses) ;
+- latence et santé réseau par plateforme ;
+- scores et équipes ;
+- figurants IA : densité, humeur, part dans le chat ;
+- et, après la représentation, la courbe d'engagement segment par segment.
+
 ### P0-d — Les écrans téléphone du spectateur (390 × 844 ; sombre forcé en salle, clair pour avant/après)
 1. **Entrée (QR → pseudo)** : titre du spectacle (capitales larges), code K7Q2 en mono, champ pseudo 16 px (16 signes max),
    option zone / siège, bouton ENTRER. Erreurs : pseudo pris (suggestion « Zoé (2) »), pseudo refusé (filtre, sans moraliser),

@@ -628,9 +628,14 @@ export function creerTests(B) {
       async lancer(c) {
         off?.();
         if (!nav.mediaDevices?.getUserMedia) return ko('getUserMedia absent (HTTPS requis, ou navigateur intégré).');
+        // Une session audio en « playback » (test audioSession) interdit la capture sur iOS
+        // (InvalidStateError, vu sur iPhone le 26/10) : on repasse en « play-and-record » le temps du micro.
+        const session = nav.audioSession;
+        const typeAvant = session?.type;
+        if (session && typeAvant === 'playback') { try { session.type = 'play-and-record'; } catch {} }
         let flux;
         try { flux = await nav.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false }); }
-        catch (e) { return ko('Micro refusé ou indisponible : ' + erreur(e)); }
+        catch (e) { return ko('Micro refusé ou indisponible : ' + erreur(e) + (typeAvant ? ` (audioSession : ${typeAvant} → ${session.type})` : '')); }
         let ctx;
         try { ctx = await B.audioPret(); } catch (e) { flux.getTracks().forEach((t) => t.stop()); return ko(erreur(e)); }
         const src = ctx.createMediaStreamSource(flux);
