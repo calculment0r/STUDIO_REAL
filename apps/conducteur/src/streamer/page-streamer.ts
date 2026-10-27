@@ -12,11 +12,15 @@ const LIBELLES: Record<EtatEmetteur['phase'], string> = {
 
 export function pageStreamer(racine: HTMLElement, c: ConfigPage): void {
   const ice = lireIce(c.ice);
+  // L'émetteur appelle onEtat dès sa création, avant que les éléments de la page ci-dessous existent
+  // (ReferenceError « before initialization » vu sur le vrai essai) : on garde le dernier état et on rend quand tout est prêt.
+  let pageConstruite = false;
+  let dernierEtat: EtatEmetteur | null = null;
   const em = creerEmetteur({
     serveur: c.serveur, projet: c.projet, jeton: c.jeton, nom: 'Streamer',
     ...(c.canal ? { canal: c.canal } : {}), ...(ice ? { iceServers: ice } : {}), ...(c.relais ? { relais: true } : {}), ...(c.mire ? { mire: true } : {}),
     personne: identifiantStable(),
-    onEtat: (e) => rendre(e),
+    onEtat: (e) => { dernierEtat = e; if (pageConstruite) rendre(e); },
     onConsigne: (k) => montrerConsigne(k),
   });
   (window as unknown as { __emetteur: unknown }).__emetteur = em;   // inspection (tests, console)
@@ -48,6 +52,8 @@ export function pageStreamer(racine: HTMLElement, c: ConfigPage): void {
   racine.append(el('div', { class: 'st' }, video,
     el('header', { class: 'st-haut' }, pastille, infos), consigne,
     el('footer', { class: 'st-bas' }, btCamera, btDirect, btMicro), voile));
+  pageConstruite = true;
+  if (dernierEtat) queueMicrotask(() => rendre(dernierEtat as EtatEmetteur));
 
   async function demarrer() {
     voileBouton.disabled = true;

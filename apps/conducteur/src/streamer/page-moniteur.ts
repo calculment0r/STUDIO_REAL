@@ -7,6 +7,33 @@ import { mesurerLatenceMire } from '../flux/mire';
 import { noteQualite, resumeStats } from '../flux/stats';
 import type { ConfigPage } from './config';
 import { el } from './dom';
+import { ajouterTransport, demarrerRelais, publierScene } from '../sortie/relais';
+import { transportLocal } from '../sortie/canal';
+
+/**
+ * Barre « SCÈNE » : pilotage manuel de la sortie Écran scène ouverte dans ce même navigateur (canal local) —
+ * direct du streamer, vidéo précalculée (lue en local par la sortie, depuis son « Dossier médias »), noir, QR du public,
+ * avec le temps de fondu. Sert à l'essai réel de bascule direct ↔ vidéo ; en spectacle, c'est la conduite qui pilote.
+ */
+function barreScene(): HTMLElement {
+  ajouterTransport(transportLocal());
+  demarrerRelais();
+  const fondu = el('input', { type: 'range', min: 0, max: 2000, step: 100, value: 800, title: 'fondu (ms)' });
+  const fonduTxt = el('span', { class: 'pc-stats' }, '0,8 s');
+  fondu.addEventListener('input', () => { fonduTxt.textContent = (Number(fondu.value) / 1000).toFixed(1).replace('.', ',') + ' s'; });
+  const asset = el('input', { value: 'test-h3.mp4', size: 18, title: 'nom du fichier dans le dossier médias de la sortie' });
+  const boucle = el('input', { type: 'checkbox', checked: true });
+  const f = () => Number(fondu.value);
+  const bouton = (txt: string, cmd: () => void) => el('button', { class: 'pc-bouton', onclick: cmd }, txt);
+  return el('div', { class: 'pc-bas' },
+    el('span', { class: 'pc-stats' }, 'SCÈNE'),
+    bouton('DIRECT', () => publierScene({ scene: 'streamer' }, { fondu: f() })),
+    bouton('VIDÉO', () => publierScene({ scene: 'video', asset: asset.value.trim(), boucle: boucle.checked, cadrage: 'contain' }, { fondu: f() })),
+    asset, el('label', { class: 'pc-stats' }, boucle, ' boucle'),
+    bouton('NOIR', () => publierScene({ scene: 'noir' }, { fondu: f() })),
+    bouton('QR PUBLIC', () => publierScene({ scene: 'accueil-qr' }, { fondu: f() })),
+    el('span', { class: 'pc-stats' }, 'fondu'), fondu, fonduTxt);
+}
 
 const LIBELLES: Record<EtatFlux['phase'], string> = {
   connexion: 'connexion…', attente: 'attente du streamer', negociation: 'négociation…', direct: 'en direct', coupe: 'coupure, reprise…', arrete: 'arrêté',
@@ -33,9 +60,12 @@ export function pageMoniteur(racine: HTMLElement, c: ConfigPage): void {
 
   racine.append(el('div', { class: 'pc' },
     el('header', { class: 'pc-tete' }, el('h1', {}, 'FLUX STREAMER'), etatTxt, statsTxt, mireTxt, el('span', { style: 'flex:1' }), btSon, btPlein),
+    barreScene(),
     el('div', { class: 'pc-video' }, video),
     el('footer', { class: 'pc-bas' }, saisie, el('button', { class: 'pc-bouton', onclick: () => envoyer('info') }, 'Envoyer'), btUrgent, vu)));
 
+  // Déclaré AVANT le récepteur : il appelle onEtat dès sa création (ReferenceError « before initialization » sinon).
+  let flux: MediaStream | null = null;
   const r = creerRecepteurFlux({
     serveur: c.serveur, projet: c.projet, jeton: c.jeton, nom: 'Moniteur flux',
     ...(c.canal ? { canal: c.canal } : {}), ...(ice ? { iceServers: ice } : {}), ...(c.relais ? { relais: true } : {}),
@@ -49,7 +79,6 @@ export function pageMoniteur(racine: HTMLElement, c: ConfigPage): void {
     if (id) saisie.value = '';
   }
 
-  let flux: MediaStream | null = null;
   function rendre(e: EtatFlux) {
     etatTxt.textContent = LIBELLES[e.phase];
     etatTxt.dataset.phase = e.phase === 'direct' ? 'direct' : e.phase === 'attente' ? 'pret' : e.phase === 'coupe' ? 'reprise' : 'camera';

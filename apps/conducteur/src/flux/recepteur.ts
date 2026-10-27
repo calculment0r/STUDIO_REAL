@@ -77,6 +77,23 @@ const RELANCE_RECHERCHE_MS = 5000;
 const DELAI_COUPURE_MS = 4000;
 const DELAI_NEGOCIATION_MS = 12_000;
 
+/**
+ * Sur un même réseau local, Chrome masque par défaut l'adresse IP du PC derrière un nom « xxx.local » (mDNS) que
+ * l'iPhone ne sait souvent pas résoudre : la liaison reste bloquée en « négociation » (vu à l'essai réel du 27/10).
+ * Dès que la page a l'autorisation du micro, Chrome donne la vraie adresse locale. On la demande donc une fois
+ * (rien n'est enregistré, la piste est coupée aussitôt) ; si l'utilisateur refuse, on continue comme avant.
+ */
+let deblocage: Promise<void> | null = null;
+export function adressesLocalesReelles(): Promise<void> {
+  deblocage ??= (async () => {
+    try {
+      const flux = await navigator.mediaDevices?.getUserMedia({ audio: true });
+      flux?.getTracks().forEach((p) => p.stop());
+    } catch { /* refusé ou indisponible : adresses masquées, la liaison passera par STUN/TURN si possible */ }
+  })();
+  return deblocage;
+}
+
 export function creerRecepteurFlux(o: OptionsRecepteur): RecepteurFlux {
   const canal = o.canal ?? CANAL_DEFAUT;
   const flux = new MediaStream();
@@ -141,6 +158,7 @@ export function creerRecepteurFlux(o: OptionsRecepteur): RecepteurFlux {
     fermerPc();
     streamer = { session: m.de, personne: m.par, ...(streamer?.session === m.de && streamer.nom ? { nom: streamer.nom } : {}) };
     n = sig.n;
+    await adressesLocalesReelles();
     const ici = new RTCPeerConnection(config);
     pc = ici;
     changer('negociation', 'négociation avec le téléphone…');
