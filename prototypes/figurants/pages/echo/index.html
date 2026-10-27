@@ -39,6 +39,29 @@
       <div class="ec-vide" id="vide" hidden>Regarde la scène…</div>
       <div class="ec-envoye" id="envoye" aria-live="polite"></div>
       <nav class="ec-emojis" id="emojis" aria-label="Émojis"></nav>
+      <!-- bloc 1 : le flux Instagram (vidéo plein écran), puis abonne / désabonne et pourquoi -->
+      <section class="ec-flux" id="flux" hidden>
+        <video id="fluxVideo" playsinline webkit-playsinline preload="auto"></video>
+        <button class="ec-son" id="fluxSon" type="button" hidden>🔊 Toucher pour le son</button>
+      </section>
+      <section class="ec-choix" id="choix" hidden>
+        <div class="ec-choix-etape" id="choixEtape1">
+          <span class="et">@wakupjimmy</span>
+          <h2 class="ec-choix-q">Et toi ?</h2>
+          <button class="ec-choix-bt abonne" id="bAbonne" type="button">ABONNEZ-VOUS À SON COMPTE</button>
+          <button class="ec-choix-bt desabonne" id="bDesabonne" type="button">DÉSABONNEZ-VOUS DE SON COMPTE</button>
+        </div>
+        <form class="ec-choix-etape" id="choixEtape2" hidden autocomplete="off">
+          <span class="et" id="choixRappel"></span>
+          <h2 class="ec-choix-q" id="choixPourquoi">Pourquoi ?</h2>
+          <textarea class="champ ec-pourquoi" id="pourquoi" maxlength="160" rows="4" placeholder="Écris ta raison…"></textarea>
+          <button class="ec-choix-bt envoyer" id="bPourquoi" type="submit">ENVOYER</button>
+        </form>
+        <div class="ec-choix-etape" id="choixEtape3" hidden>
+          <h2 class="ec-choix-q">Merci.</h2>
+          <p class="ec-choix-merci">Ta réponse est sur le grand écran. Lève les yeux.</p>
+        </div>
+      </section>
       <!-- vote de la séquence 6 : par-dessus le fil, le temps du vote -->
       <section class="ec-vote" id="vote" hidden aria-live="polite">
         <span class="et ec-vote-et">Écho te demande ton avis</span>

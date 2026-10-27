@@ -49,6 +49,7 @@ function entrer() {
       if (m.t === 'welcome' && m.pseudo) $('moi').textContent = '@' + m.pseudo;
       else if (m.t === 'props') montrer(m);
       else if (m.t === 'vote') montrerVote(m);
+      else if (m.t === 'tel') montrerTel(m);
     },
   });
 }
@@ -136,3 +137,54 @@ function montrerVote(m) {
   });
   $('voteEtat').textContent = m.etat === 'revele' ? 'Résultat à l’écran' : choisi !== null ? 'Vote enregistré ✓' : ouvert ? 'Touche ta réponse' : '';
 }
+
+// ---------- bloc 1 : flux Instagram (vidéo plein écran), puis abonne / désabonne et pourquoi ----------
+// La régie choisit l'écran (message `tel`) ; à la fin de la vidéo, le téléphone passe seul au choix. La réponse écrite
+// part aussitôt sur le mur (`choix.reponse`).
+let etapeChoix = 0;            // 0 pas commencé · 1 le choix · 2 pourquoi · 3 merci
+let monChoix = null;
+const video = $('fluxVideo');
+
+function montrerTel(m) {
+  if (m.video && !video.getAttribute('src')) { video.src = m.video; video.load(); }   // préchargée dès l'entrée
+  if (m.mode === 'flux') { if (etapeChoix === 0) jouerFlux(); }
+  else if (m.mode === 'choix') { arreterFlux(); ouvrirChoix(); }
+  else { arreterFlux(); $('choix').hidden = true; }
+}
+function jouerFlux() {
+  $('choix').hidden = true; $('flux').hidden = false;
+  video.currentTime = 0;
+  video.muted = false;
+  video.play().catch(() => {           // pas de son sans geste (iPhone) : lecture muette + bouton
+    video.muted = true; $('fluxSon').hidden = false;
+    video.play().catch(() => { $('fluxSon').hidden = false; });
+  });
+}
+function arreterFlux() { $('flux').hidden = true; try { video.pause(); } catch (e) { /* rien */ } }
+$('fluxSon').addEventListener('click', () => { video.muted = false; video.play().catch(() => undefined); $('fluxSon').hidden = true; });
+video.addEventListener('ended', () => { arreterFlux(); ouvrirChoix(); });
+
+function ouvrirChoix() {
+  $('choix').hidden = false;
+  if (etapeChoix === 0) etapeChoix = 1;
+  for (const n of [1, 2, 3]) $('choixEtape' + n).hidden = n !== etapeChoix;
+}
+function choisir(c) {
+  monChoix = c;
+  if (ws) ws.envoyer({ t: 'choix.reponse', choix: c }, true);
+  navigator.vibrate?.(30);
+  $('choixRappel').textContent = c === 'abonne' ? 'tu t’abonnes' : 'tu te désabonnes';
+  $('choixPourquoi').textContent = c === 'abonne' ? 'Pourquoi tu t’abonnes ?' : 'Pourquoi tu te désabonnes ?';
+  etapeChoix = 2; ouvrirChoix();
+  setTimeout(() => $('pourquoi').focus(), 50);
+}
+$('bAbonne').addEventListener('click', () => choisir('abonne'));
+$('bDesabonne').addEventListener('click', () => choisir('desabonne'));
+$('choixEtape2').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const texte = $('pourquoi').value.trim();
+  if (!texte || !ws || !monChoix) return;
+  ws.envoyer({ t: 'choix.reponse', choix: monChoix, texte }, true);
+  $('pourquoi').blur();
+  etapeChoix = 3; ouvrirChoix();
+});

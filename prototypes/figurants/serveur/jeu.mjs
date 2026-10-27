@@ -17,6 +17,8 @@ export class Jeu {
     this.moderateur = moderateur; this.journal = journal; this.banques = banques;
     this.fichierPropositions = fichierPropositions;
     this.fichierVotes = fichierVotes;               // votes.json : questions du vote truqué (relu à chaque commande)
+    this.tel = { mode: 'phrases', depuis: Date.now() };   // écran des téléphones : phrases | flux (vidéo Insta) | choix (abonne / désabonne + pourquoi)
+    this.choixFaits = new Map();                    // clé client → 'abonne' | 'desabonne'
     this.vote = null;                               // vote en cours : { numero, etat, q, comptes, debut, reels: Map(cle → index) }
     this.minuteurVote = null;   // propositions.json : phrases et émojis à toucher, par segment (relu à chaque changement)
     this.jetonRegie = jetonRegie;
@@ -176,6 +178,43 @@ export class Jeu {
     this.diffuserVote();
   }
 
+  /** Écran des téléphones (bloc 1 du déroulé) : la vidéo du flux est servie par le serveur depuis medias-locales/. */
+  vueTel() { return { t: 'tel', mode: this.tel.mode, depuis: this.tel.depuis, video: '/medias-locales/flux_insta_jim.mp4' }; }
+  statChoix() {
+    let abonne = 0, desabonne = 0;
+    for (const v of this.choixFaits.values()) if (v === 'abonne') abonne++; else desabonne++;
+    return { t: 'choix.stat', abonne, desabonne };
+  }
+
+  _telCmd(c, m) {
+    if (c.role !== 'regie') return;
+    const mode = String(m.mode || '');
+    if (!['phrases', 'flux', 'choix'].includes(mode)) return;
+    this.tel = { mode, depuis: Date.now() };
+    this.journal.ecrire({ e: 'tel_cmd', mode });
+    this.journalRegie('téléphones : ' + mode);
+    this.versRole('telephone', this.vueTel());
+    this.versRegie(this.vueTel());
+  }
+
+  /** Abonne / désabonne + pourquoi : la réponse part AUSSITÔT sur le mur (plus grosse, comme tout message de spectateur). */
+  _choixReponse(c, m) {
+    if (c.role !== 'telephone') return;
+    const choix = m.choix === 'abonne' ? 'abonne' : m.choix === 'desabonne' ? 'desabonne' : null;
+    if (!choix) return;
+    this.choixFaits.set(c.cle, choix);
+    this.versRegie(this.statChoix());
+    const texte = typeof m.texte === 'string' ? m.texte.trim().slice(0, 160) : '';
+    if (!texte) return;
+    const t = Date.now();
+    c.nMsg = c.nMsg.filter((x) => t - x < 10_000);
+    if (c.nMsg.length >= 8) return;
+    c.nMsg.push(t);
+    const publie = this.diffuserChat({ pseudo: c.pseudo, couleur: c.couleur, texte: (choix === 'abonne' ? '✅ abonné · ' : '🚫 désabonné · ') + texte,
+      origine: 'humain', pid: null, ref: 'choix', fournisseur: 'humain', t: { recu: t } }, { figurant: false });
+    if (!publie) this.journalRegie(`réponse de ${c.pseudo} refusée par le filtre`);
+  }
+
   _voteChoix(c, m) {
     const v = this.vote;
     if (c.role !== 'telephone' || !v || v.etat !== 'compte' || Number(m.numero) !== v.numero) return;
@@ -245,6 +284,8 @@ export class Jeu {
       case 'fig.valide': return this._valide(c, m);
       case 'vote.cmd': return this._voteCmd(c, m);
       case 'vote.choix': return this._voteChoix(c, m);
+      case 'tel.cmd': return this._telCmd(c, m);
+      case 'choix.reponse': return this._choixReponse(c, m);
       case 'diag':                                          // diagnostic de la page comédien (micro, moteur audio)
         if (c.role !== 'comedien') return;
         this.journal.ecrire({ e: 'diag_client', etape: String(m.etape || '').slice(0, 40), detail: JSON.stringify(m.detail ?? null).slice(0, 400) });
@@ -277,7 +318,8 @@ export class Jeu {
     const historique = this.historique.slice(-30).map((x) => this.vue(x, role));
     this.envoyer(c, { t: 'welcome', ts: Date.now(), etat: this.etatPour(role), historique, ...(role === 'telephone' ? { pseudo: c.pseudo } : {}),
       ...(role === 'comedien' ? { asr_serveur: !!this.asrUrl } : {}) });
-    if (role === 'telephone') this.envoyer(c, this.propositions());
+    if (role === 'telephone') { this.envoyer(c, this.propositions()); this.envoyer(c, this.vueTel()); }
+    if (role === 'regie') { this.envoyer(c, this.vueTel()); this.envoyer(c, this.statChoix()); }
     if (this.vote && ['telephone', 'chat', 'ministre', 'regie'].includes(role)) this.envoyer(c, this.vueVote(role, c));   // vote en cours (reconnexion)
   }
 

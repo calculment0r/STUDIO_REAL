@@ -73,6 +73,8 @@ const ws = connecter({
       case 'fig.attente': recevoirAttente(m); break;
       case 'journal': journal(m.ligne, m.ts, false); break;
       case 'vote': recevoirVote(m); break;
+      case 'tel': $('telEtat').textContent = { phrases: 'fil de phrases', flux: 'flux Insta', choix: 'abonne / désabonne' }[m.mode] || m.mode; break;
+      case 'choix.stat': $('choixStat').textContent = `abonnés ${m.abonne} · désabonnés ${m.desabonne}`; break;
       default: break;
     }
   },
@@ -535,3 +537,12 @@ function recevoirVote(m) {
   });
   if (m.resultat) d.appendChild(el('p', 'vt-res', m.resultat));
 }
+
+// ---------- écran des téléphones (bloc 1) : flux Insta, abonne / désabonne + pourquoi, fil de phrases ----------
+function telCmd(mode) {
+  const envoye = ws.envoyer({ t: 'tel.cmd', mode }, true);
+  journal('→ téléphones : ' + mode + (envoye ? '' : ' (en file : hors ligne)'), Date.now(), true);
+}
+$('bTelFlux').addEventListener('click', () => telCmd('flux'));
+$('bTelChoix').addEventListener('click', () => telCmd('choix'));
+$('bTelPhrases').addEventListener('click', () => telCmd('phrases'));

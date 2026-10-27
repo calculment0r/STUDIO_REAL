@@ -68,7 +68,8 @@ const MIME = {
 };
 // Jamais servis : fichiers cachés (.git, .env…), journaux, dépendances.
 const INTERDITS = [/(^|\/)\.[^/]/, /^prototypes\/figurants\/serveur\/(journaux|node_modules)(\/|$)/, /(^|\/)node_modules(\/|$)/];
-const AUTORISES = [/^prototypes\/figurants\/pages\//, /^packages\/theme\//];
+// + les vidéos et images du spectacle posées dans medias-locales/ (hors git), jamais les sons ni les autres fichiers
+const AUTORISES = [/^prototypes\/figurants\/pages\//, /^packages\/theme\//, /^medias-locales\/[^/]+\.(mp4|jpg|jpeg|png|webp)$/i];
 let racineReelle = RACINE;
 try { racineReelle = fs.realpathSync(RACINE); } catch { /* rien */ }
 
@@ -108,9 +109,25 @@ function servir(req, res) {
 
 function envoyerFichier(req, res, fichier, st) {
   const type = MIME[path.extname(fichier).toLowerCase()] || 'application/octet-stream';
-  res.writeHead(200, { 'content-type': type, 'content-length': st.size, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
+  if (envoyerPlage(req, res, fichier, st, type)) return;
+  res.writeHead(200, { 'content-type': type, 'content-length': st.size, 'accept-ranges': 'bytes', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
   if (req.method === 'HEAD') return res.end();
   fs.createReadStream(fichier).on('error', () => res.destroy()).pipe(res);
+}
+
+/** Vidéo servie par plages (Range) : Safari sur iPhone refuse de lire une vidéo sans elles. */
+function envoyerPlage(req, res, fichier, st, type) {
+  const plage = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+  if (!plage || (!plage[1] && !plage[2])) return false;
+  let debut = plage[1] ? Number(plage[1]) : st.size - Number(plage[2]);
+  let fin = plage[1] && plage[2] ? Number(plage[2]) : st.size - 1;
+  debut = Math.max(0, debut); fin = Math.min(st.size - 1, fin);
+  if (debut > fin) { res.writeHead(416, { 'content-range': `bytes */${st.size}` }); res.end(); return true; }
+  res.writeHead(206, { 'content-type': type, 'content-length': fin - debut + 1, 'content-range': `bytes ${debut}-${fin}/${st.size}`,
+    'accept-ranges': 'bytes', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
+  if (req.method === 'HEAD') { res.end(); return true; }
+  fs.createReadStream(fichier, { start: debut, end: fin }).on('error', () => res.destroy()).pipe(res);
+  return true;
 }
 
 const serveur = http.createServer(servir);
