@@ -1,0 +1,9 @@
+
+# Design Claude Design : police sans licence connue et moteur de l outil de design, gardés en local
+conception/conducteur/source/uploads/
+conception/conducteur/source/support.js
+conception/conducteur/Studio Real Conducteur (statique).html
+node_modules/
+dist/
+.wrangler/
+.dev.vars

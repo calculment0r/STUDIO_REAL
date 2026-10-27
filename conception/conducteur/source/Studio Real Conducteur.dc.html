@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Azeret+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="studio-real/blocs.js"></script>
+<script src="studio-real/conducteur-core.js"></script>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a0d0b"></rect><rect x="22" y="30" width="24" height="16" rx="3" fill="#e59578"></rect><rect x="54" y="30" width="24" height="16" rx="3" fill="#2f6b4a"></rect><path d="M46 38 H54" stroke="#b9cfd8" stroke-width="2"></path><rect x="22" y="60" width="56" height="6" rx="2" fill="#d47a5c"></rect><rect x="49" y="54" width="2" height="18" fill="#e0674a"></rect></svg></template>
+<style>
+@font-face{font-family:'Venus Rising';src:url('uploads/Venus Rising Rg.otf') format('opentype');font-display:swap}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#0a0d0b;overflow:hidden}
+a{color:#e0674a}a:hover{color:#f0b49b}
+input::placeholder{color:var(--ink3)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(var(--lr),.22);border-radius:4px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(var(--lr),.4);background-clip:padding-box}
+::-webkit-scrollbar-corner{background:transparent}
+[data-theme="dark"]{--bg:#0a0d0b;--tile:#0f1311;--tile2:#171d1a;--well2:#070a08;--ink:#e6eae7;--ink2:#a3aea8;--ink3:#7f8b86;--lr:185,207,216;--cy:#b9cfd8;--ort:#e0674a;--gt:#3f9a6a;--gdeep:#1a3f2c;--gink:#cfe3d6}
+[data-theme="light"]{--bg:#e9e8e2;--tile:#f5f4f0;--tile2:#e2e1da;--well2:#dcdbd3;--ink:#141a17;--ink2:#3a4440;--ink3:#59635e;--lr:24,34,29;--cy:#2c5363;--ort:#b8492e;--gt:#24613f;--gdeep:#1a3f2c;--gink:#e6f1ea}
+@keyframes srp{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes srmq{0%,18%{transform:translateX(0)}82%,100%{transform:translateX(-50%)}}
+</style>
+</helmet>
+<div data-theme="{{ themeAttr }}" style="height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-family:'Chakra Petch',sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none;position:relative">
+  <sc-if value="{{ liveOn }}" hint-placeholder-val="{{ false }}"><span style="position:fixed;inset:0;pointer-events:none;z-index:200;box-shadow:inset 0 0 0 3px #c8311f"></span><span style="position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:201;pointer-events:none;height:16px;padding:0 10px;border-radius:0 0 6px 6px;background:#c8311f;color:#fff;display:flex;align-items:center;gap:6px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.2em"><span style="width:6px;height:6px;border-radius:50%;background:#fff;animation:srp 1.4s infinite"></span>EN LECTURE</span></sc-if>
+  <header style="flex:none;height:56px;display:flex;align-items:center;gap:8px;padding:0 12px 0 34px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.12);overflow:hidden">
+    <div style="display:flex;align-items:center;gap:10px;flex:none">
+      <span style="width:28px;height:28px;border-radius:7px;background:var(--ort);display:flex;align-items:center;justify-content:center"><span style="width:9px;height:9px;border-radius:2px;background:#170c08"></span></span>
+      <span style="display:flex;flex-direction:column;gap:5px">
+        <span style="font-family:'Venus Rising',sans-serif;font-size:12px;letter-spacing:.12em;line-height:1">STUDIO REAL</span>
+        <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink3)">conducteur du spectacle</span>
+      </span>
+    </div>
+    <sc-if value="{{ showCrumb }}" hint-placeholder-val="{{ true }}">
+      <nav style="display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;white-space:nowrap;font-size:12px;color:var(--ink2);padding-left:12px;box-shadow:inset 1px 0 0 rgba(var(--lr),.12)">
+        <span>{{ crumbAct }}</span><span style="color:var(--ink3)">›</span><span>{{ crumbEv }}</span><span style="color:var(--ink3)">›</span><span style="color:var(--ort);font-weight:600">{{ crumbSt }}</span>
+      </nav>
+    </sc-if>
+    <div style="flex:1 1 0;min-width:0"></div>
+    <div style="display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);flex:none">
+      <sc-for list="{{ viewBtns }}" as="vb" hint-placeholder-count="3"><span onClick="{{ vb.go }}" title="{{ vb.tip }}" style="{{ vb.st }}"><svg width="14" height="14" viewBox="0 0 16 16"><path d="{{ vb.g }}" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path></svg></span></sc-for>
+    </div>
+    <div style="display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);flex:none">
+      <sc-for list="{{ modeBtns }}" as="mb" hint-placeholder-count="2"><span onClick="{{ mb.go }}" title="{{ mb.tip }}" style="{{ mb.st }}">{{ mb.t }}</span></sc-for>
+    </div>
+    <sc-if value="{{ hdSm }}" hint-placeholder-val="{{ true }}"><span onClick="{{ toggleLock }}" title="{{ lockTip }}" style="{{ lockSt }}"><svg width="11" height="12" viewBox="0 0 11 12"><rect x="1" y="5" width="9" height="6.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"></rect><path d="{{ lockG }}" fill="none" stroke="currentColor" stroke-width="1.2"></path></svg><sc-if value="{{ hdWide }}" hint-placeholder-val="{{ true }}"><span>SCÈNE</span></sc-if></span></sc-if>
+    <sc-if value="{{ hdWide }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:1px;padding:2px;border-radius:8px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);flex:none">
+      <span onClick="{{ undo }}" title="Annuler · Ctrl+Z" style="{{ undoSt }}">↶</span>
+      <span style="font-family:'Venus Rising',sans-serif;font-size:8px;color:var(--ink3);display:flex;align-items:center;justify-content:center;min-width:18px">{{ histTxt }}</span>
+      <span onClick="{{ redo }}" title="Refaire · Ctrl+Y" style="{{ redoSt }}">↷</span>
+    </div></sc-if>
+    <div style="display:flex;align-items:center;gap:6px;flex:none">
+      <span onClick="{{ reset }}" title="Revenir au début" style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.16);color:var(--ink2)" style-hover="color:var(--ink);background:var(--tile2)"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1.5" width="1.6" height="9" fill="currentColor"></rect><path d="M11 1.5 L4 6 L11 10.5 Z" fill="currentColor"></path></svg></span>
+      <span onClick="{{ togglePlay }}" title="Lecture / pause · espace" style="{{ playSt }}">
+        <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="1.5" width="2.6" height="9" fill="currentColor"></rect><rect x="7.4" y="1.5" width="2.6" height="9" fill="currentColor"></rect></svg></sc-if>
+        <sc-if value="{{ paused }}" hint-placeholder-val="{{ true }}"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2.5 1.2 L11 6 L2.5 10.8 Z" fill="currentColor"></path></svg></sc-if>
+      </span>
+      <sc-if value="{{ hdMid }}" hint-placeholder-val="{{ true }}"><div style="display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14)">
+        <sc-for list="{{ speedBtns }}" as="spb" hint-placeholder-count="3"><span onClick="{{ spb.go }}" style="{{ spb.st }}">{{ spb.t }}</span></sc-for>
+      </div></sc-if>
+      <div style="display:flex;align-items:center;gap:7px;padding:0 11px;height:34px;border-radius:7px;background:var(--well2);box-shadow:inset 0 0 0 1px rgba(var(--lr),.12)">
+        <span style="font-family:'Venus Rising',sans-serif;font-size:16px;color:var(--cy);letter-spacing:.04em;width:68px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ tNow }}</span>
+        <span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.12em;color:var(--ink3);width:50px;white-space:nowrap">/ {{ tTot }}</span>
+      </div>
+    </div>
+    <span onClick="{{ doGo }}" onPointerEnter="{{ goIn }}" onPointerLeave="{{ goOut }}" title="Top régie · touche G" style="{{ goSt }}">{{ goTxt }}</span>
+    <sc-if value="{{ hdMid }}" hint-placeholder-val="{{ true }}"><span onClick="{{ openSearch }}" title="Rechercher · Ctrl+K" style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.16);color:var(--ink2);flex:none" style-hover="color:var(--ink);background:var(--tile2)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="6" cy="6" r="4"></circle><path d="M9 9l3.5 3.5"></path></svg></span>
+    <span onClick="{{ togglePup }}" title="Pupitre de représentation · touche P" style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.16);color:var(--ink2);flex:none" style-hover="color:var(--ink);background:var(--tile2)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2.5" width="11" height="7" rx="1"></rect><path d="M4.5 12h5M7 9.5V12"></path></svg></span>
+    <span onClick="{{ toggleHelp }}" title="Raccourcis · touche ?" style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.16);color:var(--ink2);flex:none;font-family:'Venus Rising',sans-serif;font-size:11px" style-hover="color:var(--ink);background:var(--tile2)">?</span></sc-if>
+    <span onClick="{{ toggleFs }}" title="{{ fsTip }}" style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.16);color:var(--ink2);flex:none" style-hover="color:var(--ink);background:var(--tile2)">
+      <sc-if value="{{ fsOff }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.5 5 V1.5 H5"></path><path d="M9 1.5 H12.5 V5"></path><path d="M12.5 9 V12.5 H9"></path><path d="M5 12.5 H1.5 V9"></path></svg></sc-if>
+      <sc-if value="{{ fsOn }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M5 1.5 V5 H1.5"></path><path d="M12.5 5 H9 V1.5"></path><path d="M9 12.5 V9 H12.5"></path><path d="M1.5 9 H5 V12.5"></path></svg></sc-if>
+    </span>
+    <span onClick="{{ toggleTheme }}" title="Thème clair / sombre" style="width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.16);color:var(--ink2);flex:none" style-hover="color:var(--ink);background:var(--tile2)"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" stroke-width="1.2"></circle><path d="M7 1.8 A5.2 5.2 0 0 1 7 12.2 Z" fill="currentColor"></path></svg></span>
+  </header>
+  <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+    <div style="{{ topSt }}">
+      <div ref="{{ boardRef }}" onPointerDown="{{ boardDown }}" onDoubleClick="{{ boardDbl }}" onContextMenu="{{ boardCtx }}" style="{{ boardSt }}">
+        <div style="{{ gridSt }}"></div>
+        <sc-for list="{{ frames }}" as="fr" hint-placeholder-count="3">
+          <div style="{{ fr.st }}">
+            <div style="{{ fr.hdSt }}">
+              <span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink3);white-space:nowrap">{{ fr.tag }}</span>
+              <span style="{{ fr.tSt }}">{{ fr.name }}</span>
+            </div>
+            <sc-if value="{{ fr.live }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:0;top:-26px;font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.18em;color:var(--gink);background:var(--gdeep);padding:5px 8px;border-radius:5px">EN COURS</span></sc-if>
+          </div>
+        </sc-for>
+        <sc-for list="{{ wires }}" as="wr" hint-placeholder-count="0">
+          <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible"><path d="{{ wr.d }}" style="{{ wr.st }}"></path></svg>
+        </sc-for>
+        <sc-for list="{{ wdots }}" as="wd" hint-placeholder-count="0"><span style="{{ wd }}"></span></sc-for>
+        <sc-if value="{{ lkOn }}" hint-placeholder-val="{{ false }}">
+          <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible"><path d="{{ lkD }}" style="fill:none;stroke:#e0674a;stroke-width:1.5;stroke-dasharray:5 4"></path></svg>
+        </sc-if>
+        <sc-for list="{{ bGates }}" as="bgt" hint-placeholder-count="0">
+          <div data-ui="1" onPointerDown="{{ bgt.pick }}" style="{{ bgt.st }}">
+            <span style="{{ bgt.dia }}"></span>
+            <sc-if value="{{ bgt.showLab }}" hint-placeholder-val="{{ true }}"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;background:var(--bg);padding:3px 5px;border-radius:4px">{{ bgt.lab }}</span></sc-if>
+          </div>
+        </sc-for>
+        <sc-for list="{{ nodes }}" as="nd" hint-placeholder-count="0">
+          <sc-if value="{{ nd.lblOn }}" hint-placeholder-val="{{ false }}"><span style="{{ nd.lblSt }}">{{ nd.name }}</span></sc-if>
+          <div data-node="1" data-key="{{ nd.key }}" onPointerUp="{{ nd.up }}" style="{{ nd.box }}">
+            <div style="{{ nd.inner }}">
+              <div onPointerDown="{{ nd.grab }}" style="height:56px;display:flex;align-items:center;gap:10px;padding:0 14px 0 16px;cursor:grab;position:relative">
+                <span style="{{ nd.dotSt }}"></span>
+                <span style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1">
+                  <sc-if value="{{ nd.showName }}" hint-placeholder-val="{{ true }}"><span style="{{ nd.nameSt }}"><span style="{{ nd.mqSt }}">{{ nd.nameTxt }}</span></span></sc-if>
+                  <sc-if value="{{ nd.showBody }}" hint-placeholder-val="{{ true }}"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ nd.sub }}</span></sc-if>
+                </span>
+                <sc-if value="{{ nd.showBody }}" hint-placeholder-val="{{ true }}"><span style="{{ nd.durSt }}">{{ nd.durTxt }}</span></sc-if>
+                <span style="position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(var(--lr),.07)"><span style="{{ nd.progSt }}"></span></span>
+              </div>
+              <sc-if value="{{ nd.showBody }}" hint-placeholder-val="{{ true }}">
+                <div style="margin:6px 12px 0;height:92px;border-radius:7px;background:var(--well2);overflow:hidden">
+                  <canvas data-pk="{{ nd.key }}" width="432" height="184" style="width:216px;height:92px;display:block"></canvas>
+                </div>
+                <sc-if value="{{ nd.near }}" hint-placeholder-val="{{ false }}">
+                  <div style="height:64px;display:flex;gap:10px;padding:10px 14px 0">
+                    <sc-for list="{{ nd.knobs }}" as="ndk" hint-placeholder-count="3">
+                      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;width:60px">
+                        <span onPointerDown="{{ ndk.grab }}" style="position:relative;width:32px;height:32px;display:block;cursor:ns-resize;touch-action:none">
+                          <svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+                            <circle cx="20" cy="20" r="19" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="0.01 4.97" style="stroke:rgba(var(--lr),.4)"></circle>
+                            <circle cx="20" cy="20" r="14.5" style="fill:var(--tile2)"></circle>
+                            <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-dasharray="68.3 200" transform="rotate(135 20 20)" style="stroke:rgba(var(--lr),.14)"></circle>
+                            <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="{{ ndk.dash }}" transform="rotate(135 20 20)" style="{{ ndk.arc }}"></circle>
+                          </svg>
+                          <span style="{{ ndk.ptr }}"></span>
+                        </span>
+                        <span style="font-size:10.5px;font-weight:600;color:var(--ink);line-height:1;white-space:nowrap">{{ ndk.disp }}</span>
+                        <span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;white-space:nowrap">{{ ndk.lab }}</span>
+                      </span>
+                    </sc-for>
+                  </div>
+                  <div style="padding:8px 14px 0;display:flex;flex-direction:column;gap:3px;height:72px;overflow:hidden">
+                    <span style="font-family:'Azeret Mono',monospace;font-size:6.5px;letter-spacing:.16em;color:var(--ink3);white-space:nowrap">SORTIES · {{ nd.outsHint }}</span>
+                    <sc-for list="{{ nd.outs }}" as="ndo" hint-placeholder-count="1"><span onPointerDown="{{ ndo.pick }}" style="display:flex;align-items:center;gap:6px;height:16px;cursor:pointer"><span style="font-family:'Venus Rising',sans-serif;font-size:8px;color:var(--ink3);width:10px">{{ ndo.no }}</span><span style="{{ ndo.dot }}"></span><span style="flex:1;min-width:0;font-size:10.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ndo.to }}</span><span style="font-family:'Azeret Mono',monospace;font-size:6.5px;letter-spacing:.08em;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px;text-transform:uppercase">{{ ndo.rule }}</span></span></sc-for>
+                  </div>
+                </sc-if>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+        <sc-for list="{{ chips }}" as="ch" hint-placeholder-count="0">
+          <div data-ui="1" onPointerDown="{{ ch.pick }}" title="Cliquer pour régler la condition" style="{{ ch.st }}">
+            <sc-if value="{{ ch.hasOrd }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Venus Rising',sans-serif;font-size:7px;letter-spacing:.14em;color:var(--ort)">{{ ch.ord }}</span></sc-if>
+            <sc-if value="{{ ch.multi }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.2em;color:var(--ink3);text-transform:uppercase">{{ ch.mode }}</span></sc-if>
+            <sc-for list="{{ ch.lines }}" as="chl" hint-placeholder-count="1">
+              <span style="display:flex;align-items:center;gap:6px">
+                <span style="{{ chl.dot }}"></span>
+                <span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);line-height:1.4">{{ chl.txt }}</span>
+                <sc-if value="{{ chl.hasVal }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Venus Rising',sans-serif;font-size:8px;color:var(--cy)">{{ chl.val }}</span></sc-if>
+              </span>
+            </sc-for>
+          </div>
+        </sc-for>
+        <sc-for list="{{ ports }}" as="pt" hint-placeholder-count="0"><span data-ui="1" onPointerDown="{{ pt.down }}" onPointerUp="{{ pt.up }}" onPointerEnter="{{ pt.en }}" onPointerLeave="{{ pt.le }}" title="{{ pt.tip }}" style="{{ pt.st }}"></span></sc-for>
+        <sc-if value="{{ mqOn }}" hint-placeholder-val="{{ false }}"><span style="{{ mqSt }}"></span></sc-if>
+        <sc-if value="{{ mmOn }}" hint-placeholder-val="{{ false }}"><div data-ui="1" onPointerDown="{{ mmDown }}" title="Mini-carte · cliquer pour déplacer la vue" style="position:absolute;right:12px;bottom:12px;width:168px;height:84px;border-radius:8px;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);overflow:hidden;cursor:pointer;z-index:6"><sc-for list="{{ mm.rects }}" as="mr" hint-placeholder-count="0"><span style="{{ mr.st }}"></span></sc-for><span style="{{ mm.view }}"></span></div></sc-if>
+        <div data-ui="1" onPointerDown="{{ stop }}" style="position:absolute;left:34px;top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;cursor:default">
+          <div style="display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14)">
+            <sc-for list="{{ lodBtns }}" as="lb" hint-placeholder-count="3"><span onClick="{{ lb.go }}" style="{{ lb.st }}">{{ lb.t }}</span></sc-for>
+          </div>
+          <div style="display:flex;align-items:center;height:32px;border-radius:8px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14)">
+            <span onClick="{{ zoomOut }}" style="width:30px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2);font-size:15px">−</span>
+            <span style="font-family:'Venus Rising',sans-serif;font-size:9px;width:46px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap">{{ zoomTxt }}</span>
+            <span onClick="{{ zoomIn }}" style="width:30px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2);font-size:15px">+</span>
+          </div>
+          <span onClick="{{ soloBoard }}" title="{{ soloBoardTip }}" style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);color:var(--ink2)" style-hover="color:var(--ink);background:var(--tile2)"><svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="{{ soloBoardG }}"></path></svg></span>
+          <span onClick="{{ openLibBtn }}" title="Bibliothèque de blocs · double-clic ou clic droit sur la planche" style="height:32px;padding:0 12px;border-radius:8px;display:flex;align-items:center;gap:7px;cursor:pointer;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);font-family:'Azeret Mono',monospace;font-size:8.5px;letter-spacing:.16em;color:var(--ink)" style-hover="background:var(--tile2)"><span style="color:var(--ort);font-size:13px;line-height:1">+</span>BLOC</span>
+        </div>
+        <sc-if value="{{ folOff }}" hint-placeholder-val="{{ false }}">
+          <span data-ui="1" onPointerDown="{{ stop }}" onClick="{{ reframe }}" style="position:absolute;right:12px;top:12px;height:32px;padding:0 12px;border-radius:8px;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(224,103,74,.7);font-family:'Azeret Mono',monospace;font-size:8.5px;letter-spacing:.16em;color:var(--ink)"><span style="width:6px;height:6px;border-radius:50%;background:var(--ort)"></span>SUIVI EN PAUSE · REPRENDRE (F)</span>
+        </sc-if>
+        <sc-if value="{{ folOn }}" hint-placeholder-val="{{ false }}">
+          <span style="position:absolute;right:12px;top:12px;height:32px;padding:0 12px;border-radius:8px;display:flex;align-items:center;gap:8px;background:var(--gdeep);font-family:'Azeret Mono',monospace;font-size:8.5px;letter-spacing:.16em;color:var(--gink);pointer-events:none"><span style="width:6px;height:6px;border-radius:50%;background:#78b08f;animation:srp 1.6s infinite"></span>LA CAMÉRA SUIT LE SPECTACLE</span>
+        </sc-if>
+        <sc-if value="{{ legOn }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;left:34px;bottom:10px;display:flex;gap:14px;align-items:center;height:26px;padding:0 10px;border-radius:7px;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.12);pointer-events:none;flex-wrap:nowrap;overflow:hidden;white-space:nowrap;max-width:calc(100% - 60px)">
+          <span style="display:flex;align-items:center;gap:6px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink2)"><span style="width:16px;height:2px;background:#e0674a"></span>EN COURS</span>
+          <span style="display:flex;align-items:center;gap:6px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink2)"><span style="width:16px;height:2px;background:#3f9a6a"></span>JOUÉ</span>
+          <span style="display:flex;align-items:center;gap:6px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink2)"><span style="width:16px;height:0;border-top:2px dashed rgba(var(--lr),.35)"></span>NON CHOISI</span>
+          <sc-if value="{{ legHelp }}" hint-placeholder-val="{{ true }}"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);padding-left:12px;box-shadow:inset 1px 0 0 rgba(var(--lr),.14)">CLIC MILIEU : DÉPLACER · GLISSER : SÉLECTIONNER · DOUBLE-CLIC : AJOUTER</span></sc-if>
+        </div></sc-if>
+        
+        <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+          <span style="position:absolute;left:50%;bottom:52px;transform:translateX(-50%);padding:9px 14px;border-radius:8px;background:var(--tile2);box-shadow:inset 0 0 0 1px rgba(224,103,74,.6);font-size:12px;color:var(--ink);white-space:nowrap;pointer-events:none;z-index:25">{{ toastTxt }}</span>
+        </sc-if>
+      </div>
+      <div onPointerDown="{{ asDown }}" title="Glisser pour élargir le panneau" style="{{ vsplitSt }}"><span style="width:2px;height:38px;border-radius:1px;background:rgba(var(--lr),.3)"></span></div>
+      <aside style="{{ asideSt }}">
+      <sc-if value="{{ msOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">SÉLECTION</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div>
+          <div style="display:flex;align-items:baseline;gap:10px"><span style="font-family:'Venus Rising',sans-serif;font-size:24px;color:var(--cy);line-height:1">{{ msCount }}</span><span style="font-size:12px;color:var(--ink2)">étapes</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><span onClick="{{ alignSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">ALIGNER</span><span onClick="{{ delSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(224,103,74,.55);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">SUPPRIMER</span></div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ selNOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">ÉTAPE · {{ sn.kind }}</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div>
+          <input value="{{ sn.name }}" onChange="{{ sn.setName }}" style="height:34px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:13px;padding:0 10px">
+          <div style="display:flex;gap:10px"><sc-for list="{{ sn.knobs }}" as="snk" hint-placeholder-count="3"><span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:64px">
+                <span onPointerDown="{{ snk.grab }}" style="position:relative;width:38px;height:38px;display:block;cursor:ns-resize;touch-action:none">
+                  <svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+                    <circle cx="20" cy="20" r="19" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="0.01 4.97" style="stroke:rgba(var(--lr),.4)"></circle>
+                    <circle cx="20" cy="20" r="14.5" style="fill:var(--tile2)"></circle>
+                    <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-dasharray="68.3 200" transform="rotate(135 20 20)" style="stroke:rgba(var(--lr),.14)"></circle>
+                    <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="{{ snk.dash }}" transform="rotate(135 20 20)" style="{{ snk.arc }}"></circle>
+                  </svg>
+                  <span style="{{ snk.ptr }}"></span>
+                </span>
+                <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ snk.disp }}</span>
+                <span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;white-space:nowrap">{{ snk.lab }}</span>
+              </span></sc-for></div>
+          <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">SORTIES</span>
+          <sc-for list="{{ sn.outs }}" as="sno" hint-placeholder-count="1">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 8px 7px 10px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(var(--lr),.14)">
+              <span style="font-family:'Venus Rising',sans-serif;font-size:9px;color:var(--ink3);width:10px">{{ sno.no }}</span>
+              <span onClick="{{ sno.pick }}" style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;cursor:pointer"><span style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">→ {{ sno.to }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.1em;color:var(--ink2);text-transform:uppercase;line-height:1.4">{{ sno.rule }}</span></span>
+              <span style="display:flex;flex-direction:column;gap:1px"><span onClick="{{ sno.up }}" style="{{ sno.upSt }}">▲</span><span onClick="{{ sno.down }}" style="{{ sno.dnSt }}">▼</span></span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ sn.noOut }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;color:var(--ink3)">Tirer le rond + du bloc pour créer une sortie.</span></sc-if>
+        </div>
+        <div onClick="{{ toggleAccR }}" style="{{ accRHd }}"><span>RÉGLAGES</span><span style="{{ accRCh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accR }}" hint-placeholder-val="{{ true }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">MOMENT</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ sn.moment }}</span></div><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">TYPE</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ sn.kind }}</span></div><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">ASSET</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ sn.asset }}</span></div></div></sc-if>
+        <div onClick="{{ toggleAccA }}" style="{{ accAHd }}"><span>AVANCÉ</span><span style="{{ accACh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accA }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><span style="font-size:11px;color:var(--ink2);line-height:1.4">{{ sn.desc }}</span><sc-if value="{{ sn.canDel }}" hint-placeholder-val="{{ false }}"><span onClick="{{ delSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(224,103,74,.55);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">SUPPRIMER L'ÉTAPE</span></sc-if></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ selTOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">{{ stx.ordTag }}</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div>
+          <span style="font-size:13px;font-weight:600;line-height:1.35">{{ stx.title }}</span>
+          <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">CONDITIONS</span>
+          <sc-for list="{{ stx.guards }}" as="stg" hint-placeholder-count="1">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(var(--lr),.14)">
+              <sc-if value="{{ stg.hasKnob }}" hint-placeholder-val="{{ true }}">
+                <span onPointerDown="{{ stg.grab }}" style="position:relative;width:32px;height:32px;display:block;cursor:ns-resize;touch-action:none;flex:none">
+                  <svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+                    <circle cx="20" cy="20" r="19" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="0.01 4.97" style="stroke:rgba(var(--lr),.4)"></circle>
+                    <circle cx="20" cy="20" r="14.5" style="fill:var(--tile2)"></circle>
+                    <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="{{ stg.dash }}" transform="rotate(135 20 20)" style="{{ stg.arc }}"></circle>
+                  </svg>
+                  <span style="{{ stg.ptr }}"></span>
+                </span>
+              </sc-if>
+              <span style="flex:1;font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;line-height:1.5">{{ stg.lab }}</span>
+              <span onClick="{{ stg.del }}" title="Retirer" style="font-family:'Azeret Mono',monospace;font-size:10px;color:var(--ink3);cursor:pointer;padding:4px">✕</span>
+            </div>
+          </sc-for>
+          <div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ stx.adds }}" as="sta" hint-placeholder-count="5"><span onClick="{{ sta.go }}" style="height:28px;padding:0 9px;border-radius:6px;display:flex;align-items:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.18);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.12em;color:var(--ink)" style-hover="background:var(--tile2)">+ {{ sta.t }}</span></sc-for></div>
+        </div>
+        <div onClick="{{ toggleAccR }}" style="{{ accRHd }}"><span>RÉGLAGES</span><span style="{{ accRCh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accR }}" hint-placeholder-val="{{ true }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+          <div style="display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14)"><sc-for list="{{ stx.modes }}" as="stm" hint-placeholder-count="2"><span onClick="{{ stm.go }}" style="{{ stm.st }}">{{ stm.t }}</span></sc-for></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><span onClick="{{ stx.up }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">▲ PLUS TÔT</span><span onClick="{{ stx.down }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">▼ PLUS TARD</span></div>
+        </div></sc-if>
+        <div onClick="{{ toggleAccA }}" style="{{ accAHd }}"><span>AVANCÉ</span><span style="{{ accACh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accA }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><span onClick="{{ delSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(224,103,74,.55);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">SUPPRIMER LE LIEN</span></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ smOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">MOMENT {{ smv.no }} · ACTE {{ smv.rom }}</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div>
+          <input value="{{ smv.name }}" onChange="{{ smv.setName }}" style="height:34px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:13px;padding:0 10px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <span style="display:flex;flex-direction:column;gap:5px"><span style="font-family:'Venus Rising',sans-serif;font-size:13px;color:var(--cy)">{{ smv.steps }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.14em;color:var(--ink3)">ÉTAPES</span></span>
+            <span style="display:flex;flex-direction:column;gap:5px"><span style="font-family:'Venus Rising',sans-serif;font-size:13px;color:var(--cy)">{{ smv.dur }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.14em;color:var(--ink3)">DURÉE</span></span>
+            <span style="display:flex;flex-direction:column;gap:5px"><span style="font-family:'Venus Rising',sans-serif;font-size:13px;color:var(--cy)">{{ smv.start }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.14em;color:var(--ink3)">DÉBUT</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><span onClick="{{ addMomentBtn }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">+ MOMENT APRÈS</span><span onClick="{{ smv.split }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">COUPER EN DEUX</span></div>
+        </div>
+        <div onClick="{{ toggleAccA }}" style="{{ accAHd }}"><span>AVANCÉ</span><span style="{{ accACh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accA }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <sc-if value="{{ smv.canNewAct }}" hint-placeholder-val="{{ false }}"><span onClick="{{ smv.newAct }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">NOUVEL ACTE ICI</span></sc-if>
+          <sc-if value="{{ smv.canMerge }}" hint-placeholder-val="{{ false }}"><span onClick="{{ smv.merge }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">JOINDRE À L'ACTE AVANT</span></sc-if>
+          <sc-if value="{{ smv.canDel }}" hint-placeholder-val="{{ false }}"><span onClick="{{ delSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(224,103,74,.55);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">SUPPRIMER</span></sc-if>
+        </div></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ saOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">ACTE {{ sav.rom }}</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div><input value="{{ sav.name }}" onChange="{{ sav.setName }}" style="height:34px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:13px;padding:0 10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">CONTENU</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ sav.info }}</span></div></div>
+      </sc-if>
+      <sc-if value="{{ scOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">CLIP · {{ scv.track }}</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div>
+          <input value="{{ scv.name }}" onChange="{{ scv.setName }}" style="height:34px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:13px;padding:0 10px">
+          <div style="display:flex;align-items:center;gap:14px"><span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:64px">
+                <span onPointerDown="{{ scv.grab }}" style="position:relative;width:38px;height:38px;display:block;cursor:ns-resize;touch-action:none">
+                  <svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+                    <circle cx="20" cy="20" r="19" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="0.01 4.97" style="stroke:rgba(var(--lr),.4)"></circle>
+                    <circle cx="20" cy="20" r="14.5" style="fill:var(--tile2)"></circle>
+                    <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-dasharray="68.3 200" transform="rotate(135 20 20)" style="stroke:rgba(var(--lr),.14)"></circle>
+                    <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="{{ scv.dash }}" transform="rotate(135 20 20)" style="{{ scv.arc }}"></circle>
+                  </svg>
+                  <span style="{{ scv.ptr }}"></span>
+                </span>
+                <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ scv.dur }}</span>
+                <span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;white-space:nowrap">DURÉE</span>
+              </span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">MOMENT</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ scv.ev }}</span></div><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">DÉCALAGE</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ scv.off }}</span></div></span></div>
+        </div>
+        <div onClick="{{ toggleAccA }}" style="{{ accAHd }}"><span>AVANCÉ</span><span style="{{ accACh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accA }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><span onClick="{{ delSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(224,103,74,.55);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">SUPPRIMER LE CLIP</span></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ skOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">NOTE · {{ skv.at }}</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div><input value="{{ skv.txt }}" onChange="{{ skv.setTxt }}" style="height:34px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:13px;padding:0 10px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">MOMENT</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ skv.ev }}</span></div></div>
+        <div onClick="{{ toggleAccA }}" style="{{ accAHd }}"><span>AVANCÉ</span><span style="{{ accACh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accA }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><span onClick="{{ delSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(224,103,74,.55);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">SUPPRIMER LA NOTE</span></div></sc-if>
+      </sc-if>
+      <sc-if value="{{ stOn }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">PISTE · {{ stv.type }}</span><span onClick="{{ desel }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">FERMER</span></div><input value="{{ stv.name }}" onChange="{{ stv.setName }}" style="height:34px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:13px;padding:0 10px"></div>
+        <div onClick="{{ toggleAccA }}" style="{{ accAHd }}"><span>AVANCÉ</span><span style="{{ accACh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+        <sc-if value="{{ accA }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)"><span onClick="{{ delSel }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(224,103,74,.55);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">SUPPRIMER LA PISTE</span></div></sc-if>
+      </sc-if>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+        <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.2em;color:var(--ort)">OÙ EN EST-ON</span><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);text-transform:uppercase">{{ ins.tag }}</span></div>
+        <span style="font-family:'Venus Rising',sans-serif;font-size:15px;letter-spacing:.08em;line-height:1.3;text-transform:uppercase">{{ ins.name }}</span>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px"><span style="{{ ins.leftSt }}">{{ ins.left }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.16em;color:var(--ink3);text-align:right;line-height:1.5">{{ ins.leftLab }}</span></div>
+        <span style="height:3px;border-radius:2px;background:rgba(var(--lr),.1);display:block;overflow:hidden"><span style="{{ ins.progSt }}"></span></span>
+        <span style="font-size:12px;color:var(--ink2)">Ensuite : <span style="color:var(--ink);font-weight:600">{{ ins.next }}</span></span>
+        <sc-for list="{{ ins.rows }}" as="ir" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="{{ ir.dot }}"></span><span style="flex:1;font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)">{{ ir.lab }}</span><span style="font-family:'Venus Rising',sans-serif;font-size:9px;color:var(--ink)">{{ ir.val }}</span></div>
+            <span style="height:3px;border-radius:2px;background:rgba(var(--lr),.1);display:block;overflow:hidden"><span style="{{ ir.bar }}"></span></span>
+          </div>
+        </sc-for>
+        <sc-if value="{{ ins.canGo }}" hint-placeholder-val="{{ false }}"><span onClick="{{ doGo }}" style="height:38px;border-radius:8px;background:var(--ort);color:#170c08;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:'Venus Rising',sans-serif;font-size:11px;letter-spacing:.16em">TOP · GO</span></sc-if>
+      </div>
+      <div onClick="{{ toggleAccS }}" style="{{ accSHd }}"><span>SALLE SIMULÉE</span><span style="{{ accSCh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+      <sc-if value="{{ accS }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"><sc-for list="{{ sens }}" as="sek" hint-placeholder-count="4"><span style="display:flex;flex-direction:column;align-items:center;gap:4px;width:auto">
+                <span onPointerDown="{{ sek.grab }}" style="position:relative;width:34px;height:34px;display:block;cursor:ns-resize;touch-action:none">
+                  <svg viewBox="0 0 40 40" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible">
+                    <circle cx="20" cy="20" r="19" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="0.01 4.97" style="stroke:rgba(var(--lr),.4)"></circle>
+                    <circle cx="20" cy="20" r="14.5" style="fill:var(--tile2)"></circle>
+                    <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-dasharray="68.3 200" transform="rotate(135 20 20)" style="stroke:rgba(var(--lr),.14)"></circle>
+                    <circle cx="20" cy="20" r="14.5" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="{{ sek.dash }}" transform="rotate(135 20 20)" style="{{ sek.arc }}"></circle>
+                  </svg>
+                  <span style="{{ sek.ptr }}"></span>
+                </span>
+                <span style="font-size:11px;font-weight:600;white-space:nowrap">{{ sek.disp }}</span>
+                <span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;white-space:nowrap">{{ sek.lab }}</span>
+              </span></sc-for></div>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">VOTE A · B · C</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ voteTxt }}</span></div><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">ISSUE</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ issueTxt }}</span></div>
+      </div></sc-if>
+      <div onClick="{{ toggleAccV }}" style="{{ accVHd }}"><span>PROJET · VERSIONS</span><span style="{{ accVCh }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span></div>
+      <sc-if value="{{ accV }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.1)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><span onClick="{{ saveVer }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">ENREGISTRER</span><span onClick="{{ exportJson }}" style="height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);text-align:center" style-hover="background:var(--tile2)">EXPORTER JSON</span></div>
+        <sc-for list="{{ versions }}" as="vr" hint-placeholder-count="0">
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(var(--lr),.12)">
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ vr.n }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.12em;color:var(--ink3)">{{ vr.d }}</span></span>
+            <span onClick="{{ vr.open }}" style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--cy);cursor:pointer">OUVRIR</span>
+            <span onClick="{{ vr.del }}" style="font-family:'Azeret Mono',monospace;font-size:10px;color:var(--ink3);cursor:pointer;padding:0 2px">✕</span>
+          </div>
+        </sc-for>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);flex:none">SOIRS JOUÉS</span><span style="font-size:12px;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ runsTxt }}</span></div>
+      </div></sc-if>
+    </aside>
+    </div>
+    <sc-if value="{{ splitOn }}" hint-placeholder-val="{{ true }}"><div onPointerDown="{{ splitDown }}" title="Glisser pour agrandir la conduite" style="flex:none;height:8px;cursor:row-resize;display:flex;align-items:center;justify-content:center;background:var(--tile);box-shadow:inset 0 1px 0 rgba(var(--lr),.12),inset 0 -1px 0 rgba(var(--lr),.12)"><span style="width:38px;height:2px;border-radius:1px;background:rgba(var(--lr),.3)"></span></div></sc-if>
+      <div style="{{ tlSt }}">
+        <div style="height:36px;flex:none;display:flex;align-items:center;gap:8px;padding:0 14px 0 34px;position:relative;z-index:20;overflow:hidden">
+          <span style="font-family:'Venus Rising',sans-serif;font-size:11px;letter-spacing:.14em;flex:none">CONDUITE</span>
+          <sc-if value="{{ tracksSolo }}" hint-placeholder-val="{{ false }}"><span onClick="{{ openLibBtn }}" title="Bibliothèque de blocs" style="height:24px;padding:0 9px;border-radius:6px;display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink);flex:none" style-hover="background:var(--tile2)"><span style="color:var(--ort);font-size:12px;line-height:1">+</span>BLOC</span></sc-if>
+          <span onClick="{{ soloTracks }}" title="{{ soloTracksTip }}" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);color:var(--ink2);flex:none" style-hover="color:var(--ink);background:var(--tile2)"><svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="{{ soloTracksG }}"></path></svg></span>
+          <div style="display:flex;gap:2px;padding:2px;border-radius:7px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);flex:none">
+            <sc-for list="{{ tools }}" as="tlt" hint-placeholder-count="2"><span onClick="{{ tlt.go }}" title="{{ tlt.tip }}" style="{{ tlt.st }}"><svg width="12" height="12" viewBox="0 0 24 24"><path d="{{ tlt.g }}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{ tlt.t }}</span></sc-for>
+          </div>
+          <span style="position:relative;display:flex;gap:4px;flex:none">
+            <sc-if value="{{ tlNarrow }}" hint-placeholder-val="{{ false }}"><span onClick="{{ toggleAddTk }}" title="Ajouter un moment, une note ou une piste" style="{{ addTkBtnSt }}">+</span></sc-if>
+            <sc-if value="{{ tlWideH }}" hint-placeholder-val="{{ true }}"><span onClick="{{ addMomentBtn }}" title="Ajouter un moment après le moment choisi · touche M" style="height:26px;padding:0 9px;border-radius:6px;display:flex;align-items:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.18);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);white-space:nowrap" style-hover="background:var(--tile2)">+ MOMENT</span>
+            <span onClick="{{ addNoteBtn }}" title="Poser une note de régie à la tête de lecture · touche K" style="height:26px;padding:0 9px;border-radius:6px;display:flex;align-items:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.18);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink);white-space:nowrap" style-hover="background:var(--tile2)">+ NOTE</span>
+            <span onClick="{{ toggleAddTk }}" title="Ajouter une piste" style="{{ addTkBtnSt }}">+ PISTE</span></sc-if>
+            <sc-if value="{{ addTkOn }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:0;top:32px;width:250px;padding:6px;border-radius:10px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2), 0 14px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px">
+                <sc-if value="{{ tlNarrow }}" hint-placeholder-val="{{ false }}"><div onClick="{{ addMomentBtn }}" style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;cursor:pointer" style-hover="background:var(--tile2)"><span style="font-size:12px;font-weight:600;color:var(--ink)">+ Moment</span><span style="font-size:10.5px;color:var(--ink3)">après le moment choisi · M</span></div><div onClick="{{ addNoteBtn }}" style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;cursor:pointer;box-shadow:inset 0 -1px 0 rgba(var(--lr),.12);margin-bottom:4px" style-hover="background:var(--tile2)"><span style="font-size:12px;font-weight:600;color:var(--ink)">+ Note</span><span style="font-size:10.5px;color:var(--ink3)">à la tête de lecture · K</span></div><span style="padding:4px 8px;font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.16em;color:var(--ink3)">+ PISTE</span></sc-if>
+                <sc-for list="{{ addTypes }}" as="att" hint-placeholder-count="7">
+                  <div onClick="{{ att.go }}" style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:6px;cursor:pointer" style-hover="background:var(--tile2)">
+                    <span style="{{ att.sw }}"></span>
+                    <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;font-weight:600;color:var(--ink)">{{ att.n }}</span><span style="font-size:10.5px;color:var(--ink3)">{{ att.d }}</span></span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </span>
+          <div style="flex:1;min-width:0"></div>
+          <div style="display:flex;align-items:center;height:24px;border-radius:6px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14);flex:none">
+            <span onClick="{{ tzOut }}" title="Dézoomer la conduite · touche −" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2);font-size:13px" style-hover="color:var(--ink)">−</span>
+            <span title="Alt + molette sur la conduite pour zoomer" style="font-family:'Venus Rising',sans-serif;font-size:8px;width:42px;text-align:center;color:var(--ink)">{{ tzTxt }}</span>
+            <span onClick="{{ tzIn }}" title="Zoomer la conduite · touche +" style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink2);font-size:13px" style-hover="color:var(--ink)">+</span>
+            <span onClick="{{ tzFit }}" title="Voir toute la conduite" style="height:24px;padding:0 9px;display:flex;align-items:center;cursor:pointer;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink2);box-shadow:inset 1px 0 0 rgba(var(--lr),.14)" style-hover="color:var(--ink)">TOUT</span>
+          </div>
+          <sc-if value="{{ showDrift }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:7px;font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);padding-left:10px;box-shadow:inset 1px 0 0 rgba(var(--lr),.12);flex:none">RETARD <span style="{{ driftSt }}">{{ drift }}</span></span></sc-if>
+        </div>
+        <div ref="{{ tlRef }}" onPointerDown="{{ tlDown }}" style="position:relative;flex:1;min-height:0;cursor:text;overflow:hidden">
+          <span style="position:absolute;left:0;top:0;height:132px;width:172px;background:var(--bg);z-index:5;pointer-events:none"></span>
+          <span style="position:absolute;z-index:6;left:34px;top:6px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">TEMPS</span>
+          <span style="position:absolute;z-index:6;left:34px;top:39px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">ACTES</span>
+          <span style="position:absolute;z-index:6;left:34px;top:78px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">MOMENTS</span>
+          <span style="position:absolute;z-index:6;left:34px;top:111px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">PASSAGES</span>
+          <sc-for list="{{ rTicks }}" as="rk" hint-placeholder-count="0"><span style="{{ rk }}"></span></sc-for>
+          <sc-for list="{{ rLabs }}" as="rl" hint-placeholder-count="0"><span style="{{ rl.st }}">{{ rl.t }}</span></sc-for>
+          <sc-for list="{{ tActs }}" as="ta" hint-placeholder-count="3"><div onPointerDown="{{ ta.pick }}" title="Cliquer pour renommer l’acte" style="{{ ta.st }}"><span style="{{ ta.nSt }}">{{ ta.num }}</span><span style="{{ ta.tSt }}">{{ ta.name }}</span></div></sc-for>
+          <sc-for list="{{ tEvs }}" as="te" hint-placeholder-count="7">
+            <div onPointerDown="{{ te.down }}" onDoubleClick="{{ te.dbl }}" title="{{ te.tip }}" style="{{ te.st }}">
+              <span style="{{ te.fill }}"></span>
+              <sc-for list="{{ te.ticks }}" as="tk" hint-placeholder-count="2"><span style="{{ tk }}"></span></sc-for>
+              <sc-if value="{{ te.wide }}" hint-placeholder-val="{{ true }}"><span style="position:relative;font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px 0 8px">{{ te.name }}</span></sc-if>
+              <span onPointerDown="{{ te.rs }}" title="Tirer pour allonger ou raccourcir le moment" style="position:absolute;right:0;top:0;bottom:0;width:7px;cursor:ew-resize"></span>
+            </div>
+          </sc-for>
+          <sc-for list="{{ tGates }}" as="tg" hint-placeholder-count="6">
+            <span style="{{ tg.wait }}"></span>
+            <span style="{{ tg.hold }}"></span>
+            <span onPointerDown="{{ tg.pick }}" title="{{ tg.tip }}" style="{{ tg.box }}"><span style="{{ tg.dia }}"></span></span>
+          </sc-for>
+          <sc-for list="{{ tRuns }}" as="trn" hint-placeholder-count="0"><span title="{{ trn.tip }}" style="{{ trn.st }}"></span></sc-for>
+          <div ref="{{ trRef }}" style="position:absolute;left:0;right:0;top:132px;bottom:26px;overflow-y:auto;overflow-x:hidden;box-shadow:inset 0 1px 0 rgba(var(--lr),.12);scrollbar-width:thin;scrollbar-color:rgba(var(--lr),.28) transparent">
+            <div style="{{ trInSt }}">
+              <sc-for list="{{ tRows }}" as="tw" hint-placeholder-count="6">
+                <div onDoubleClick="{{ tw.dbl }}" style="{{ tw.st }}">
+                  <sc-if value="{{ tw.isCurve }}" hint-placeholder-val="{{ false }}">
+                    <svg viewBox="{{ tw.vb }}" preserveAspectRatio="none" style="{{ tw.svgSt }}"><path d="{{ tw.fillD }}" style="{{ tw.fillSt }}"></path><path d="{{ tw.d }}" style="{{ tw.dSt }}"></path></svg>
+                    <sc-for list="{{ tw.pts }}" as="twp" hint-placeholder-count="0"><span onPointerDown="{{ twp.down }}" title="Tirer pour régler" style="{{ twp.st }}"></span></sc-for>
+                  </sc-if>
+                  <sc-if value="{{ tw.isClips }}" hint-placeholder-val="{{ false }}">
+                    <sc-for list="{{ tw.clips }}" as="twc" hint-placeholder-count="0">
+                      <div onPointerDown="{{ twc.down }}" title="{{ twc.name }}" style="{{ twc.st }}">
+                        <svg viewBox="0 0 100 20" preserveAspectRatio="none" style="position:absolute;left:0;top:0;width:100%;height:100%"><path d="{{ twc.d }}" style="{{ twc.dSt }}"></path></svg>
+                        <sc-if value="{{ twc.showName }}" hint-placeholder-val="{{ true }}"><span style="position:relative;font-size:10.5px;font-weight:600;color:var(--ink);padding:0 8px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ twc.name }}</span></sc-if>
+                        <span onPointerDown="{{ twc.rs }}" style="position:absolute;right:0;top:0;bottom:0;width:6px;cursor:ew-resize"></span>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                  <sc-if value="{{ tw.isNotes }}" hint-placeholder-val="{{ false }}">
+                    <sc-for list="{{ tw.marks }}" as="twm" hint-placeholder-count="0">
+                      <div onPointerDown="{{ twm.down }}" title="{{ twm.txt }}" style="{{ twm.st }}"><span style="{{ twm.flag }}"></span><sc-if value="{{ twm.showTxt }}" hint-placeholder-val="{{ true }}"><span style="{{ twm.tSt }}">{{ twm.txt }}</span></sc-if></div>
+                    </sc-for>
+                  </sc-if>
+                  <div onPointerDown="{{ stop }}" style="{{ tw.hdSt }}">
+                    <span onClick="{{ tw.toggle }}" title="Ouvrir ou replier la piste" style="{{ tw.chevSt }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span>
+                    <span onClick="{{ tw.pick }}" title="{{ tw.name }}" style="{{ tw.nmSt }}">{{ tw.name }}</span>
+                    <span onClick="{{ tw.mute }}" title="Couper la piste" style="{{ tw.mSt }}">M</span>
+                  </div>
+                </div>
+              </sc-for>
+              <div onPointerDown="{{ stop }}" onClick="{{ toggleAddTk }}" style="{{ addRowSt }}"><span style="color:var(--ort);font-size:12px">+</span>AJOUTER UNE PISTE</div>
+            </div>
+          </div>
+          <div onPointerDown="{{ zbTrack }}" title="Glisser la barre pour défiler, ses ronds pour zoomer" style="{{ zbSt }}">
+            <span style="{{ zbPh }}"></span>
+            <span onPointerDown="{{ zbThumb }}" style="{{ zbThSt }}">
+              <span onPointerDown="{{ zbL }}" style="position:absolute;left:-7px;top:-2px;width:14px;height:14px;border-radius:50%;background:var(--bg);box-shadow:inset 0 0 0 2px var(--cy);cursor:ew-resize" style-hover="background:var(--cy)"></span>
+              <span onPointerDown="{{ zbR }}" style="position:absolute;right:-7px;top:-2px;width:14px;height:14px;border-radius:50%;background:var(--bg);box-shadow:inset 0 0 0 2px var(--cy);cursor:ew-resize" style-hover="background:var(--cy)"></span>
+            </span>
+          </div>
+          <span style="{{ phSt }}"><span style="position:absolute;left:-5px;top:0;width:11px;height:12px;border-radius:2px;background:var(--ort)"></span></span>
+          <sc-if value="{{ cardOn }}" hint-placeholder-val="{{ false }}">
+            <div onPointerDown="{{ stop }}" style="{{ cardSt }}">
+              <span style="{{ cardNotch }}"></span>
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+                <span style="display:flex;flex-direction:column;gap:6px">
+                  <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ort);text-transform:uppercase">{{ cd.tag }}</span>
+                  <span style="font-family:'Venus Rising',sans-serif;font-size:11px;letter-spacing:.08em;line-height:1.3">{{ cd.title }}</span>
+                </span>
+                <span onClick="{{ closeCard }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer;padding:2px 0">FERMER</span>
+              </div>
+              <div style="display:flex;gap:2px;padding:2px;border-radius:8px;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.14)">
+                <sc-for list="{{ cd.modes }}" as="cdm" hint-placeholder-count="2"><span onClick="{{ cdm.go }}" style="{{ cdm.st }}">{{ cdm.t }}</span></sc-for>
+              </div>
+              <span style="font-size:11.5px;color:var(--ink2);line-height:1.4">{{ cd.help }}</span>
+              <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">POUR PASSER</span>
+              <sc-for list="{{ cd.conds }}" as="cdc" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="{{ cdc.dot }}"></span>
+                  <span style="flex:1;font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)">{{ cdc.lab }}</span>
+                  <span style="font-family:'Venus Rising',sans-serif;font-size:9px;color:var(--ink)">{{ cdc.val }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ cd.isGo }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                  <span style="display:flex;flex-direction:column;gap:4px"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ink3)">ATTENTE DU TOP</span><span style="font-family:'Venus Rising',sans-serif;font-size:18px;color:var(--cy)">{{ cd.hold }}</span></span>
+                  <span onClick="{{ doGo }}" style="{{ cd.goSt }}">{{ cd.goTxt }}</span>
+                </div>
+              </sc-if>
+              <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3)">{{ cd.timing }}</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+  </div>
+  <sc-if value="{{ libOn }}" hint-placeholder-val="{{ false }}">
+          <div data-ui="1" onPointerDown="{{ stop }}" onDoubleClick="{{ stop }}" style="{{ libSt }}">
+            <div style="width:300px;display:flex;flex-direction:column;min-height:0">
+              <div style="padding:12px 12px 10px;display:flex;flex-direction:column;gap:8px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.12)">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                  <span style="font-family:'Venus Rising',sans-serif;font-size:10px;letter-spacing:.12em">BIBLIOTHÈQUE DE BLOCS</span>
+                  <span onClick="{{ closeLib }}" style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">ÉCHAP</span>
+                </div>
+                <span style="font-size:11px;color:var(--ink2);line-height:1.35">{{ libHint }}</span>
+                <input ref="{{ libIn }}" value="{{ libQ }}" onChange="{{ setLibQ }}" onKeyDown="{{ libKey }}" placeholder="Chercher : vote, son, lumière, attente…" style="height:32px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:12.5px;padding:0 10px">
+              </div>
+              <div data-scroll="1" style="flex:1;min-height:0;overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:rgba(var(--lr),.28) transparent">
+                <sc-for list="{{ libGroups }}" as="lg" hint-placeholder-count="9">
+                  <div onClick="{{ lg.toggle }}" style="{{ lg.st }}">
+                    <span style="{{ lg.chevSt }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span>
+                    <span style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:var(--tile2);flex:none;color:var(--ink2)"><svg width="13" height="13" viewBox="0 0 24 24"><path d="{{ lg.g }}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+                    <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                      <span style="font-family:'Azeret Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)">{{ lg.n }}</span>
+                      <span style="font-size:10.5px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ lg.s }}</span>
+                    </span>
+                    <span style="font-family:'Venus Rising',sans-serif;font-size:8px;color:var(--ink3)">{{ lg.c }}</span>
+                  </div>
+                  <sc-if value="{{ lg.open }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:1px;padding:2px 0 8px">
+                      <sc-for list="{{ lg.items }}" as="li" hint-placeholder-count="4">
+                        <div onClick="{{ li.add }}" onPointerEnter="{{ li.hov }}" style="{{ li.st }}">
+                          <span style="{{ li.dot }}"></span>
+                          <span style="flex:1;min-width:0;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ li.n }}</span>
+                          <span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.12em;color:var(--ink3);white-space:nowrap">{{ li.key }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+            <div style="width:252px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:inset 1px 0 0 rgba(var(--lr),.12);overflow:hidden">
+              <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ort);text-transform:uppercase">{{ lp.grp }}</span>
+              <span style="font-family:'Venus Rising',sans-serif;font-size:11px;letter-spacing:.08em;line-height:1.35;text-transform:uppercase">{{ lp.name }}</span>
+              <div style="height:92px;width:216px;border-radius:7px;background:var(--well2);overflow:hidden;flex:none"><canvas data-pk="lib" width="432" height="184" style="width:216px;height:92px;display:block"></canvas></div>
+              <span style="font-size:11.5px;color:var(--ink2);line-height:1.45">{{ lp.desc }}</span>
+              <sc-for list="{{ lp.sets }}" as="lps" hint-placeholder-count="2">
+                <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3);text-transform:uppercase">{{ lps.l }}</span><span style="font-size:11px;font-weight:600">{{ lps.v }}</span></div>
+              </sc-for>
+              <div style="flex:1"></div>
+              <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3)">CLIC OU ENTRÉE POUR AJOUTER</span>
+            </div>
+          </div>
+        </sc-if>
+  <sc-if value="{{ pupOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:150;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;padding:30px 48px 40px;gap:26px;font-family:'Chakra Petch',sans-serif">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="font-family:'Venus Rising',sans-serif;font-size:12px;letter-spacing:.14em">PUPITRE · REPRÉSENTATION</span>
+        <span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ pup.crumb }}</span>
+        <div style="flex:1"></div>
+        <span onClick="{{ togglePlay }}" style="{{ pup.playSt }}">{{ pup.playTxt }}</span>
+        <span onClick="{{ toggleLock }}" title="{{ lockTip }}" style="{{ lockSt }}"><svg width="11" height="12" viewBox="0 0 11 12"><rect x="1" y="5" width="9" height="6.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.2"></rect><path d="{{ lockG }}" fill="none" stroke="currentColor" stroke-width="1.2"></path></svg>SCÈNE</span>
+        <span onClick="{{ togglePup }}" style="height:32px;padding:0 12px;border-radius:7px;display:flex;align-items:center;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(var(--lr),.16);font-family:'Azeret Mono',monospace;font-size:8.5px;letter-spacing:.16em;color:var(--ink2)" style-hover="color:var(--ink);background:var(--tile2)">QUITTER · ÉCHAP</span>
+      </div>
+      <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:48px;flex:1;min-height:0">
+        <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+          <span style="font-family:'Azeret Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--ort);text-transform:uppercase">{{ ins.tag }}</span>
+          <span style="font-family:'Venus Rising',sans-serif;font-size:32px;letter-spacing:.08em;line-height:1.2;text-transform:uppercase;text-wrap:balance">{{ ins.name }}</span>
+          <span style="font-size:15px;color:var(--ink2)">{{ ins.sub }}</span>
+          <span style="font-family:'Venus Rising',sans-serif;font-size:124px;line-height:1;color:var(--cy);letter-spacing:.02em;font-variant-numeric:tabular-nums;margin-top:10px">{{ ins.left }}</span>
+          <span style="font-family:'Azeret Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--ink3)">{{ ins.leftLab }}</span>
+          <span style="height:4px;border-radius:2px;background:rgba(var(--lr),.1);display:block;overflow:hidden;max-width:520px"><span style="{{ ins.progSt }}"></span></span>
+          <span style="font-size:15px;color:var(--ink2)">Ensuite : <span style="color:var(--ink);font-weight:600">{{ ins.next }}</span></span>
+          <div style="flex:1"></div>
+          <span style="font-family:'Azeret Mono',monospace;font-size:8.5px;letter-spacing:.16em;color:var(--ink3)">HORLOGE {{ tNow }} / {{ tTot }} · RETARD {{ drift }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+          <span style="font-family:'Azeret Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--ort)">POUR PASSER À LA SUITE</span>
+          <span style="font-size:14px;color:var(--ink2);line-height:1.45">{{ ins.rule }}</span>
+          <sc-for list="{{ ins.rows }}" as="pr" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="{{ pr.dot }}"></span><span style="flex:1;font-family:'Azeret Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase">{{ pr.lab }}</span><span style="font-family:'Venus Rising',sans-serif;font-size:14px">{{ pr.val }}</span></div>
+              <span style="height:5px;border-radius:3px;background:rgba(var(--lr),.1);display:block;overflow:hidden"><span style="{{ pr.bar }}"></span></span>
+            </div>
+          </sc-for>
+          <div style="flex:1"></div>
+          <span onClick="{{ doGo }}" style="{{ pup.goSt }}">{{ goTxt }}</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ srchOn }}" hint-placeholder-val="{{ false }}">
+    <div onPointerDown="{{ closeSearch }}" style="position:fixed;inset:0;z-index:160;background:rgba(0,0,0,.45);display:flex;justify-content:center;align-items:flex-start;padding-top:12vh">
+      <div onPointerDown="{{ stop }}" style="width:560px;max-width:92vw;max-height:64vh;border-radius:12px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2), 0 20px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow:hidden">
+        <input ref="{{ srchIn }}" value="{{ srchQ }}" onChange="{{ setSrchQ }}" placeholder="Chercher une étape, un moment, un clip, une note, un asset…" style="height:50px;border:none;outline:none;background:transparent;box-shadow:inset 0 -1px 0 rgba(var(--lr),.14);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:15px;padding:0 16px">
+        <div style="overflow-y:auto;padding:6px;scrollbar-width:thin;scrollbar-color:rgba(var(--lr),.28) transparent">
+          <sc-for list="{{ srchRes }}" as="sr" hint-placeholder-count="5">
+            <div onClick="{{ sr.go }}" onPointerEnter="{{ sr.hov }}" style="{{ sr.st }}">
+              <span style="{{ sr.dot }}"></span>
+              <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sr.t }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.12em;color:var(--ink3);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sr.sub }}</span></span>
+              <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.16em;color:var(--ink3)">{{ sr.kind }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ srchEmpty }}" hint-placeholder-val="{{ false }}"><span style="display:block;padding:14px;font-size:12px;color:var(--ink3)">Aucun résultat.</span></sc-if>
+        </div>
+        <span style="padding:9px 16px;font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.16em;color:var(--ink3);box-shadow:inset 0 1px 0 rgba(var(--lr),.12)">↑ ↓ CHOISIR · ENTRÉE OUVRIR · ÉCHAP FERMER</span>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ helpOn }}" hint-placeholder-val="{{ false }}">
+    <div onPointerDown="{{ toggleHelp }}" style="position:fixed;inset:0;z-index:160;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center">
+      <div onPointerDown="{{ stop }}" style="width:640px;max-width:92vw;max-height:84vh;overflow-y:auto;padding:22px 24px;border-radius:12px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2), 0 20px 60px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:16px;scrollbar-width:thin">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Venus Rising',sans-serif;font-size:12px;letter-spacing:.14em">RACCOURCIS ET GESTES</span><span onClick="{{ toggleHelp }}" style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.14em;color:var(--ink3);cursor:pointer">? OU ÉCHAP POUR FERMER</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px">
+          <sc-for list="{{ helpRows }}" as="hr" hint-placeholder-count="16">
+            <div style="display:flex;align-items:center;gap:10px;min-height:28px"><span style="min-width:74px;padding:4px 7px;border-radius:5px;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.12em;color:var(--cy);text-align:center;white-space:nowrap">{{ hr.k }}</span><span style="font-size:12px;color:var(--ink2)">{{ hr.d }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ alertOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;left:50%;top:66px;transform:translateX(-50%);z-index:140;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 16px;border-radius:9px;background:#c8311f;color:#fff;box-shadow:0 14px 40px rgba(0,0,0,.45);max-width:min(92vw,620px)">
+      <span style="width:10px;height:10px;border-radius:50%;background:#fff;animation:srp .8s infinite;flex:none"></span>
+      <span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-family:'Azeret Mono',monospace;font-size:8px;letter-spacing:.18em">SÉCURITÉ · {{ al.when }}</span><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ al.txt }}</span></span>
+      <span onClick="{{ ackAlert }}" style="height:32px;padding:0 12px;border-radius:7px;background:#fff;color:#c8311f;display:flex;align-items:center;cursor:pointer;font-family:'Venus Rising',sans-serif;font-size:9px;letter-spacing:.14em;flex:none">BIEN REÇU</span>
+    </div>
+  </sc-if>
+  <sc-if value="{{ goPvOn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;right:14px;top:62px;z-index:130;width:300px;padding:12px 14px;border-radius:10px;background:var(--tile);box-shadow:inset 0 0 0 1px rgba(224,103,74,.6), 0 14px 40px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:8px;pointer-events:none">
+      <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.18em;color:var(--ort)">AU TOP, SE DÉCLENCHE</span>
+      <span style="font-family:'Venus Rising',sans-serif;font-size:11px;letter-spacing:.08em;line-height:1.3;text-transform:uppercase">{{ goPv.title }}</span>
+      <sc-for list="{{ goPv.lines }}" as="gl" hint-placeholder-count="2"><span style="display:flex;align-items:center;gap:8px"><span style="{{ gl.dot }}"></span><span style="flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ gl.t }}</span><span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.14em;color:var(--ink3);white-space:nowrap">{{ gl.k }}</span></span></sc-for>
+    </div>
+  </sc-if>
+  <div style="{{ adWrapSt }}">
+    <div style="width:300px;height:100%;display:flex;flex-direction:column;background:var(--tile);box-shadow:inset -1px 0 0 rgba(var(--lr),.16)">
+      <div style="padding:14px 14px 10px;display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 -1px 0 rgba(var(--lr),.12)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span style="font-family:'Venus Rising',sans-serif;font-size:11px;letter-spacing:.14em">ASSETS</span>
+          <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ink3)">{{ adCount }} · CTRL+ESPACE</span>
+        </div>
+        <input value="{{ adQ }}" onChange="{{ setAdQ }}" placeholder="Chercher un son, une mémoire…" style="height:32px;border-radius:7px;border:none;outline:none;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--lr),.2);color:var(--ink);font-family:'Chakra Petch',sans-serif;font-size:12.5px;padding:0 10px">
+        <span style="font-size:11px;color:var(--ink3);line-height:1.35">Glisser vers la planche pour créer une étape, vers une piste pour poser un clip.</span>
+      </div>
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:8px;scrollbar-width:thin;scrollbar-color:rgba(var(--lr),.28) transparent">
+        <sc-for list="{{ adCats }}" as="ac" hint-placeholder-count="8">
+          <div onClick="{{ ac.toggle }}" style="{{ ac.st }}">
+            <span style="{{ ac.chevSt }}"><svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" stroke-width="1.3"></path></svg></span>
+            <span style="{{ ac.icSt }}"><svg width="13" height="13" viewBox="0 0 24 24"><path d="{{ ac.g }}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+            <span style="flex:1;min-width:0;font-family:'Azeret Mono',monospace;font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ac.n }}</span>
+            <span style="font-family:'Venus Rising',sans-serif;font-size:8px;color:var(--ink3)">{{ ac.c }}</span>
+          </div>
+          <sc-if value="{{ ac.open }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:2px;padding:2px 0 8px 12px">
+              <sc-for list="{{ ac.items }}" as="ai" hint-placeholder-count="4">
+                <div onPointerDown="{{ ai.down }}" title="Glisser vers la planche ou une piste" style="display:flex;align-items:center;gap:9px;height:38px;padding:0 8px;border-radius:6px;cursor:grab" style-hover="background:var(--tile2)">
+                  <span style="{{ ai.tile }}"><svg width="12" height="12" viewBox="0 0 24 24"><path d="{{ ai.g }}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <span style="font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ ai.n }}</span>
+                    <span style="font-family:'Azeret Mono',monospace;font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)">{{ ai.meta }}</span>
+                  </span>
+                  <span style="font-family:'Venus Rising',sans-serif;font-size:8px;color:var(--cy)">{{ ai.dur }}</span>
+                  <svg width="8" height="12" viewBox="0 0 8 12" style="flex:none;color:var(--ink3)"><circle cx="2" cy="2" r="1" fill="currentColor"></circle><circle cx="6" cy="2" r="1" fill="currentColor"></circle><circle cx="2" cy="6" r="1" fill="currentColor"></circle><circle cx="6" cy="6" r="1" fill="currentColor"></circle><circle cx="2" cy="10" r="1" fill="currentColor"></circle><circle cx="6" cy="10" r="1" fill="currentColor"></circle></svg>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-for>
+      </div>
+    </div>
+    <div onClick="{{ toggleAssets }}" title="Assets · Ctrl + Espace" style="width:22px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;background:var(--tile);box-shadow:inset -1px 0 0 rgba(var(--lr),.14)" style-hover="background:var(--tile2)">
+      <svg width="6" height="22" viewBox="0 0 6 22" style="color:var(--ink3)"><circle cx="3" cy="2" r="1.2" fill="currentColor"></circle><circle cx="3" cy="7" r="1.2" fill="currentColor"></circle><circle cx="3" cy="12" r="1.2" fill="currentColor"></circle><circle cx="3" cy="17" r="1.2" fill="currentColor"></circle></svg>
+      <span style="writing-mode:vertical-rl;transform:rotate(180deg);font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.22em;color:var(--ink2);white-space:nowrap">ASSETS · CTRL+ESPACE</span>
+      <svg width="6" height="22" viewBox="0 0 6 22" style="color:var(--ink3)"><circle cx="3" cy="2" r="1.2" fill="currentColor"></circle><circle cx="3" cy="7" r="1.2" fill="currentColor"></circle><circle cx="3" cy="12" r="1.2" fill="currentColor"></circle><circle cx="3" cy="17" r="1.2" fill="currentColor"></circle></svg>
+    </div>
+  </div>
+  <sc-if value="{{ ghostOn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ ghostSt }}">
+      <span style="font-size:12px;font-weight:600;color:var(--ink);white-space:nowrap">{{ ghostName }}</span>
+      <span style="font-family:'Azeret Mono',monospace;font-size:7.5px;letter-spacing:.14em;color:var(--ort);white-space:nowrap;text-transform:uppercase">{{ ghostHint }}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  boardRef=React.createRef(); tlRef=React.createRef(); trRef=React.createRef(); libIn=React.createRef();
+  X=()=>window.SRC;
+  D=window.SRC?window.SRC.mk():null;
+  S=window.SRC?window.SRC.newS():null;
+  hist=[]; redoS=[]; runs=[];
+  srchIn=React.createRef();
+  state={_aw:300,_acc:{r:true,a:false,s:false,v:false},_view:'both',_lock:false,_tlM:600,_goHov:false,_srch:false,_srchQ:'',_srchI:0,_help:false,_t:0,_pl:false,_sp:20,_mode:'jouer',_th:'dark',_sel:null,_msel:[],_gate:null,_tlH:380,_toast:'',_v:0,_cam:{px:80,py:300,z:.5},_fol:true,_bw:1000,_bh:520,_tw:1000,_lk:null,_hp:null,_mq:null,_lib:null,_libQ:'',_libG:'deroule',_libHov:null,_ad:false,_adQ:'',_adOpen:{son:true,lx:true},_ghost:null,_tool:'sel',_addTk:false,_fs:false,_pan:false};
+
+  nodes(){ const B=window.SRB, R=this.X(); if(this._N&&(this._Nb||!B)) return this._N; const N={};
+    R.CK.forEach(([ty,name,label,kd,col,desc,sets])=>{ N[ty]={ty,name,label,kd,grp:ty==='k:issue'?'flow':'deroule',col,desc,key:label,sets} });
+    if(B){ Object.values(B.SP).forEach(sp=>{ if(['seg','gatem','gatem3','sub'].includes(sp.k)) return; const g=R.GRP.find(x=>x[0]===sp.fam); N[sp.k]={ty:sp.k,name:sp.name,label:(g?g[1]:sp.fam).toUpperCase(),pv:sp.pv,grp:sp.fam,col:R.FC[sp.fam]||'#8fa5ad',desc:sp.desc,key:sp.key,sets:sp.sets.slice(0,2)} }) }
+    this._Nb=!!B; this._N=N; return N }
+  nodeOf(ty){ return this.nodes()[ty]||{ty,name:'bloc',label:'BLOC',kd:'passage',grp:'deroule',col:'#8fa5ad',desc:'',key:'',sets:[]} }
+  fm(s){ s=Math.max(0,Math.floor((+s||0)+1e-6)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0') }
+  fmtSet(se,v){ const B=window.SRB; return B?B.fmt(se,v/100):String(v) }
+  dur(st){ return 10+st.k[0]*6 }
+  votes(){ const p=this.D.sens.pen; const A=Math.round(28+p*.4), C=12; return {A,B:100-A-C,C} }
+  issue(){ const v=this.votes(); return v.A>v.B+4?'A':v.B>v.A+4?'B':'T' }
+  SN(k){ const s=this.D.sens, E=Math.exp, Lg=Math.log;
+    if(k==='pres'){ const T=40+(100-s.aff)*2.2; return {val:t=>142*(1-E(-t/T)),cross:v=>v>=142?1e9:-T*Lg(1-v/142),f:v=>String(Math.round(v)),ph:v=>Math.round(v)+' spectateurs assis'} }
+    if(k==='quorum'){ const T=20+(100-s.part)*1.2; return {val:t=>100*(1-E(-t/T)),cross:v=>v>=100?1e9:-T*Lg(1-v/100),f:v=>Math.round(v)+' %',ph:v=>Math.round(v)+' % des votes reçus'} }
+    if(k==='prets'){ const T=15+(100-s.part)*.6; return {val:t=>100*(1-E(-t/T)),cross:v=>v>=100?1e9:-T*Lg(1-v/100),f:v=>Math.round(v)+' %',ph:v=>Math.round(v)+' % des téléphones prêts'} }
+    if(k==='bruit'){ const T=10+(100-s.calme)*.8; return {val:t=>32+40*E(-t/T),cross:v=>v<=32?1e9:v>=72?0:-T*Lg((v-32)/40),f:v=>Math.round(v)+' dB',ph:v=>'salle calme · ≤ '+Math.round(v)+' dB'} }
+    return {val:t=>t,cross:v=>v,f:v=>this.fm(v),ph:v=>'après '+this.fm(v)} }
+  cross(g,iss){ return g.k==='issue'?(iss===g.v?0:1e9):this.SN(g.k).cross(g.v) }
+  met(g,tau,iss){ if(g.k==='issue') return iss===g.v; const c=this.SN(g.k).val(tau); return g.op==='≤'?c<=g.v+.01:c>=g.v-.01 }
+  glab(g){ if(g.k==='issue') return 'le public choisit '+(g.v==='T'?'égalité':g.v); const n=this.SN(g.k); return g.k==='pres'?'au moins '+n.ph(g.v):n.ph(g.v) }
+  trC(tr,iss){ if(!tr.g.length) return 0; const c=tr.g.map(g=>this.cross(g,iss)); return tr.mode==='any'?Math.min(...c):Math.max(...c) }
+  sched(){ const D=this.D, iss=this.issue(); let T=0, pending=null, planned=0; const evs=[], gates=[];
+    D.ev.forEach((ev,i)=>{ const S0=T, run=[]; let sid=typeof ev.entry==='string'?ev.entry:ev.entry[iss]; const seen={};
+      while(sid&&!seen[sid]){ seen[sid]=1; const st=ev.st.find(x=>x.id===sid); if(!st) break; const d=this.dur(st); planned+=d;
+        const outs=ev.tr.filter(x=>x.a===sid); let tr=null,c=0;
+        if(outs.length){ let bc=1e12; outs.forEach(o=>{ const cc=this.trC(o,iss); if(cc<bc){bc=cc;tr=o} }); c=bc }
+        const blocked=c>=1e8; const ex=blocked?d+600:Math.max(d,c); run.push({st,S:T,E:T+ex,tr,blocked}); T+=ex; sid=tr?tr.b:null }
+      if(!run.length) T+=10;
+      evs.push({ev,i,S:S0,E:T,run});
+      if(ev.gate&&i<D.ev.length-1){ const g=ev.gate; const cc=g.g.length?Math.max(...g.g.map(x=>this.cross(x,iss))):0; const ready=T+Math.min(cc,600); const hold=g.mode==='go'?(D.hold[ev.id]||0):0; const pend=g.mode==='go'&&!D.go[ev.id]&&!pending; const gg={ev,i,g,S:T,ready,pass:ready+hold,hold,pend}; if(pend) pending=gg; gates.push(gg); T=gg.pass } });
+    return {evs,gates,total:T,pending,iss,planned} }
+  layout(){ const D=this.D; if(this._lv===D.ver&&this._ly) return this._ly; let fx=0; const F=[];
+    D.ev.forEach((ev,i)=>{ const P={}; let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+      ev.st.forEach(st=>{ const x=fx+46+st.c*560+st.dx, y=st.r*320+st.dy; P[st.id]={x,y}; x0=Math.min(x0,x); x1=Math.max(x1,x+240); y0=Math.min(y0,y); y1=Math.max(y1,y+264) });
+      if(!ev.st.length){ x0=fx+46; x1=fx+286; y0=0; y1=264 }
+      const r={x:Math.min(fx,x0-46),y:y0-90}; r.w=x1+46-r.x; r.h=y1+46-r.y; F.push({ev,i,P,r,fx}); fx=r.x+r.w+180 });
+    this._lv=D.ver; this._ly=F; return F }
+  curIdx(L,t){ for(const e of L.evs){ const g=L.gates.find(x=>x.i===e.i); if(t<e.E) return {i:e.i,gate:null}; if(g&&(t<g.pass||(g.pend&&t<=g.pass+1e-6))) return {i:e.i,gate:g} } return {i:L.evs.length-1,gate:null,end:true} }
+  fitR(r){ const bw=this.state._bw,bh=this.state._bh, zf=top=>Math.max(.2,Math.min(1.05,Math.min((bw-80)/r.w,(bh-top-56)/r.h))); let top=122, z=zf(top); if(z>=.5){ top=64; z=Math.max(.5,zf(top)) } const ah=bh-top-56; return {z,px:bw/2-(r.x+r.w/2)*z,py:top-r.y*z+Math.max(0,(ah-r.h*z)/2)} }
+  focusRect(L,t){ const c=this.curIdx(L,t), F=this.layout(); let r=F[c.i].r; if(c.gate&&F[c.i+1]){ const b=F[c.i+1].r, x=Math.min(r.x,b.x), y=Math.min(r.y,b.y); r={x,y,w:Math.max(r.x+r.w,b.x+b.w)-x,h:Math.max(r.y+r.h,b.y+b.h)-y} } return r }
+  bump(){ this.D.ver++; this.setState(s=>({_v:s._v+1})) }
+  locked(){ if(!this.state._lock) return false; this.toast('Verrouillé · mode scène. Désactive SCÈNE en haut pour modifier.'); return true }
+  snap(tag){ const now=performance.now(), top=this.hist[this.hist.length-1]; if(top&&top.tag===tag&&now-top.t<900) return; const ser=JSON.stringify(this.D); if(top&&top.ser===ser) return; this.hist.push({ser,tag,t:now}); if(this.hist.length>80) this.hist.shift(); this.redoS=[] }
+  restore(ser){ const v=this.D.ver; this.D=JSON.parse(ser); this.D.ver=v+1; this._ly=null; this.setState(s=>({_sel:null,_msel:[],_gate:null,_v:s._v+1})) }
+  undo(){ const h=this.hist.pop(); if(!h){ this.toast('Rien à annuler.'); return } this.redoS.push(JSON.stringify(this.D)); this.restore(h.ser); this.toast('Annulé · '+h.tag) }
+  redo(){ const r=this.redoS.pop(); if(!r){ this.toast('Rien à refaire.'); return } this.hist.push({ser:JSON.stringify(this.D),tag:'refaire',t:0}); this.restore(r) }
+  openLibCenter(){ const s=this.state, F=this.layout(), L=this.sched(), sl=s._sel; let f=sl&&sl.ev?F.find(x=>x.ev.id===sl.ev):null; if(!f) f=F[this.curIdx(L,s._t).i]; if(!f) return; const vw=window.innerWidth, vh=window.innerHeight; this.setState({_lib:{x:0,y:0,sx:vw/2-284,sy:Math.max(70,vh/2-220),wx:f.r.x+f.r.w-100,wy:f.r.y+130,link:null},_libQ:'',_libHov:null,_addTk:false}) }
+  toast(m){ clearTimeout(this.tt); this.setState({_toast:m}); this.tt=setTimeout(()=>this.setState({_toast:''}),2800) }
+  absAll(){ const L=this.sched(), S={}; L.evs.forEach(e=>{S[e.ev.id]=e.S}); const out=[]; this.D.tracks.forEach(tk=>(tk.clips||tk.marks||[]).forEach(it=>out.push([it,(S[it.ev]!=null?S[it.ev]:0)+it.off]))); return out }
+  anchor(it,abs){ const L=this.sched(); let e=L.evs[0]; L.evs.forEach(x=>{ if(abs>=x.S) e=x }); if(!e) return; it.ev=e.ev.id; it.off=Math.max(0,abs-e.S) }
+  reanchor(list){ list.forEach(([it,abs])=>this.anchor(it,abs)) }
+
+  tick=(ts)=>{ this.raf=requestAnimationFrame(this.tick); const last=this.lt||ts; this.lt=ts; const dt=Math.min(.1,(ts-last)/1000); const s=this.state, P={}; let t=s._t;
+    { const b=this.boardRef.current, tl=this.tlRef.current; if(b&&b.clientWidth>0&&(b.clientWidth!==s._bw||b.clientHeight!==s._bh)){ P._bw=b.clientWidth; P._bh=b.clientHeight } if(tl&&tl.clientWidth>0&&(tl.clientWidth!==s._tw||tl.clientHeight+36!==s._tlM)){ P._tw=tl.clientWidth; P._tlM=tl.clientHeight+36 } if(P._bw&&!this.fitted){ this.fitted=true; this.setState(P,()=>this.setState({_cam:this.fitR(this.focusRect(this.sched(),this.state._t))})); return } }
+    if(this.S) this.X().stepS(this.S,dt,this.votes());
+    if(s._pl){ t+=dt*s._sp; let L=this.sched(); const pg=L.pending; if(pg&&t>pg.ready){ this.D.hold[pg.ev.id]=Math.max(this.D.hold[pg.ev.id]||0,t-pg.ready); L=this.sched() } if(t>=L.total){ t=L.total; P._pl=false; this.recordRun(L) } P._t=t; if(s._tspan){ const v0=s._tv0||0; if(t>v0+s._tspan*.96||t<v0) P._tv0=Math.max(0,t-s._tspan*.08) } }
+    if(s._mode==='jouer'&&s._fol&&s._bw>50&&!this.pan&&!this.mq&&!this.nd){ const tg=this.fitR(this.focusRect(this.sched(),t)), cm=s._cam, a=Math.min(1,dt*3.2); const dz=tg.z-cm.z,dx=tg.px-cm.px,dy=tg.py-cm.py; if(Math.abs(dx)+Math.abs(dy)>.4||Math.abs(dz)>.0008) P._cam={z:cm.z+dz*a,px:cm.px+dx*a,py:cm.py+dy*a} }
+    if(Object.keys(P).length) this.setState(P);
+    this.fc=(this.fc||0)+1; if(this.fc%2===0) this.drawPv(ts/1000) };
+  drawPv(now){ const B=window.SRB, root=this.boardRef.current, R=this.X(); if(!B||!root||!this.PV) return; const C=R.pal(this.state._th), X={fr:B.fr,sr:B.sr,tx:B.tx,F:B.F};
+    root.querySelectorAll('canvas[data-pk]').forEach(cv=>{ const info=this.PV[cv.getAttribute('data-pk')]; if(!info) return; const c=cv.getContext('2d'); if(!c) return;
+      c.setTransform(2,0,0,2,0,0); c.globalAlpha=1; c.clearRect(0,0,216,92); c.fillStyle=C['--bg']; c.fillRect(0,0,216,92);
+      const o=Object.assign({},info,{k:info.col,live:info.run,cur:info.run}); if(info.loop){ o.prog=(now%8)/8; o.rem=info.dur*(1-o.prog); o.run=true }
+      try{ if(info.kd) R.KD[info.kd](c,216,92,now,C,o,X); else if(B.D[info.pv]) B.D[info.pv](c,216,92,now,C,this.S,o) }catch(err){ if(!this.errL){ this.errL=1; console.warn('aperçu',info.pv||info.kd,err) } } }) }
+  componentDidMount(){ if(!this.D&&window.SRC){ this.D=window.SRC.mk(); this.S=window.SRC.newS() }
+    this.raf=requestAnimationFrame(this.tick);
+    this.mv=e=>this.onMove(e); this.upH=e=>this.onUp(e); this.kdH=e=>this.onKey(e);
+    window.addEventListener('pointermove',this.mv); window.addEventListener('pointerup',this.upH); window.addEventListener('keydown',this.kdH);
+    this.fsH=()=>this.setState({_fs:!!document.fullscreenElement}); document.addEventListener('fullscreenchange',this.fsH);
+    const b=this.boardRef.current; if(b){ this.wh=e=>this.onWheel(e); b.addEventListener('wheel',this.wh,{passive:false}) }
+    const tlE=this.tlRef.current; if(tlE){ this.twh=e=>this.onWheelTl(e); tlE.addEventListener('wheel',this.twh,{passive:false}) }
+    const meas=()=>{ const b=this.boardRef.current, tl=this.tlRef.current, P={}; if(b){P._bw=b.clientWidth;P._bh=b.clientHeight} if(tl){ P._tw=tl.clientWidth; P._tlM=tl.clientHeight+36 } this.setState(P,()=>{ if(!this.fitted&&this.state._bw>50){ this.fitted=true; this.setState({_cam:this.fitR(this.focusRect(this.sched(),this.state._t))}) } }) };
+    this.ro=new ResizeObserver(meas); if(b) this.ro.observe(b); if(tlE) this.ro.observe(tlE); meas(); this.rsH=()=>meas(); window.addEventListener('resize',this.rsH);
+    this.setState({_tlH:Math.round(Math.max(200,Math.min(420,window.innerHeight*.42,window.innerHeight-56-8-220)))});
+    const w=()=>{ if(window.SRB){ this._N=null; this.forceUpdate() } else setTimeout(w,80) }; w() }
+  componentWillUnmount(){ cancelAnimationFrame(this.raf); window.removeEventListener('pointermove',this.mv); window.removeEventListener('pointerup',this.upH); window.removeEventListener('keydown',this.kdH); document.removeEventListener('fullscreenchange',this.fsH); const b=this.boardRef.current; if(b&&this.wh) b.removeEventListener('wheel',this.wh); const tl=this.tlRef.current; if(tl&&this.twh) tl.removeEventListener('wheel',this.twh); this.ro&&this.ro.disconnect() }
+  componentDidUpdate(pp,ps){ if(this.state._lib&&!ps._lib) setTimeout(()=>{ const el=this.libIn.current; el&&el.focus() },40); if(this.state._srch&&!ps._srch) setTimeout(()=>{ const el=this.srchIn.current; el&&el.focus() },40) }
+  srchKey(k){ const res=this._srchRes||[], i=this.state._srchI; if(k==='ArrowDown') this.setState({_srchI:Math.min(res.length-1,i+1)}); else if(k==='ArrowUp') this.setState({_srchI:Math.max(0,i-1)}); else if(k==='Enter'&&res[i]) res[i].go() }
+  versList(){ try{ return JSON.parse(localStorage.getItem('sr-conducteur-versions')||'[]') }catch(e){ return [] } }
+  pack(){ return {format:'studio-real/conducteur@1',project:this.D,assets:this.X().ASSETS.map(c=>({cat:c.k,items:c.items.map(i=>({name:i[0],meta:i[1],dur:i[2]}))})),runs:this.runs} }
+  saveVer(){ const l=this.versList(), d=new Date(); l.unshift({n:'Version '+(l.length+1),d:d.toISOString(),data:this.pack()}); try{ localStorage.setItem('sr-conducteur-versions',JSON.stringify(l.slice(0,12))) }catch(e){ this.toast('Stockage local plein.'); return } this.forceUpdate(); this.toast('Version enregistrée en local. Même format pour Cloudflare.') }
+  exportJson(){ const blob=new Blob([JSON.stringify(this.pack(),null,1)],{type:'application/json'}), a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='conducteur.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),3000) }
+  recordRun(L){ this.runs.push({n:'Soir '+(this.runs.length+1),S:L.evs.map(e=>e.S),drift:L.total-L.planned,d:new Date().toISOString()}); this.toast(this.runs[this.runs.length-1].n+' enregistré · retard '+this.fm(Math.abs(L.total-L.planned))) }
+
+  onWheel(e){ if(e.target.closest&&e.target.closest('[data-scroll]')) return; e.preventDefault(); const r=this.boardRef.current.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top, c=this.state._cam;
+    const pinch=e.ctrlKey||e.metaKey; const pad=!pinch&&(e.shiftKey||Math.abs(e.deltaX)>.5||(e.deltaMode===0&&Math.abs(e.deltaY)<40));
+    let nc; if(pad){ nc={z:c.z,px:c.px-(e.shiftKey&&!e.deltaX?e.deltaY:e.deltaX),py:c.py-(e.shiftKey&&!e.deltaX?0:e.deltaY)} }
+    else { const z=Math.max(.2,Math.min(2.2,c.z*Math.exp(-e.deltaY*(pinch?.01:.0016)))); nc={z,px:mx-(mx-c.px)*z/c.z,py:my-(my-c.py)*z/c.z} }
+    this.setState({_cam:nc,_fol:false}) }
+  setTv(v0,span){ const tot=this.tv?this.tv.tot:600; span=Math.max(20,Math.min(tot,span)); v0=Math.max(0,Math.min(tot-span,v0)); this.setState({_tv0:v0,_tspan:span>=tot-.5?null:span}) }
+  tz(k,a){ const {v0,span}=this.tv; if(a==='ph') a=Math.max(v0,Math.min(v0+span,this.state._t)); else if(typeof a!=='number') a=v0+span/2; const ns=span*k, f=(a-v0)/span; this.setTv(a-f*ns,ns) }
+  onWheelTl(e){ const r=this.tlRef.current.getBoundingClientRect(), tv=this.tv; if(!tv) return; const mod=e.ctrlKey||e.altKey||e.metaKey;
+    if(!mod&&Math.abs(e.deltaY)>=Math.abs(e.deltaX)&&e.target.closest&&this.trRef.current&&this.trRef.current.contains(e.target)&&!e.shiftKey) return;
+    e.preventDefault();
+    if(mod){ const d=Math.max(-50,Math.min(50,e.deltaY)); this.tz(Math.exp(d*.006),tv.v0+Math.max(0,Math.min(1,(e.clientX-r.left-tv.LBL)/tv.TW))*tv.span) }
+    else { const d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY; this.setTv(tv.v0+d/tv.TW*tv.span,tv.span) } }
+  zoomBy(k){ const c=this.state._cam, mx=this.state._bw/2, my=this.state._bh/2, z=Math.max(.2,Math.min(2.2,c.z*k)); this.setState({_cam:{z,px:mx-(mx-c.px)*z/c.z,py:my-(my-c.py)*z/c.z},_fol:false}) }
+  zoomTo(z){ this.zoomBy(z/this.state._cam.z) }
+  kg(get,set){ return e=>{ e.stopPropagation(); e.preventDefault(); const v=get(); this.snap('réglage'); this.kn={v0:v,y0:e.clientY,set,last:v} } }
+  kv(v,col){ return {dash:(v/100*68.3).toFixed(2)+' 200',arc:{stroke:col},ptr:{position:'absolute',left:'50%',top:'50%',width:2,height:'31%',marginLeft:-1,borderRadius:1,background:col,transformOrigin:'50% 0',transform:'rotate('+(v*2.7+45)+'deg)'}} }
+  bRel(e){ const r=this.boardRef.current.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top} }
+  stepByKey(k){ const [a,b]=k.split('/'); const ev=this.D.ev.find(x=>x.id===a); return ev?{ev,st:ev.st.find(x=>x.id===b)}:null }
+  toggleMs(k){ const s=this.state; let ms=s._msel.slice(); if(!ms.length&&s._sel&&s._sel.t==='n') ms=[s._sel.ev+'/'+s._sel.st]; const i=ms.indexOf(k); if(i>=0) ms.splice(i,1); else ms.push(k);
+    if(ms.length===1){ const [a,b]=ms[0].split('/'); this.setState({_sel:{t:'n',ev:a,st:b},_msel:[]}) } else this.setState({_msel:ms,_sel:ms.length?null:s._sel}) }
+
+  onMove(e){ const s=this.state;
+    if(this.vs){ this.setState({_aw:Math.max(240,Math.min(560,this.vs.w-(e.clientX-this.vs.x)))}); return }
+    if(this.zb){ const b=this.zb, ds=(e.clientX-b.x)/b.TW*b.tot; if(b.m==='mv') this.setTv(b.v0+ds,b.sp); else if(b.m==='l'){ const nv=Math.max(0,Math.min(b.v0+b.sp-20,b.v0+ds)); this.setTv(nv,b.v0+b.sp-nv) } else this.setTv(b.v0,b.sp+ds); return }
+    if(this.kn){ const k=this.kn, v=Math.max(0,Math.min(100,Math.round(k.v0+(k.y0-e.clientY)*.6))); if(v!==k.last){ k.last=v; k.set(v); this.bump() } return }
+    if(this.ad){ const a=this.ad; if(!a.on&&Math.hypot(e.clientX-a.x,e.clientY-a.y)>4) a.on=true; if(a.on) this.setState({_ghost:{n:a.a.name,x:e.clientX,y:e.clientY,hint:this.dropHint(a.a,e.clientX,e.clientY)}}); return }
+    if(this.nd){ const n=this.nd, z=s._cam.z; if(Math.abs(e.clientX-n.x)+Math.abs(e.clientY-n.y)>3) n.moved=true; if(n.moved&&s._lock){ if(!n.warned){ n.warned=true; this.locked() } return } if(n.moved){ if(!n.snapped){ n.snapped=true; this.snap('déplacement') } n.items.forEach(it=>{ it.st.dx=it.dx0+(e.clientX-n.x)/z; it.st.dy=it.dy0+(e.clientY-n.y)/z }); this.bump() } return }
+    if(this.mq){ const p=this.bRel(e), m=this.mq; if(Math.abs(p.x-m.x0)+Math.abs(p.y-m.y0)>4) m.moved=true; if(m.moved) this.setState({_mq:{x0:m.x0,y0:m.y0,x1:p.x,y1:p.y}}); return }
+    if(this.pan){ const p=this.pan, dx=e.clientX-p.x, dy=e.clientY-p.y; this.setState({_cam:{z:s._cam.z,px:p.px+dx,py:p.py+dy},_fol:false}); return }
+    if(s._lk){ const p=this.bRel(e); this.setState({_lk:Object.assign({},s._lk,{mx:p.x,my:p.y})}); return }
+    if(s._lock&&(this.cd||this.mr||this.tp)){ if(!this.lw){ this.lw=true; this.locked(); setTimeout(()=>{this.lw=false},1500) } return }
+    if(this.cd){ const c=this.cd, tv=this.tv, ds=(e.clientX-c.x)/tv.TW*tv.span; if(Math.abs(e.clientX-c.x)>2) c.moved=true; if(!c.moved) return;
+      if(c.m==='mv'){ const b=this.boardRef.current, rb=b?b.getBoundingClientRect():null; const inB=rb&&rb.width>0&&e.clientX>=rb.left&&e.clientX<=rb.right&&e.clientY>=rb.top&&e.clientY<=rb.bottom; if(inB){ const el=document.elementFromPoint(e.clientX,e.clientY), nd=el&&el.closest?el.closest('[data-key]'):null; c.onBoard=nd?nd.getAttribute('data-key'):'none'; this.setState({_ghost:{n:c.it.name||c.it.txt,x:e.clientX,y:e.clientY,hint:nd?'→ accrocher au début de cette étape':'survoler une étape'}}); return } else if(c.onBoard){ c.onBoard=null; this.setState({_ghost:null}) } } if(!c.snapped){ c.snapped=true; this.snap(c.m==='rs'?'durée de clip':'déplacement de clip') } if(c.m==='rs') c.it.dur=Math.max(2,Math.round(c.dur0+ds)); else this.anchor(c.it,Math.max(0,c.s0+ds)); this.bump(); return }
+    if(this.mr){ const m=this.mr, tv=this.tv, ds=(e.clientX-m.x)/tv.TW*tv.span, ratio=Math.max(.1,(m.tot0+ds)/m.tot0); m.ks.forEach(([st,k0])=>{ st.k[0]=Math.max(0,Math.min(100,Math.round(((10+k0*6)*ratio-10)/6))) }); this.bump(); return }
+    if(this.scr){ this.scrubTo(e.clientX); return }
+    if(this.tp){ const p=this.tp; p.tk.pts[p.ev]=Math.max(0,Math.min(100,Math.round((1-(e.clientY-p.top)/p.h)*100))); this.bump(); return }
+    if(this.sp){ this.setState({_tlH:Math.max(240,Math.min(window.innerHeight-220,this.sp.h-(e.clientY-this.sp.y)))}) } }
+  onUp(e){ const s=this.state;
+    if(this.vs){ this.vs=null; return }
+    if(this.zb){ this.zb=null; return }
+    if(this.kn){ this.kn=null; return }
+    if(this.ad){ const a=this.ad; this.ad=null; this.setState({_ghost:null}); if(a.on) this.dropAsset(a.a,e.clientX,e.clientY); else this.toast('Glisse l’asset vers la planche ou vers une piste de la conduite.'); return }
+    if(this.nd){ const n=this.nd; this.nd=null; if(!n.moved) this.setState({_sel:{t:'n',ev:n.ev.id,st:n.st.id},_msel:[],_gate:null}); return }
+    if(this.mq){ const m=this.mq; this.mq=null; if(!m.moved){ if(!m.add) this.setState({_sel:null,_msel:[],_gate:null,_mq:null}); else this.setState({_mq:null}); return } this.finishMarquee(m,this.bRel(e)); return }
+    if(this.pan){ this.pan=null; this.setState({_pan:false}); return }
+    if(s._lk){ this.finishLink(); return }
+    if(this.cd){ const c=this.cd; this.cd=null; if(c.onBoard){ this.setState({_ghost:null}); const key=c.onBoard; if(key!=='none'){ const q=this.stepByKey(key); if(q&&q.st){ const L=this.sched(); let S0=null; L.evs.forEach(ev2=>ev2.run.forEach(r=>{ if(r.st===q.st) S0=r.S })); if(S0==null){ const e2=L.evs.find(x=>x.ev===q.ev); S0=e2?e2.S:0 } this.anchor(c.it,S0); this.bump(); this.toast('« '+(c.it.name||c.it.txt)+' » accroché au début de « '+q.st.name+' »') } } } return }
+    if(this.mr){ this.mr=null; return }
+    this.scr=false; this.tp=null; this.sp=null }
+  finishMarquee(m,p){ const s=this.state, cm=s._cam, z=cm.z, NH=this._NH||164, F=this.layout(); const x0=Math.min(m.x0,p.x),x1=Math.max(m.x0,p.x),y0=Math.min(m.y0,p.y),y1=Math.max(m.y0,p.y); const hit=[];
+    F.forEach(f=>f.ev.st.forEach(st=>{ const q=f.P[st.id], sx=q.x*z+cm.px, sy=q.y*z+cm.py, w=240*z, h=NH*z; if(sx<x1&&sx+w>x0&&sy<y1&&sy+h>y0) hit.push(f.ev.id+'/'+st.id) }));
+    let ms=m.add?Array.from(new Set(s._msel.concat(s._sel&&s._sel.t==='n'?[s._sel.ev+'/'+s._sel.st]:[]).concat(hit))):hit;
+    if(ms.length===1){ const [a,b]=ms[0].split('/'); this.setState({_sel:{t:'n',ev:a,st:b},_msel:[],_mq:null}) } else this.setState({_msel:ms,_sel:null,_mq:null,_gate:null});
+    if(ms.length>1) this.toast(ms.length+' étapes sélectionnées') }
+  finishLink(){ const lk=this.state._lk, T=this.lkT; this.lkT=null; const ev=this.D.ev.find(x=>x.id===lk.ev);
+    if(T){ if(T.ev!==lk.ev) this.toast('Entre deux moments, on passe par un passage de la conduite.'); else if(T.b!==lk.a){ if(ev.tr.some(x=>x.a===lk.a&&x.b===T.b)) this.toast('Ce lien existe déjà.'); else { if(this.locked()){ this.setState({_lk:null}); return } this.snap('lien'); ev.tr.push({a:lk.a,b:T.b,mode:'all',g:[]}); this.D.ver++; this.setState({_lk:null,_sel:{t:'t',ev:ev.id,i:ev.tr.length-1},_msel:[]}); this.toast('Lien créé. Choisis sa condition à droite.'); return } } this.setState({_lk:null}); return }
+    if(Math.hypot(lk.mx-lk.sx,lk.my-lk.sy)<24){ this.setState({_lk:null}); return }
+    this.setState({_lk:null}); if(this.locked()) return; this.openLib(lk.mx,lk.my,{ev:lk.ev,a:lk.a}) }
+  openLib(x,y,link){ const cm=this.state._cam, b=this.boardRef.current, rb=b?b.getBoundingClientRect():{left:0,top:0}; this.setState({_lib:{x,y,sx:rb.left+x,sy:rb.top+y,wx:(x-cm.px)/cm.z,wy:(y-cm.py)/cm.z,link},_libQ:'',_libHov:null,_addTk:false}) }
+  addStepAt(ty,name,wx,wy,link,asset){ if(this.locked()) return; this.snap('ajout de bloc'); const F=this.layout(); let f=null; if(link) f=F.find(x=>x.ev.id===link.ev);
+    if(!f) f=F.find(x=>wx>=x.r.x&&wx<=x.r.x+x.r.w&&wy>=x.r.y&&wy<=x.r.y+x.r.h);
+    if(!f){ let bd=1e18; F.forEach(x=>{ const dx=Math.max(x.r.x-wx,0,wx-(x.r.x+x.r.w)), dy=Math.max(x.r.y-wy,0,wy-(x.r.y+x.r.h)), dd=dx*dx+dy*dy; if(dd<bd){bd=dd;f=x} }) }
+    if(!f) return; const ev=f.ev, nd=this.nodeOf(ty), id='n'+(++this.D.nid); const k=[8].concat([0,1].map(j=>nd.sets[j]?Math.round(nd.sets[j][1]*100):50));
+    const st={id,name:name||(nd.name.charAt(0).toUpperCase()+nd.name.slice(1)),ty,c:Math.max(0,(wx-120-f.fx-46)/560),r:(wy-28)/320,dx:0,dy:0,k}; if(asset) st.asset=asset; ev.st.push(st);
+    if(link) ev.tr.push({a:link.a,b:id,mode:'all',g:[]});
+    this.D.ver++; this.setState({_sel:{t:'n',ev:ev.id,st:id},_msel:[],_lib:null});
+    this.toast(link?'« '+st.name+' » créé et relié.':'« '+st.name+' » ajouté dans « '+ev.name+' ». Relie-le pour qu’il soit joué.') }
+  assetDown(cat,it,e){ if(e.button!==0) return; e.preventDefault(); this.ad={a:{cat:cat.k,name:it[0],dur:it[2]||30},x:e.clientX,y:e.clientY,on:false} }
+  dropHint(a,cx,cy){ const R=this.X(), b=this.boardRef.current, tl=this.tlRef.current; if(this.state._ad&&cx<322) return 'relâcher pour annuler';
+    const in_=(el)=>{ if(!el) return false; const r=el.getBoundingClientRect(); return cx>=r.left&&cx<=r.right&&cy>=r.top&&cy<=r.bottom };
+    if(in_(b)) return '→ planche · nouvelle étape';
+    if(in_(tl)){ const tt=R.AT[a.cat]; if(!tt) return 'les rôles se posent sur la planche'; const r=tl.getBoundingClientRect(), tv=this.tv; return '→ piste '+R.TT[tt][0]+' · '+this.fm(tv.v0+Math.max(0,(cx-r.left-tv.LBL))/tv.TW*tv.span) }
+    return 'relâcher pour annuler' }
+  dropAsset(a,cx,cy){ if(this.locked()) return; this.snap('asset'); const R=this.X(), D=this.D, b=this.boardRef.current, tl=this.tlRef.current, tr=this.trRef.current; if(this.state._ad&&cx<322) return;
+    const rb=b.getBoundingClientRect(); if(cx>=rb.left&&cx<=rb.right&&cy>=rb.top&&cy<=rb.bottom){ const cm=this.state._cam, wx=(cx-rb.left-cm.px)/cm.z, wy=(cy-rb.top-cm.py)/cm.z; this.addStepAt(R.AN[a.cat],a.name,wx,wy,null,a.name); return }
+    if(!tl) return; const rt=tl.getBoundingClientRect(); if(!(cx>=rt.left&&cx<=rt.right&&cy>=rt.top&&cy<=rt.bottom)) return;
+    const want=R.AT[a.cat]; if(!want){ this.toast('Les rôles se posent sur la planche, pas dans la conduite.'); return }
+    const tv=this.tv, abs=tv.v0+Math.max(0,(cx-rt.left-tv.LBL))/tv.TW*tv.span; let tk=null;
+    if(tr){ const rr=tr.getBoundingClientRect(); if(cy>=rr.top){ const yy=cy-rr.top+tr.scrollTop, row=(this._rows||[]).find(x=>yy>=x.top&&yy<x.top+x.h); if(row) tk=D.tracks.find(x=>x.id===row.id) } }
+    let made=false; if(!tk||tk.type!==want){ tk=D.tracks.find(x=>x.type===want)||null; if(!tk){ tk={id:'t'+(++D.nid),type:want,name:R.TT[want][0],open:true,clips:[]}; D.tracks.push(tk); made=true } }
+    const clip={id:'c'+(++D.nid),name:a.name,ev:'',off:0,dur:a.dur||30}; this.anchor(clip,abs); tk.clips.push(clip); tk.open=true; this.bump();
+    this.setState({_sel:{t:'c',tk:tk.id,id:clip.id},_msel:[]}); this.toast((made?'Piste « '+tk.name+' » créée · ':'')+'clip posé à '+this.fm(abs)) }
+
+  onKey(e){ if((e.ctrlKey||e.metaKey)&&e.code==='Space'){ e.preventDefault(); this.setState({_ad:!this.state._ad}); return } if((e.ctrlKey||e.metaKey)&&(e.key==='k'||e.key==='K')){ e.preventDefault(); this.setState({_srch:!this.state._srch,_srchQ:'',_srchI:0}); return } if(this.state._srch){ if(e.key==='Escape'){ this.setState({_srch:false}); return } if(e.key==='ArrowDown'||e.key==='ArrowUp'||e.key==='Enter'){ e.preventDefault(); this.srchKey(e.key) } return }
+    const tg=e.target; if(tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.isContentEditable)) return; const k=e.key;
+    if((e.ctrlKey||e.metaKey)&&(k==='z'||k==='Z')){ e.preventDefault(); if(e.shiftKey) this.redo(); else this.undo(); return } if((e.ctrlKey||e.metaKey)&&(k==='y'||k==='Y')){ e.preventDefault(); this.redo(); return }
+    if(e.code==='Space'){ e.preventDefault(); this.togglePlay() } else if(k==='g'||k==='G') this.doGo(); else if(k==='?'){ this.setState({_help:!this.state._help}) } else if(k==='p'||k==='P'){ this.setState({_view:this.state._view==='pupitre'?'both':'pupitre'}) } else if(k==='f'||k==='F') this.reframe();
+    else if(k==='v'||k==='V') this.setState({_tool:'sel'}); else if(k==='c'||k==='C') this.setState({_tool:'cut'}); else if(k==='m'||k==='M') this.addMoment(); else if(k==='k'||k==='K') this.addNote();
+    else if(k==='='||k==='+') this.tz(1/1.5,'ph'); else if(k==='-') this.tz(1.5,'ph'); else if(k==='\\') this.setTv(0,1e9);
+    else if(k==='Escape'){ if(this.state._help||this.state._view==='pupitre') this.setState({_help:false,_view:this.state._view==='pupitre'?'both':this.state._view}); else this.setState({_sel:null,_msel:[],_gate:null,_lib:null,_addTk:false,_lk:null,_goHov:false}) } else if(k==='Delete'||k==='Backspace') this.delSel() }
+  togglePlay(){ const L=this.sched(); if(!this.state._pl&&this.state._t>=L.total-.01) this.setState({_t:0,_pl:true}); else this.setState({_pl:!this.state._pl}) }
+  doGo(){ const L=this.sched(), p=L.pending; if(!p){ this.toast('Aucun passage n’attend de top.'); return } this.D.go[p.ev.id]=true; this.bump(); this.toast('Top donné · passage P'+(p.i+1)+' franchi') }
+  reframe(){ if(this.state._mode==='jouer') this.setState({_fol:true}); else this.setState({_cam:this.fitR(this.focusRect(this.sched(),this.state._t))}) }
+  entries(ev){ return typeof ev.entry==='string'?[ev.entry]:Object.values(ev.entry) }
+  delSel(){ if(this.locked()) return; this.snap('suppression'); const s=this.state, D=this.D, sl=s._sel;
+    if(s._msel.length>1){ let n=0,kept=0; s._msel.forEach(k=>{ const q=this.stepByKey(k); if(!q||!q.st) return; if(this.entries(q.ev).includes(q.st.id)){ kept++; return } q.ev.st=q.ev.st.filter(x=>x.id!==q.st.id); q.ev.tr=q.ev.tr.filter(x=>x.a!==q.st.id&&x.b!==q.st.id); n++ }); D.ver++; this.setState({_msel:[]}); this.toast(n+' étapes supprimées'+(kept?' · '+kept+' premières étapes gardées':'')); return }
+    if(!sl) return;
+    if(sl.t==='n'||sl.t==='t'){ const ev=D.ev.find(x=>x.id===sl.ev); if(!ev) return;
+      if(sl.t==='t') ev.tr.splice(sl.i,1); else { if(this.entries(ev).includes(sl.st)){ this.toast('La première étape d’un moment ne se supprime pas.'); return } ev.st=ev.st.filter(x=>x.id!==sl.st); ev.tr=ev.tr.filter(x=>x.a!==sl.st&&x.b!==sl.st) } }
+    else if(sl.t==='m'){ if(D.ev.length<2){ this.toast('Il faut garder au moins un moment.'); return } const abs=this.absAll(), i=D.ev.findIndex(x=>x.id===sl.ev); if(i<0) return; const a=D.ev[i].act; D.ev.splice(i,1); if(!D.ev.some(x=>x.act===a)){ D.acts.splice(a,1); D.ev.forEach(x=>{ if(x.act>a) x.act-- }) } D.ver++; this.reanchor(abs) }
+    else if(sl.t==='c'||sl.t==='k'){ const tk=D.tracks.find(x=>x.id===sl.tk); if(tk){ if(tk.clips) tk.clips=tk.clips.filter(x=>x.id!==sl.id); if(tk.marks) tk.marks=tk.marks.filter(x=>x.id!==sl.id) } }
+    else if(sl.t==='tk'){ D.tracks=D.tracks.filter(x=>x.id!==sl.tk) }
+    else return;
+    D.ver++; this.setState({_sel:null}) }
+  moveOut(ev,tr,dir){ if(this.locked()) return; const outs=ev.tr.filter(x=>x.a===tr.a), k=outs.indexOf(tr), j=k+dir; if(j<0||j>=outs.length) return; this.snap('ordre des sorties'); const i1=ev.tr.indexOf(tr), i2=ev.tr.indexOf(outs[j]); ev.tr[i1]=outs[j]; ev.tr[i2]=tr; this.bump(); this.setState({_sel:{t:'t',ev:ev.id,i:i2}}) }
+  alignSel(){ if(this.locked()) return; this.snap('alignement'); const ks=this.state._msel; if(ks.length<2) return; const F=this.layout(), pos=ks.map(k=>{ const q=this.stepByKey(k); if(!q||!q.st) return null; const f=F.find(x=>x.ev===q.ev); return {st:q.st,y:f.P[q.st.id].y} }).filter(Boolean); const y=pos[0].y; pos.forEach(p=>{ p.st.dy+=y-p.y }); this.bump(); this.toast('Étapes alignées sur la même ligne') }
+  seek(tt,follow){ const D=this.D, P={};
+    if(this.state._mode==='preparer'){ for(let k=0;k<3;k++){ this.sched().gates.forEach(g=>{ if(g.g.mode!=='go') return; if(g.ready<=tt+.001) D.go[g.ev.id]=true; else { delete D.go[g.ev.id]; delete D.hold[g.ev.id] } }) } D.ver++; P._t=Math.max(0,Math.min(this.sched().total,tt)) }
+    else { const L=this.sched(), lim=L.pending?L.pending.ready+L.pending.hold:L.total; P._t=Math.max(0,Math.min(lim,tt)) }
+    const tv=this.tv; if(follow&&tv&&this.state._tspan&&(P._t<tv.v0||P._t>tv.v0+tv.span)) P._tv0=Math.max(0,P._t-tv.span*.2);
+    this.setState(s=>Object.assign(P,{_v:s._v+1})) }
+  scrubTo(cx){ const tl=this.tlRef.current, tv=this.tv; if(!tl||!tv) return; const r=tl.getBoundingClientRect(); this.seek(tv.v0+(cx-r.left-tv.LBL)/tv.TW*tv.span,false) }
+  absAt(cx){ const tl=this.tlRef.current, tv=this.tv, r=tl.getBoundingClientRect(); return Math.max(0,tv.v0+(cx-r.left-tv.LBL)/tv.TW*tv.span) }
+  splitAt(i,tc){ if(this.locked()) return; this.snap('coupe'); const L=this.sched(), e=L.evs[i]; if(!e||e.run.length<2){ this.toast('Ce moment n’a qu’une étape jouée : rien à couper.'); return }
+    let b=1,bd=1e12; for(let j=1;j<e.run.length;j++){ const dd=Math.abs(e.run[j].S-tc); if(dd<bd){bd=dd;b=j} }
+    const ev=e.ev, cut=e.run[b].st.id, moved=new Set([cut]), q=[cut]; while(q.length){ const a=q.shift(); ev.tr.forEach(x=>{ if(x.a===a&&!moved.has(x.b)){ moved.add(x.b); q.push(x.b) } }) }
+    if(this.entries(ev).some(x=>moved.has(x))){ this.toast('Impossible de couper ici : une branche revient au début.'); return }
+    const abs=this.absAll(), D=this.D, nid='m'+(++D.nid), ms=ev.st.filter(x=>moved.has(x.id)), minC=Math.min(...ms.map(x=>x.c)); ms.forEach(x=>{ x.c-=minC });
+    const ne={id:nid,act:ev.act,name:ev.name+' · suite',entry:cut,st:ms,tr:ev.tr.filter(x=>moved.has(x.a)&&moved.has(x.b)),gate:ev.gate||{mode:'auto',g:[]}};
+    ev.st=ev.st.filter(x=>!moved.has(x.id)); ev.tr=ev.tr.filter(x=>!moved.has(x.a)&&!moved.has(x.b)); ev.gate={mode:'auto',g:[]};
+    D.ev.splice(i+1,0,ne); D.tracks.forEach(tk=>{ if(tk.pts) tk.pts[nid]=tk.pts[ev.id]!=null?tk.pts[ev.id]:50 }); D.ver++; this.reanchor(abs); this.bump();
+    this.setState({_sel:{t:'m',ev:nid},_tool:'sel'}); this.toast('Moment coupé en deux · « '+ne.name+' »') }
+  splitClip(tk,c,abs){ if(this.locked()) return; this.snap('coupe de clip'); const L=this.sched(), e=L.evs.find(x=>x.ev.id===c.ev), s0=(e?e.S:0)+c.off; if(abs<=s0+1||abs>=s0+c.dur-1) return; const D=this.D, n={id:'c'+(++D.nid),name:c.name,ev:'',off:0,dur:Math.round(s0+c.dur-abs)}; c.dur=Math.round(abs-s0); this.anchor(n,abs); tk.clips.push(n); this.bump(); this.toast('Clip coupé à '+this.fm(abs)) }
+  addMoment(){ if(this.locked()) return; this.snap('nouveau moment'); const L=this.sched(), D=this.D, sl=this.state._sel; let i=sl&&sl.t==='m'?D.ev.findIndex(x=>x.id===sl.ev):this.curIdx(L,this.state._t).i; if(i<0) i=D.ev.length-1;
+    const abs=this.absAll(), id='m'+(++D.nid), sid='n'+(++D.nid), prev=D.ev[i];
+    const ne={id,act:prev.act,name:'Nouveau moment',entry:sid,st:[{id:sid,name:'Nouvelle étape',ty:'k:scene',c:0,r:0,dx:0,dy:0,k:[8,60,40]}],tr:[],gate:{mode:'auto',g:[]}};
+    if(!prev.gate) prev.gate={mode:'auto',g:[]}; D.ev.splice(i+1,0,ne); D.tracks.forEach(tk=>{ if(tk.pts) tk.pts[id]=50 }); D.ver++; this.reanchor(abs); this.bump();
+    const f=this.layout().find(x=>x.ev===ne); this.setState({_sel:{t:'m',ev:id},_msel:[],_cam:this.fitR(f.r),_fol:false}); this.toast('Moment ajouté. Double-clic dans son cadre pour ajouter des étapes.') }
+  newAct(evId){ if(this.locked()) return; this.snap('nouvel acte'); const D=this.D, i=D.ev.findIndex(x=>x.id===evId), a=D.ev[i].act; if(i===0||D.ev[i-1].act!==a){ this.toast('Ce moment ouvre déjà un acte.'); return }
+    D.acts.splice(a+1,0,{n:'Nouvel acte'}); D.ev.forEach((x,j)=>{ if(x.act>a) x.act++; else if(x.act===a&&j>=i) x.act=a+1 }); this.bump(); this.setState({_sel:{t:'a',i:a+1}}); this.toast('Nouvel acte créé. Donne-lui un nom à droite.') }
+  mergeAct(evId){ if(this.locked()) return; this.snap('acte'); const D=this.D, i=D.ev.findIndex(x=>x.id===evId), a=D.ev[i].act; if(a===0) return; D.ev.forEach(x=>{ if(x.act===a) x.act=a-1; else if(x.act>a) x.act-- }); D.acts.splice(a,1); this.bump(); this.toast('Moment rattaché à l’acte précédent') }
+  addNote(){ if(this.locked()) return; this.snap('note'); const D=this.D, R=this.X(); let tk=D.tracks.find(x=>x.type==='notes'); if(!tk){ tk={id:'t'+(++D.nid),type:'notes',name:R.TT.notes[0],open:true,marks:[]}; D.tracks.push(tk) } const m={id:'k'+(++D.nid),ev:'',off:0,txt:'Nouvelle note'}; this.anchor(m,this.state._t); tk.marks.push(m); tk.open=true; this.bump(); this.setState({_sel:{t:'k',tk:tk.id,id:m.id},_msel:[]}) }
+  addTrack(type){ if(this.locked()) return; this.snap('piste'); const D=this.D, R=this.X(), tk={id:'t'+(++D.nid),type,name:R.TT[type][0],open:true}; if(type==='notes'||type==='secu') tk.marks=[]; else if(type==='curve'){ tk.src='custom'; tk.col=R.TT.curve[1]; tk.pts={}; D.ev.forEach(e=>{ tk.pts[e.id]=50 }) } else tk.clips=[]; D.tracks.push(tk); this.bump(); this.setState({_addTk:false,_sel:{t:'tk',tk:tk.id}}); this.toast('Piste « '+tk.name+' » ajoutée'+(type==='curve'?' · tire ses points':' · glisse des assets dessus')) }
+  libKey(e){ const vis=this._libVis||[], s=this.state; if(e.key==='Escape'){ e.preventDefault(); this.setState({_lib:null}); return }
+    const cur=vis.indexOf(s._libHov||vis[0]);
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); const n=Math.max(0,Math.min(vis.length-1,cur+(e.key==='ArrowDown'?1:-1))); this.setState({_libHov:vis[n]}) }
+    else if(e.key==='Enter'){ e.preventDefault(); const ty=vis[Math.max(0,cur)]; if(ty){ const lb=s._lib; this.addStepAt(ty,null,lb.wx,lb.wy,lb.link) } } }
+
+  renderVals(){ const s=this.state, R=this.X(); if(!R||!this.D) return {};
+    const D=this.D, t=s._t, cm=s._cam, z=cm.z, B=window.SRB, light=s._th==='light', lc=h=>R.lc(h,light);
+    const L=this.sched(), F=this.layout(), iss=L.iss, V=this.votes();
+    const lod=z<.5?'far':z<1?'mid':'near', NH=lod==='far'?56:lod==='mid'?164:292; this._NH=NH; const view=s._view, tlH=view==='tracks'?s._tlM:s._tlH;
+    const SX=x=>x*z+cm.px, SY=y=>y*z+cm.py, jouer=s._mode==='jouer', sl=s._sel, msel=new Set(s._msel);
+    const ci=this.curIdx(L,t), stat={}; L.evs.forEach(e=>e.run.forEach(ri=>{ stat[e.ev.id+'/'+ri.st.id]={ri,status:t>=ri.E?'done':t>=ri.S?'act':'fut'} }));
+    const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X'], rom=a=>ROM[a]||String(a+1), ACTN=a=>'Acte '+rom(a)+' · '+((D.acts[a]||{}).n||'');
+    const seg=(on)=>({height:28,padding:'0 10px',borderRadius:6,display:'flex',alignItems:'center',gap:6,cursor:'pointer',whiteSpace:'nowrap',fontFamily:"'Azeret Mono',monospace",fontSize:8.5,letterSpacing:'.16em',background:on?'var(--gdeep)':'transparent',color:on?'var(--gink)':'var(--ink2)'});
+    const dotS=(c,pulse,hollow)=>({width:7,height:7,borderRadius:'50%',flex:'none',background:hollow?'transparent':c,boxShadow:hollow?'inset 0 0 0 1.2px '+c:'none',animation:pulse?'srp 1.2s infinite':'none'});
+    const bz=(ax,ay,bx,by)=>{ const d=Math.max(40,Math.abs(bx-ax)*.45); return 'M'+ax+' '+ay+' C'+(ax+d)+' '+ay+' '+(bx-d)+' '+by+' '+bx+' '+by };
+    const portY=y=>SY(y+28), frames=[],nodes=[],ports=[],wires=[],wdots=[],chips=[],bGates=[],lk=s._lk; this.PV={};
+    F.forEach(f=>{ const ev=f.ev, live=f.i===ci.i||(ci.gate&&f.i===ci.i+1), dim=jouer&&!live, fw=f.r.w*z, nm=ev.name.toUpperCase();
+      const fsz=lod==='far'?Math.max(9,Math.min(20,(fw-10)/(nm.length*1.02))):14, selM=sl&&sl.t==='m'&&sl.ev===ev.id, ghost=s._goHov&&L.pending&&f.i===L.pending.i+1;
+      frames.push({name:nm,tag:'Moment '+(f.i+1)+' · acte '+rom(ev.act)+' · '+ev.st.length+' étapes',live:f.i===ci.i&&!ci.gate&&!ci.end,
+        st:{position:'absolute',left:SX(f.r.x),top:SY(f.r.y),width:fw,height:f.r.h*z,borderRadius:16,background:live?'rgba(47,107,74,.08)':'rgba(var(--lr),.02)',boxShadow:ghost?'inset 0 0 0 2px #e0674a, 0 0 0 6px rgba(224,103,74,.14)':selM?'inset 0 0 0 1.5px var(--cy)':live?'inset 0 0 0 1px rgba(63,154,106,.6)':'inset 0 0 0 1px rgba(var(--lr),.13)',opacity:dim&&!ghost?.4:1,transition:'opacity .35s',animation:ghost?'srp 1.1s infinite':'none'},
+        hdSt:lod==='far'?{position:'absolute',left:0,bottom:'100%',marginBottom:10,width:fw,display:'flex',flexDirection:'column-reverse',gap:6,pointerEvents:'none'}:{position:'absolute',left:18,top:16,display:'flex',flexDirection:'column',gap:6,pointerEvents:'none'},
+        tSt:{fontFamily:"'Venus Rising',sans-serif",fontSize:fsz,letterSpacing:'.08em',lineHeight:1.2,color:'var(--ink)',maxWidth:lod==='far'?fw:Math.max(60,fw-120),whiteSpace:lod==='far'?'nowrap':'normal',overflow:'hidden',textOverflow:'ellipsis'}});
+      const OUT={}; ev.tr.forEach(tr=>{ (OUT[tr.a]=OUT[tr.a]||[]).push(tr) }); const oyW=k=>lod==='far'?28:Math.min(NH-16,28+k*20);
+      ev.st.forEach((st,si)=>{ const p=f.P[st.id], key=ev.id+'/'+st.id, so=stat[key], outs=OUT[st.id]||[], status=so?so.status:'skip', nd=this.nodeOf(st.ty), acc=lc(nd.col), d=this.dur(st);
+        const sel=(sl&&sl.t==='n'&&sl.ev===ev.id&&sl.st===st.id)||msel.has(key), act=status==='act';
+        const tau=so?Math.max(0,Math.min(t,so.ri.E)-so.ri.S):0, prog=act?(t-so.ri.S)/(so.ri.E-so.ri.S):status==='done'?1:0;
+        const ring=act?'inset 0 0 0 1.5px #e0674a, 0 0 0 5px rgba(224,103,74,.13)':sel?'inset 0 0 0 1.5px var(--cy), 0 0 0 4px rgba(185,207,216,.16)':'inset 0 0 0 1px rgba(var(--lr),.18)';
+        const statTxt=act?'en cours':status==='done'?'joué':status==='fut'?'à venir':'non choisi';
+        let val=null,lab='',chosen=false,pct=0;
+        if(nd.kd==='attente') val=act?this.SN('pres').val(tau):status==='done'?142:0;
+        if(nd.kd==='calage') val=act?this.SN('bruit').val(tau):status==='done'?32:72;
+        if(nd.kd==='issue'){ const inc=ev.tr.find(x=>x.b===st.id&&x.g.some(g=>g.k==='issue')); const lv=inc?inc.g.find(g=>g.k==='issue').v:'A'; lab=lv==='T'?'=':lv; chosen=lv===iss; pct=lv==='A'?V.A:lv==='B'?V.B:V.C }
+        if(lod!=='far') this.PV[key]={kd:nd.kd,pv:nd.pv,col:acc,run:act,p:[st.k[1]/100,st.k[2]/100],prog:Math.max(0,Math.min(1,prog)),rem:act?so.ri.E-t:d,dur:d,val,lab,chosen,pct,asset:st.asset||st.name,gst:act?'ARMÉ':status==='done'?'PASSAGE':'RETENU'};
+        const n={key,name:st.name,sub:String(si+1).padStart(2,'0')+' · '+nd.label+' · '+statTxt,showBody:lod!=='far',showName:lod!=='far',near:lod==='near',desc:nd.desc,lblOn:lod==='far',
+          lblSt:{position:'absolute',left:SX(p.x),top:SY(p.y)-17,width:Math.max(70,240*z+40),fontFamily:"'Venus Rising',sans-serif",fontSize:8.5,letterSpacing:'.08em',textTransform:'uppercase',color:act?'var(--ort)':sel?'var(--cy)':'var(--ink2)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',pointerEvents:'none',opacity:status==='skip'?.5:dim?.45:1},
+          box:lod==='far'?{position:'absolute',left:SX(p.x),top:SY(p.y),width:240*z,height:NH*z,borderRadius:999,background:act?'#e0674a':status==='done'?'#3f9a6a':status==='fut'?'var(--tile)':'transparent',boxShadow:sel?'inset 0 0 0 1.5px var(--cy), 0 0 0 3px rgba(185,207,216,.18)':status==='skip'?'none':act?'0 0 0 4px rgba(224,103,74,.16)':status==='fut'?'inset 0 0 0 1px rgba(var(--lr),.35)':'none',border:status==='skip'?'1px dashed rgba(var(--lr),.35)':'none',overflow:'hidden',opacity:dim?.45:1,transition:'background .3s, opacity .35s'}:{position:'absolute',left:SX(p.x),top:SY(p.y),width:240*z,height:NH*z,borderRadius:Math.max(4,12*z),background:act?'var(--tile2)':'var(--tile)',boxShadow:ring,overflow:'hidden',opacity:status==='skip'?.5:dim?.4:1,transition:'box-shadow .15s, opacity .35s'},
+          inner:{width:240,height:NH,transform:'scale('+z+')',transformOrigin:'0 0'},
+          dotSt:lod==='far'?{display:'none'}:dotS(act?'#e0674a':status==='done'?'#3f9a6a':acc,act,status==='skip'),
+          nameSt:{fontFamily:"'Venus Rising',sans-serif",fontSize:10.5,letterSpacing:'.06em',lineHeight:1.25,textTransform:'uppercase',color:'var(--ink)',whiteSpace:'nowrap',overflow:'hidden',display:'block'},
+          mqSt:st.name.length>14?{display:'inline-block',whiteSpace:'nowrap',paddingRight:0,animation:'srmq '+(6+st.name.length*.25)+'s linear infinite'}:{display:'inline-block',whiteSpace:'nowrap'}, nameTxt:st.name.length>14?st.name+'\u00a0\u00a0\u00a0·\u00a0\u00a0\u00a0'+st.name+'\u00a0\u00a0\u00a0·\u00a0\u00a0\u00a0':st.name,
+          durSt:{fontFamily:"'Venus Rising',sans-serif",fontSize:11,color:act?'var(--ort)':'var(--ink2)',flex:'none'},
+          durTxt:this.fm(act?so.ri.E-t:so?so.ri.E-so.ri.S:d),
+          progSt:{display:'block',height:'100%',width:(Math.max(0,Math.min(1,prog))*100).toFixed(1)+'%',background:act?'#e0674a':'#3f9a6a'},
+          up:()=>{ if(this.state._lk) this.lkT={ev:ev.id,b:st.id} },
+          grab:e=>{ if(e.button!==0) return; e.stopPropagation(); if(e.shiftKey){ this.toggleMs(key); return } const ms=this.state._msel, group=ms.length>1&&ms.includes(key);
+            const items=(group?ms:[key]).map(kk=>{ const q=this.stepByKey(kk); return q&&q.st?{st:q.st,dx0:q.st.dx,dy0:q.st.dy}:null }).filter(Boolean);
+            this.nd={ev,st,items,x:e.clientX,y:e.clientY,moved:false,group}; if(!group&&!(sl&&sl.t==='n'&&sl.st===st.id&&sl.ev===ev.id)) this.setState({_sel:{t:'n',ev:ev.id,st:st.id},_msel:[],_gate:null});
+            if(this.state._mode==='preparer'&&!group){ if(so) this.seek(so.ri.S+.01,true); else { const eL=L.evs[f.i]; if(eL) this.seek(eL.S,true); this.toast('« '+st.name+' » n’est pas jouée avec la salle simulée actuelle : cue au début du moment.') } } }};
+        if(lod==='near'){ const ks=[{lab:'durée',disp:this.fm(d),i:0,col:'var(--ort)'}]; nd.sets.forEach((se,j)=>ks.push({lab:String(se[0]).slice(0,9),disp:this.fmtSet(se,st.k[j+1]),i:j+1,col:acc}));
+          n.knobs=ks.map(x=>Object.assign({lab:x.lab,disp:x.disp,grab:this.kg(()=>st.k[x.i],v=>{st.k[x.i]=v})},this.kv(st.k[x.i],x.col)));
+          n.outs=outs.map((tr,k)=>({no:String(k+1),to:(ev.st.find(x=>x.id===tr.b)||{}).name||'?',rule:tr.g.length?tr.g.map(g=>this.glab(g)).join(tr.mode==='any'?' ou ':' et '):(outs.length>1?'sinon · à la fin':'à la fin'),dot:{width:6,height:6,borderRadius:'50%',background:acc,flex:'none'},pick:e=>{ e.stopPropagation(); this.setState({_sel:{t:'t',ev:ev.id,i:ev.tr.indexOf(tr)},_msel:[],_gate:null}) }}));
+          n.outsHint=outs.length>1?'DE HAUT EN BAS · LA PREMIÈRE REMPLIE GAGNE':outs.length?'UNE SEULE':'AUCUNE · TIRER LE ROND +' }
+        nodes.push(n);
+        const hp=s._hp, py=portY(p.y), psz=lod==='far'?10:13, canIn=lk&&lk.ev===ev.id&&lk.a!==st.id;
+        const pst=(x,id,c,lit)=>({position:'absolute',left:x-psz/2,top:py-psz/2,width:psz,height:psz,borderRadius:'50%',cursor:'crosshair',zIndex:4,background:hp===id||lit?c:'var(--bg)',boxShadow:'inset 0 0 0 2px '+c+(canIn&&id.endsWith('/i')?', 0 0 0 5px rgba(185,207,216,.22)':''),transform:hp===id?'scale(1.4)':'scale(1)',transition:'transform .12s, background .12s'});
+        ports.push({tip:'Entrée de l’étape',st:pst(SX(p.x),key+'/i',canIn?'var(--cy)':'#76878e',false),down:e=>e.stopPropagation(),up:()=>{ this.lkT={ev:ev.id,b:st.id} },en:()=>this.setState({_hp:key+'/i'}),le:()=>this.setState({_hp:null})});
+        const ox=SX(p.x+240); const mkOut=(k,tipTxt,plus)=>{ const pyk=SY(p.y+oyW(k)), id=key+'/o'+k; ports.push({tip:tipTxt,st:{position:'absolute',left:ox-psz/2,top:pyk-psz/2,width:psz,height:psz,borderRadius:'50%',cursor:'crosshair',zIndex:4,background:hp===id||(act&&!plus)?acc:'var(--bg)',boxShadow:'inset 0 0 0 '+(plus?'1.5px':'2px')+' '+acc,opacity:plus?.7:1,transform:hp===id?'scale(1.4)':'scale(1)',transition:'transform .12s, background .12s'},down:e=>{ if(e.button!==0) return; e.stopPropagation(); this.lkT=null; this.setState({_lk:{ev:ev.id,a:st.id,sx:ox,sy:pyk,mx:ox,my:pyk}}) },up:()=>{},en:()=>this.setState({_hp:id}),le:()=>this.setState({_hp:null})}) };
+        if(lod==='far') mkOut(0,'Sorties de l’étape',false); else { outs.forEach((tr,k)=>mkOut(k,'Sortie '+(k+1)+' → '+((ev.st.find(x=>x.id===tr.b)||{}).name||''),false)); mkOut(outs.length,'Nouvelle sortie : tirer vers une étape, ou dans le vide pour choisir un bloc',true) }
+      });
+      ev.tr.forEach((tr,ti)=>{ const pa=f.P[tr.a], pb=f.P[tr.b]; if(!pa||!pb) return; const outsA=OUT[tr.a]||[], kk=Math.max(0,outsA.indexOf(tr)); const ax=SX(pa.x+240), ay=SY(pa.y+oyW(kk)), bx=SX(pb.x), by=portY(pb.y);
+        const so=stat[ev.id+'/'+tr.a], inRun=so&&so.ri.tr===tr, ws=inRun?(t>=so.ri.E?'done':t>=so.ri.S?'act':'fut'):'skip';
+        const selT=sl&&sl.t==='t'&&sl.ev===ev.id&&sl.i===ti, col={done:'#3f9a6a',act:'#e0674a',fut:'rgba(var(--lr),.45)',skip:'rgba(var(--lr),.25)'}[ws];
+        wires.push({d:bz(ax,ay,bx,by),st:{fill:'none',stroke:selT?'var(--cy)':col,strokeWidth:ws==='act'||selT?2:ws==='done'?1.2:1.4,strokeDasharray:ws==='skip'?'3 6':ws==='act'?'7 5':'none',strokeDashoffset:ws==='act'?-((t*1.5)%12):0,opacity:dim?.4:ws==='skip'?.7:1}});
+        if(ws==='act'){ const u=(t*.45)%1, dd=Math.max(40,Math.abs(bx-ax)*.45), c1x=ax+dd, c2x=bx-dd, m=1-u, px=m*m*m*ax+3*m*m*u*c1x+3*m*u*u*c2x+u*u*u*bx, py=m*m*m*ay+3*m*m*u*ay+3*m*u*u*by+u*u*u*by; wdots.push({position:'absolute',left:px-4,top:py-4,width:8,height:8,borderRadius:'50%',background:'#e0674a',boxShadow:'0 0 0 3px rgba(224,103,74,.25), 0 0 10px #e0674a',pointerEvents:'none',zIndex:3}) }
+        if(lod==='far') return; const tau=so?t-so.ri.S:0;
+        const lines=tr.g.length?tr.g.map(g=>{ const m=ws==='act'?this.met(g,tau,iss):ws==='done'; const sn=g.k!=='issue'?this.SN(g.k):null; return {txt:this.glab(g),dot:dotS(m?'#3f9a6a':ws==='act'?'#e0674a':'rgba(var(--lr),.5)',ws==='act'&&!m,!m&&ws!=='act'),hasVal:lod==='near'&&ws==='act'&&!!sn,val:sn?sn.f(sn.val(tau)):''} }):[{txt:outsA.length>1?'sinon · à la fin de l’étape':'à la fin de l’étape',dot:dotS(ws==='done'?'#3f9a6a':'rgba(var(--lr),.5)',false,ws!=='done'),hasVal:false,val:''}];
+        chips.push({hasOrd:outsA.length>1,ord:'SORTIE '+(kk+1)+' / '+outsA.length,multi:tr.g.length>1,mode:tr.mode==='any'?'une seule suffit':'toutes requises',lines,pick:e=>{ if(e.button!==0) return; e.stopPropagation(); this.setState({_sel:{t:'t',ev:ev.id,i:ti},_msel:[],_gate:null}) },
+          st:{position:'absolute',left:(ax+bx)/2,top:(ay+by)/2,transform:'translate(-50%,-50%)',maxWidth:Math.max(90,320*z-20),display:'flex',flexDirection:'column',gap:4,padding:'6px 9px',borderRadius:6,background:'var(--bg)',boxShadow:'inset 0 0 0 1px '+(selT?'var(--cy)':ws==='act'?'rgba(224,103,74,.7)':'rgba(var(--lr),.2)'),cursor:'pointer',zIndex:3,opacity:dim?.4:ws==='skip'?.6:1}}) });
+    });
+    L.gates.forEach(g=>{ const fa=F[g.i], fb=F[g.i+1]; if(!fb) return; const ea=L.evs[g.i], eb=L.evs[g.i+1], la=ea.run[ea.run.length-1], fbE=eb.run[0]; if(!la||!fbE) return;
+      const pa=fa.P[la.st.id], pb=fb.P[fbE.st.id]; if(!pa||!pb) return; const ax=SX(pa.x+240), ay=portY(pa.y), bx=SX(pb.x), by=portY(pb.y);
+      const passed=t>=g.pass&&!g.pend, here=ci.gate===g, go=g.g.mode==='go', col=here?'#e0674a':passed?'#3f9a6a':'rgba(var(--lr),.4)';
+      wires.push({d:bz(ax,ay,bx,by),st:{fill:'none',stroke:col,strokeWidth:here?2:1.3,strokeDasharray:'2 5',strokeLinecap:'round'}});
+      bGates.push({lab:'P'+(g.i+1)+' · '+(go?'top régie':'auto'),showLab:lod!=='far',pick:e=>{ if(e.button!==0) return; e.stopPropagation(); this.setState({_gate:g.i,_sel:null,_msel:[]}) },
+        st:{position:'absolute',left:(ax+bx)/2,top:(ay+by)/2-8,transform:'translateX(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:8,cursor:'pointer',zIndex:3},
+        dia:{width:16,height:16,transform:'rotate(45deg)',borderRadius:3,background:passed?(go?'#e0674a':'#3f9a6a'):'var(--bg)',boxShadow:'inset 0 0 0 1.5px '+(go?'#e0674a':'#3f9a6a')+(s._gate===g.i?', 0 0 0 4px rgba(185,207,216,.25)':''),animation:here&&g.pend?'srp 1s infinite':'none'}}) });
+    const lkOn=!!lk, lkD=lk?bz(lk.sx,lk.sy,lk.mx,lk.my):'';
+    const mm={}; { let bx0=1e9,by0=1e9,bx1=-1e9,by1=-1e9; F.forEach(f=>{ bx0=Math.min(bx0,f.r.x); by0=Math.min(by0,f.r.y-40); bx1=Math.max(bx1,f.r.x+f.r.w); by1=Math.max(by1,f.r.y+f.r.h) }); const MW=168, MH=84, k=Math.min(MW/(bx1-bx0),MH/(by1-by0)); mm.k=k; mm.bx=bx0-((MW/k)-(bx1-bx0))/2; mm.by=by0-((MH/k)-(by1-by0))/2; mm.w=MW; mm.h=MH;
+      mm.rects=F.map(f=>({st:{position:'absolute',left:(f.r.x-mm.bx)*k,top:(f.r.y-mm.by)*k,width:f.r.w*k,height:f.r.h*k,borderRadius:2,background:f.i===ci.i?'rgba(224,103,74,.45)':f.i<ci.i?'rgba(63,154,106,.35)':'rgba(var(--lr),.14)'}}));
+      mm.view={position:'absolute',left:(-cm.px/z-mm.bx)*k,top:(-cm.py/z-mm.by)*k,width:s._bw/z*k,height:s._bh/z*k,boxShadow:'inset 0 0 0 1px var(--cy)',borderRadius:2,pointerEvents:'none'} }
+    const mq=s._mq, mqOn=!!mq, mqSt=mq?{position:'absolute',left:Math.min(mq.x0,mq.x1),top:Math.min(mq.y0,mq.y1),width:Math.abs(mq.x1-mq.x0),height:Math.abs(mq.y1-mq.y0),background:'rgba(185,207,216,.07)',boxShadow:'inset 0 0 0 1px var(--cy)',borderRadius:3,pointerEvents:'none',zIndex:12}:{};
+    const evC=L.evs[Math.min(ci.i,L.evs.length-1)], runC=!ci.gate&&evC?evC.run.find(r=>t>=r.S&&t<r.E)||evC.run[evC.run.length-1]:null;
+    const crumbAct=evC?ACTN(evC.ev.act):'', crumbEv=evC?evC.ev.name:'', crumbSt=ci.gate?'Passage P'+(ci.i+1):runC?runC.st.name:'';
+    const bar=(p,c)=>({display:'block',height:'100%',width:Math.max(0,Math.min(100,p*100)).toFixed(1)+'%',background:c});
+    const condRow=(g,tau)=>{ const m=this.met(g,tau,iss); if(g.k==='issue') return {lab:this.glab(g),val:m?'oui':'non',dot:dotS(m?'#3f9a6a':'rgba(var(--lr),.5)',false,!m),bar:bar(m?1:0,'#3f9a6a')}; const sn=this.SN(g.k), cur=sn.val(tau); const p=g.op==='≤'?(72-cur)/Math.max(1,72-g.v):cur/Math.max(1,g.v); return {lab:this.glab(g),val:sn.f(cur),dot:dotS(m?'#3f9a6a':'#e0674a',!m,false),bar:bar(p,m?'#3f9a6a':'#e0674a')} };
+    let ins={tag:'',name:'',sub:'',left:'',leftLab:'',progSt:{},next:'',rule:'',canGo:false}; const ruleRows=[];
+    if(ci.gate){ const g=ci.gate, tau=t-g.S, go=g.g.mode==='go'; g.g.g.forEach(x=>ruleRows.push(condRow(x,tau)));
+      if(go) ruleRows.push({lab:'top donné par la régie',val:D.go[g.ev.id]?'oui':'attente',dot:dotS(D.go[g.ev.id]?'#3f9a6a':'#e0674a',!D.go[g.ev.id],false),bar:bar(D.go[g.ev.id]?1:0,'#3f9a6a')});
+      const nx=L.evs[g.i+1], waiting=go&&g.pend&&t>=g.ready;
+      ins={tag:'passage P'+(g.i+1),name:'Passage P'+(g.i+1),sub:'Entre « '+g.ev.name+' » et « '+(nx?nx.ev.name:'fin')+' »',left:waiting?this.fm(t-g.ready):this.fm(Math.max(0,g.ready-t)),leftLab:waiting?'ON ATTEND LE TOP':'AVANT QUE CE SOIT PRÊT',progSt:bar(g.ready>g.S?Math.min(1,tau/(g.ready-g.S)):1,'#e0674a'),next:nx?nx.ev.name:'fin du spectacle',rule:go?'Ce passage attend le top de la régie, une fois les conditions remplies.':'Ce passage enchaîne tout seul dès que les conditions sont remplies.',canGo:go&&g.pend};
+    } else if(runC){ const st=runC.st, nd=this.nodeOf(st.ty), tau=t-runC.S, d=this.dur(st), tr=runC.tr, ended=ci.end&&t>=L.total-.01;
+      ruleRows.push({lab:'durée prévue '+this.fm(d),val:this.fm(Math.min(tau,d)),dot:dotS(tau>=d?'#3f9a6a':'#e0674a',tau<d,false),bar:bar(tau/d,tau>=d?'#3f9a6a':'#e0674a')});
+      if(tr) tr.g.forEach(g=>ruleRows.push(condRow(g,tau)));
+      const nxt=tr?(evC.ev.st.find(x=>x.id===tr.b)||{}).name:(L.gates.find(x=>x.i===ci.i)?'Passage P'+(ci.i+1):'fin du spectacle');
+      ins={tag:'moment '+(ci.i+1)+' · étape '+(evC.ev.st.indexOf(st)+1),name:ended?'Fin du spectacle':st.name,sub:nd.label.toLowerCase()+' · '+evC.ev.name,left:this.fm(runC.E-t),leftLab:'AVANT LA SUITE',progSt:bar((t-runC.S)/(runC.E-runC.S),'#e0674a'),next:nxt||'',
+        rule:runC.blocked?'Bloqué : une condition ne peut pas être remplie avec la salle simulée actuelle.':!tr||!tr.g.length?'On passe à la suite quand la durée prévue est écoulée.':tr.g.some(g=>g.k==='issue')?'Le vote décide de la branche. La durée prévue doit aussi être écoulée.':tr.mode==='any'?'Il suffit qu’une des conditions soit remplie, après la durée prévue.':'Il faut que toutes les conditions soient remplies, après la durée prévue.',canGo:false} }
+    ins.rows=ruleRows; const cdn=ci.gate&&ci.gate.g.mode==='go'&&!D.go[ci.gate.ev.id]&&ci.gate.ready-t>0&&ci.gate.ready-t<=10; ins.leftSt={fontFamily:"'Venus Rising',sans-serif",fontSize:cdn?58:28,color:cdn?'var(--ort)':'var(--cy)',lineHeight:1,fontVariantNumeric:'tabular-nums',transition:'font-size .2s'};
+
+    let selNOn=false,sn={},selTOn=false,stx={},smOn=false,smv={},saOn=false,sav={},scOn=false,scv={},skOn=false,skv={},stOn=false,stv={};
+    const evS={}; L.evs.forEach(e=>{evS[e.ev.id]=e.S});
+    if(sl&&sl.t==='n'){ const ev=D.ev.find(x=>x.id===sl.ev), st=ev&&ev.st.find(x=>x.id===sl.st); if(st){ selNOn=true; const nd=this.nodeOf(st.ty), acc=lc(nd.col), outs=ev.tr.map((tr,i)=>({tr,i})).filter(o=>o.tr.a===st.id);
+      const ks=[{lab:'DURÉE',disp:this.fm(this.dur(st)),i:0,col:'var(--ort)'}]; nd.sets.forEach((se,j)=>ks.push({lab:String(se[0]).toUpperCase().slice(0,9),disp:this.fmtSet(se,st.k[j+1]),i:j+1,col:acc}));
+      sn={kind:nd.label,name:st.name,moment:ev.name,asset:st.asset||'—',desc:nd.desc,setName:e=>{ this.snap('nom'); st.name=e.target.value; this.bump() },knobs:ks.map(x=>Object.assign({lab:x.lab,disp:x.disp,grab:this.kg(()=>st.k[x.i],v=>{st.k[x.i]=v})},this.kv(st.k[x.i],x.col))),
+        outs:outs.map((o,k)=>({no:String(k+1),to:(ev.st.find(x=>x.id===o.tr.b)||{}).name,rule:o.tr.g.length?o.tr.g.map(g=>this.glab(g)).join(o.tr.mode==='any'?' ou ':' et '):(outs.length>1?'sinon · à la fin de l’étape':'à la fin de l’étape'),pick:()=>this.setState({_sel:{t:'t',ev:ev.id,i:o.i}}),up:()=>this.moveOut(ev,o.tr,-1),down:()=>this.moveOut(ev,o.tr,1),upSt:{fontSize:7,cursor:k>0?'pointer':'default',color:k>0?'var(--ink2)':'rgba(var(--lr),.18)',lineHeight:1,padding:'2px 3px'},dnSt:{fontSize:7,cursor:k<outs.length-1?'pointer':'default',color:k<outs.length-1?'var(--ink2)':'rgba(var(--lr),.18)',lineHeight:1,padding:'2px 3px'}})),outsHelp:outs.length>1?'Évaluées de haut en bas : la première sortie dont la condition est remplie l’emporte. Une sortie sans condition sert de « sinon ».':outs.length?'Une seule sortie : on y va quand sa condition est remplie.':'',noOut:!outs.length,canDel:!this.entries(ev).includes(st.id)} } }
+    if(sl&&sl.t==='t'){ const ev=D.ev.find(x=>x.id===sl.ev), tr=ev&&ev.tr[sl.i]; if(tr){ selTOn=true; const nmA=(ev.st.find(x=>x.id===tr.a)||{}).name, nmB=(ev.st.find(x=>x.id===tr.b)||{}).name, RNG={t:[0,600],quorum:[0,100],prets:[0,100],bruit:[32,72],pres:[0,142]};
+      const outsT=ev.tr.filter(x=>x.a===tr.a), kT=outsT.indexOf(tr);
+      stx={ordTag:outsT.length>1?'SORTIE '+(kT+1)+' / '+outsT.length:'SORTIE',up:()=>this.moveOut(ev,tr,-1),down:()=>this.moveOut(ev,tr,1),title:nmA+' → '+nmB,modes:[['all','TOUTES REQUISES'],['any','UNE SEULE SUFFIT']].map(([m,tt])=>({t:tt,st:Object.assign(seg(tr.mode===m),{flex:1,justifyContent:'center'}),go:()=>{ this.snap('lien'); tr.mode=m; this.bump() }})),
+        help:tr.g.length?'Après la durée prévue de « '+nmA+' », on passe quand '+(tr.mode==='any'?'une de ces conditions est remplie.':'toutes ces conditions sont remplies.'):'Aucune condition : on passe dès que la durée prévue est écoulée.',
+        guards:tr.g.map((g,gi)=>{ const has=g.k!=='issue', Rg=RNG[g.k]||[0,100], pv=has?(g.v-Rg[0])/(Rg[1]-Rg[0])*100:0; return Object.assign({lab:this.glab(g),hasKnob:has,del:()=>{ this.snap('condition'); tr.g.splice(gi,1); this.bump() },grab:this.kg(()=>Math.round(pv),v=>{ g.v=Math.round(Rg[0]+v/100*(Rg[1]-Rg[0])) })},this.kv(pv,'var(--ort)')) }),
+        adds:[['DURÉE','t',60],['VOTES','quorum',50],['TÉLÉPHONES','prets',60],['SILENCE','bruit',40],['PUBLIC ASSIS','pres',100]].map(([tt,k,v])=>({t:tt,go:()=>{ this.snap('condition'); tr.g.push({k,op:k==='bruit'?'≤':'≥',v}); this.bump() }}))} } }
+    if(sl&&sl.t==='m'){ const i=D.ev.findIndex(x=>x.id===sl.ev), e=L.evs[i]; if(e){ smOn=true; const ev=e.ev;
+      smv={no:String(i+1),rom:rom(ev.act),name:ev.name,setName:x=>{ this.snap('nom'); ev.name=x.target.value; this.bump() },steps:String(ev.st.length),dur:this.fm(e.E-e.S),start:this.fm(e.S),
+        split:()=>{ const mid=e.run.length>1?e.run[Math.floor(e.run.length/2)].S:e.S; this.splitAt(i,mid) },canNewAct:i>0&&D.ev[i-1].act===ev.act,newAct:()=>this.newAct(ev.id),canMerge:ev.act>0&&(i===0||D.ev[i-1].act!==ev.act),merge:()=>this.mergeAct(ev.id),canDel:D.ev.length>1} } }
+    if(sl&&sl.t==='a'){ const a=D.acts[sl.i]; if(a){ saOn=true; const es=L.evs.filter(e=>e.ev.act===sl.i); sav={rom:rom(sl.i),name:a.n,setName:x=>{ this.snap('nom'); a.n=x.target.value; this.bump() },info:es.length+' moments · '+(es.length?this.fm(es[es.length-1].E-es[0].S):'00:00')+' prévues'} } }
+    if(sl&&(sl.t==='c'||sl.t==='k'||sl.t==='tk')){ const tk=D.tracks.find(x=>x.id===sl.tk);
+      if(tk&&sl.t==='c'){ const c=(tk.clips||[]).find(x=>x.id===sl.id); if(c){ scOn=true; const evx=D.ev.find(x=>x.id===c.ev), pv=Math.sqrt(Math.max(0,(c.dur-2)/598))*100;
+        scv=Object.assign({track:tk.name,name:c.name,setName:x=>{ this.snap('nom'); c.name=x.target.value; this.bump() },dur:this.fm(c.dur),ev:evx?evx.name:'',off:'+'+this.fm(c.off),grab:this.kg(()=>Math.round(pv),v=>{ c.dur=Math.round(2+Math.pow(v/100,2)*598) })},this.kv(pv,lc(R.TT[tk.type]?R.TT[tk.type][1]:'#8fa5ad'))) } }
+      if(tk&&sl.t==='k'){ const m=(tk.marks||[]).find(x=>x.id===sl.id); if(m){ skOn=true; const evx=D.ev.find(x=>x.id===m.ev); skv={at:this.fm((evS[m.ev]||0)+m.off),txt:m.txt,setTxt:x=>{ this.snap('note'); m.txt=x.target.value; this.bump() },info:(tk.type==='secu'?'Alerte sécurité : un bandeau rouge apparaît '+(m.lead==null?10:m.lead)+' s avant, à accuser réception. ':'')+'Accrochée à « '+(evx?evx.name:'')+' » à +'+this.fm(m.off)+'. Glisser dans la piste pour déplacer.'} } }
+      if(tk&&sl.t==='tk'){ stOn=true; stv={type:(R.TT[tk.type]||['Courbe'])[0].toUpperCase(),name:tk.name,setName:x=>{ this.snap('nom'); tk.name=x.target.value; this.bump() },help:tk.type==='curve'?(tk.src==='lum'?'Calculée à partir des intensités des étapes lumière.':tk.src==='pub'?'Calculée à partir de la salle simulée : arrivées, votes, téléphones.':'Un point par moment, à tirer vers le haut ou le bas.'):tk.type==='notes'?'Double-clic dans la piste pour poser une note. K pose une note à la tête de lecture.':'Glisse des assets sur cette piste. Les clips restent accrochés à leur moment ; l’outil Couper les sépare en deux.'} } }
+    const msOn=s._msel.length>1;
+
+    const tw=s._tw, LBL=176, TW=Math.max(100,tw-LBL-14), tot=Math.max(1,L.total);
+    const span0=s._tspan?Math.min(tot,s._tspan):tot, v0=s._tspan?Math.max(0,Math.min(tot-span0,s._tv0||0)):0; this.tv={v0,span:span0,tot,TW,LBL};
+    const X=v=>LBL+(v-v0)/span0*TW, pps=TW/span0, SL=[1,2,5,10,15,30,60,120,300,600];
+    const mn=SL.find(x=>x*pps>=12)||600, mj=SL.find(x=>x%mn===0&&x*pps>=70)||600, rTicks=[], rLabs=[];
+    for(let v=Math.floor(v0/mn)*mn, c=0; v<=v0+span0&&c<400; v+=mn, c++){ const M=v%mj===0; rTicks.push({position:'absolute',left:X(v),top:M?10:16,width:1,height:M?14:8,background:'rgba(var(--lr),'+(M?.35:.18)+')'}); if(M) rLabs.push({t:this.fm(v),st:{position:'absolute',left:X(v)+4,top:6,fontFamily:"'Venus Rising',sans-serif",fontSize:8,color:'var(--ink3)'}}) }
+    const ACTC=[['#f0b49b','#1a0e09'],['#e59578','#1a0e09'],['#d47a5c','#1a0e09'],['#a3502f','#fdf3ee'],['#7a3a22','#fdf3ee']];
+    const tActs=D.acts.map((A,a)=>{ const es=L.evs.filter(e=>e.ev.act===a); if(!es.length) return null; const S=es[0].S, last=es[es.length-1], g=L.gates.find(x=>x.i===last.i), E=g&&g.i<L.evs.length-1&&L.evs[g.i+1].ev.act===a?g.pass:last.E; const w=X(E)-X(S)-3, nm=ACTN(a).toUpperCase(), cc=ACTC[a%5], selA=sl&&sl.t==='a'&&sl.i===a;
+      return {num:rom(a),nSt:{fontFamily:"'Venus Rising',sans-serif",fontSize:15,lineHeight:1,color:cc[1],flex:'none',display:w>40?'block':'none'},name:w>nm.length*8.6+54?nm.replace(/^ACTE [IVX]+ · /,''):'',pick:e=>{ if(e.button!==0) return; e.stopPropagation(); this.setState({_sel:{t:'a',i:a},_msel:[]}) },st:{position:'absolute',left:X(S),top:30,width:Math.max(4,w),height:26,borderRadius:6,background:cc[0],display:'flex',alignItems:'center',gap:9,padding:'0 9px',overflow:'hidden',cursor:'pointer',boxShadow:selA?'0 0 0 2px var(--cy)':'none'},tSt:{fontFamily:"'Venus Rising',sans-serif",fontSize:8.5,letterSpacing:'.12em',color:cc[1],whiteSpace:'nowrap'}} }).filter(Boolean);
+    const cut=s._tool==='cut';
+    const tEvs=L.evs.map(e=>{ const w=X(e.E)-X(e.S)-2, live=e.i===ci.i&&!ci.gate, acc=ACTC[e.ev.act%5][0], selM=sl&&sl.t==='m'&&sl.ev===e.ev.id;
+      return {name:e.ev.name,wide:w>60,tip:cut?'Couper à la limite d’étape la plus proche':'Clic : choisir · double-clic : aller au début',
+        st:{position:'absolute',left:X(e.S),top:62,width:Math.max(3,w),height:40,borderRadius:7,background:'var(--tile)',boxShadow:'inset 0 0 0 '+(selM?'1.5px var(--cy)':live?'1.5px #e0674a':'1px '+acc),display:'flex',alignItems:'center',overflow:'hidden',cursor:cut?'crosshair':'pointer'},
+        fill:{position:'absolute',left:0,top:0,bottom:0,width:Math.max(0,Math.min(1,(t-e.S)/Math.max(1,e.E-e.S)))*100+'%',background:live?'rgba(224,103,74,.16)':'rgba(63,154,106,.14)'},
+        ticks:e.run.slice(1).map(r=>({position:'absolute',top:cut?2:8,bottom:cut?2:8,width:cut?1.5:1,left:((r.S-e.S)/Math.max(1,e.E-e.S)*100)+'%',background:cut?'var(--ort)':'rgba(var(--lr),.3)'})),
+        down:ev=>{ if(ev.button!==0) return; ev.stopPropagation(); if(cut){ this.splitAt(e.i,this.absAt(ev.clientX)); return } const f=F[e.i]; this.setState({_sel:{t:'m',ev:e.ev.id},_msel:[],_cam:this.fitR(f.r),_fol:false}) },
+        dbl:ev=>{ ev.stopPropagation(); this.seek(e.S,true) },
+        rs:ev=>{ if(ev.button!==0) return; ev.stopPropagation(); const tot0=e.run.reduce((a,r)=>a+this.dur(r.st),0)||1; this.snap('durée du moment'); this.mr={x:ev.clientX,tot0,ks:e.run.map(r=>[r.st,r.st.k[0]])}; this.setState({_sel:{t:'m',ev:e.ev.id}}) }} });
+    const tGates=L.gates.filter(g=>g.i<L.evs.length-1).map(g=>{ const go=g.g.mode==='go', passed=t>=g.pass&&!g.pend, here=ci.gate===g, x=X(g.S);
+      return {tip:'Passage P'+(g.i+1)+' · cliquer pour voir les conditions',pick:e=>{ e.stopPropagation(); this.setState({_gate:s._gate===g.i?null:g.i}) },
+        wait:{position:'absolute',left:x,top:115,width:Math.max(0,X(g.ready)-x),height:0,borderTop:'2px dotted #3f9a6a'},
+        hold:{position:'absolute',left:X(g.ready),top:110,width:Math.max(0,X(g.ready+g.hold)-X(g.ready)),height:10,borderRadius:2,background:'repeating-linear-gradient(135deg,rgba(224,103,74,.55) 0 3px,transparent 3px 6px)'},
+        box:{position:'absolute',left:x-11,top:104,width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:3},
+        dia:{width:12,height:12,transform:'rotate(45deg)',borderRadius:2,background:passed?(go?'#e0674a':'#3f9a6a'):'var(--bg)',boxShadow:'inset 0 0 0 1.5px '+(go?'#e0674a':'#3f9a6a')+(s._gate===g.i?', 0 0 0 4px rgba(185,207,216,.3)':''),animation:here&&g.pend?'srp 1s infinite':'none'}} });
+
+    let ty=0; const rowsMeta=[];
+    const tRows=D.tracks.map((tk,ti)=>{ const tt=R.TT[tk.type]||R.TT.curve, open=!!tk.open, h=!open?24:tk.type==='curve'?76:tk.marks?36:46, top=ty; ty+=h+1; rowsMeta.push({id:tk.id,top,h});
+      const cl=lc(tk.col||tt[1]), selT=sl&&sl.t==='tk'&&sl.tk===tk.id;
+      const r={name:tk.name,isCurve:tk.type==='curve',isClips:!!tk.clips,isNotes:!!tk.marks,
+        st:{position:'absolute',left:0,right:0,top,height:h,background:ti%2?'rgba(var(--lr),.025)':'transparent',boxShadow:'inset 0 -1px 0 rgba(var(--lr),.07)',opacity:tk.mute?.45:1,overflow:'hidden'},
+        hdSt:{position:'absolute',left:22,top:0,width:LBL-26,height:h,display:'flex',alignItems:open?'flex-start':'center',gap:6,padding:open?'8px 8px 0 10px':'0 8px 0 10px',background:'var(--bg)',zIndex:5,boxShadow:'inset 3px 0 0 '+cl+(selT?', inset 0 0 0 1px var(--cy)':'')},
+        chevSt:{width:14,height:14,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--ink2)',cursor:'pointer',transform:open?'rotate(90deg)':'none',transition:'transform .15s',flex:'none'},
+        mSt:{width:18,height:16,borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Azeret Mono',monospace",fontSize:8,cursor:'pointer',flex:'none',background:tk.mute?'var(--ort)':'transparent',color:tk.mute?'#170c08':'var(--ink3)',boxShadow:tk.mute?'none':'inset 0 0 0 1px rgba(var(--lr),.2)'},
+        nmSt:{flex:1,minWidth:0,fontFamily:"'Azeret Mono',monospace",fontSize:7.5,letterSpacing:'.1em',textTransform:'uppercase',color:'var(--ink)',lineHeight:'12px',cursor:'pointer',overflow:'hidden',whiteSpace:open?'normal':'nowrap',textOverflow:'ellipsis',maxHeight:open?36:14,paddingTop:open?1:0},
+        toggle:()=>{ tk.open=!tk.open; this.bump() }, mute:()=>{ tk.mute=!tk.mute; this.bump() }, pick:()=>this.setState({_sel:{t:'tk',tk:tk.id},_msel:[]}),
+        dbl:e=>{ if(!tk.marks) return; e.stopPropagation(); if(this.locked()) return; this.snap('note'); const m={id:'k'+(++D.nid),ev:'',off:0,txt:tk.type==='secu'?'Nouvelle alerte':'Nouvelle note',lead:10}; this.anchor(m,this.absAt(e.clientX)); tk.marks.push(m); this.bump(); this.setState({_sel:{t:'k',tk:tk.id,id:m.id},_msel:[]}) },
+        vb:'0 0 1 1',svgSt:{display:'none'},d:'',fillD:'',dSt:{},fillSt:{},pts:[],clips:[],marks:[]};
+      if(tk.type==='curve'){ const H=open?h-14:h-10, Y=v=>(open?8:5)+H-v/100*H; let d='';
+        if(tk.src==='lum'){ let prevL=0; L.evs.forEach(e=>e.run.forEach(rr=>{ const nd=this.nodeOf(rr.st.ty); const lv=nd.kd?rr.st.k[1]:prevL, fdd=Math.min(30,(rr.E-rr.S)/2)*(nd.kd?rr.st.k[2]:50)/100; d+=(d?' L':'M')+(X(rr.S)-LBL).toFixed(1)+' '+Y(prevL).toFixed(1)+' L'+(X(rr.S+fdd)-LBL).toFixed(1)+' '+Y(lv).toFixed(1)+' L'+(X(rr.E)-LBL).toFixed(1)+' '+Y(lv).toFixed(1); prevL=lv })) }
+        else if(tk.src==='pub'){ for(let i=0;i<=140;i++){ const tt2=v0+i/140*span0; let v=40; const e=L.evs.find(x=>tt2>=x.S&&tt2<x.E); if(e){ const rr=e.run.find(x=>tt2>=x.S&&tt2<x.E), tau=rr?tt2-rr.S:0, ty2=rr?rr.st.ty:''; v=ty2==='b3'?this.SN('quorum').val(tau):ty2==='u3'?this.SN('prets').val(tau):rr&&rr.st.id==='portes'?this.SN('pres').val(tau)/1.42:35+((D.tracks[0].pts||{})[e.ev.id]||40)*.45 } d+=(i?' L':'M')+(i/140*TW).toFixed(1)+' '+Y(v).toFixed(1) } }
+        else { const pts=L.evs.map(e=>({x:X((e.S+e.E)/2)-LBL,y:Y(tk.pts[e.ev.id]!=null?tk.pts[e.ev.id]:50),id:e.ev.id,v:tk.pts[e.ev.id]!=null?tk.pts[e.ev.id]:50}));
+          if(pts.length){ d='M'+(X(0)-LBL).toFixed(1)+' '+pts[0].y.toFixed(1)+' L'+pts[0].x.toFixed(1)+' '+pts[0].y.toFixed(1); pts.forEach((p,i)=>{ if(!i) return; const q=pts[i-1], mx=(q.x+p.x)/2; d+=' C'+mx.toFixed(1)+' '+q.y.toFixed(1)+' '+mx.toFixed(1)+' '+p.y.toFixed(1)+' '+p.x.toFixed(1)+' '+p.y.toFixed(1) }); d+=' L'+(X(tot)-LBL).toFixed(1)+' '+pts[pts.length-1].y.toFixed(1) }
+          if(open) r.pts=pts.map(p=>({st:{position:'absolute',left:LBL+p.x-6,top:p.y-6,width:12,height:12,borderRadius:'50%',background:'var(--bg)',boxShadow:'inset 0 0 0 2px '+cl,cursor:'ns-resize',zIndex:2,display:p.x<0||p.x>TW?'none':'block'},down:e=>{ if(e.button!==0) return; e.stopPropagation(); const rc=e.currentTarget.parentElement.getBoundingClientRect(); this.snap('courbe'); this.tp={tk,ev:p.id,top:rc.top+(open?8:5),h:H} }})) }
+        r.vb='0 0 '+TW+' '+h; r.svgSt={position:'absolute',left:LBL,top:0,width:TW,height:h,overflow:'visible',pointerEvents:'none'}; r.d=d; r.dSt={fill:'none',stroke:cl,strokeWidth:open?1.6:1.2,vectorEffect:'non-scaling-stroke'};
+        r.fillD=d&&tk.src!=='lum'?d+' L'+TW+' '+h+' L0 '+h+' Z':''; r.fillSt={fill:cl,opacity:.08,stroke:'none'} }
+      if(tk.clips){ r.clips=tk.clips.map(c=>{ const s0=(evS[c.ev]!=null?evS[c.ev]:0)+c.off, x0=X(s0), w=Math.max(3,X(s0+c.dur)-x0), selC=sl&&sl.t==='c'&&sl.id===c.id;
+          return {name:c.name,showName:open&&w>34,d:tk.type==='son'?R.wf(c.id):(R.CLIPD[tk.type]||R.CLIPD.txt),dSt:{fill:cl,opacity:tk.type==='son'?.5:.28,stroke:'none'},
+            st:{position:'absolute',left:x0,top:open?5:4,width:w,height:open?h-10:h-8,borderRadius:5,background:'var(--tile)',boxShadow:'inset 0 0 0 1px '+(selC?'var(--cy)':cl)+(selC?', 0 0 0 2px rgba(185,207,216,.25)':''),overflow:'hidden',cursor:cut?'crosshair':'grab',display:'flex',alignItems:'flex-end',zIndex:selC?2:1},
+            down:e=>{ if(e.button!==0) return; e.stopPropagation(); if(cut){ this.splitClip(tk,c,this.absAt(e.clientX)); return } this.cd={it:c,x:e.clientX,s0,m:'mv'}; this.setState({_sel:{t:'c',tk:tk.id,id:c.id},_msel:[]}) },
+            rs:e=>{ if(e.button!==0) return; e.stopPropagation(); this.cd={it:c,x:e.clientX,dur0:c.dur,m:'rs'}; this.setState({_sel:{t:'c',tk:tk.id,id:c.id},_msel:[]}) }} }) }
+      if(tk.marks){ r.marks=tk.marks.map(m=>{ const s0=(evS[m.ev]!=null?evS[m.ev]:0)+m.off, x0=X(s0), selK=sl&&sl.t==='k'&&sl.id===m.id;
+          return {txt:m.txt,showTxt:open,st:{position:'absolute',left:x0,top:0,height:h,display:'flex',alignItems:'center',gap:5,cursor:'grab',zIndex:selK?2:1},flag:{width:2,alignSelf:'stretch',background:selK?'var(--cy)':cl},
+            tSt:{fontSize:10.5,color:'var(--ink)',background:'var(--tile2)',padding:'3px 7px',borderRadius:4,whiteSpace:'nowrap',maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',boxShadow:selK?'inset 0 0 0 1px var(--cy)':'none'},
+            down:e=>{ if(e.button!==0) return; e.stopPropagation(); this.cd={it:m,x:e.clientX,s0,m:'mv'}; this.setState({_sel:{t:'k',tk:tk.id,id:m.id},_msel:[]}) }} }) }
+      return r });
+    this._rows=rowsMeta;
+    const inView=t>=v0-.01&&t<=v0+span0+.01;
+
+    let cardOn=false,cd={},cardSt={},cardNotch={};
+    if(s._gate!=null){ const g=L.gates.find(x=>x.i===s._gate); if(g){ cardOn=true; const go=g.g.mode==='go', nx=L.evs[g.i+1], here=ci.gate===g, tau=here?t-g.S:0, gx=X(g.S), cw=300, cl2=Math.max(LBL,Math.min(tw-cw-10,gx-40));
+      const conds=g.g.g.map(x=>{ const rr=condRow(x,tau); return {lab:rr.lab,val:here?rr.val:'—',dot:here?rr.dot:dotS('rgba(var(--lr),.5)',false,true)} });
+      if(go) conds.push({lab:'top donné par la régie',val:D.go[g.ev.id]?'oui':'attente',dot:dotS(D.go[g.ev.id]?'#3f9a6a':'#e0674a',here&&!D.go[g.ev.id],!here&&!D.go[g.ev.id])});
+      if(!conds.length) conds.push({lab:'aucune condition',val:'',dot:dotS('#3f9a6a',false,false)});
+      const canGo=go&&g.pend, ctop=tlH-36-132>=260?132:6;
+      cd={tag:'Passage P'+(g.i+1),title:g.ev.name.toUpperCase()+' → '+(nx?nx.ev.name.toUpperCase():'FIN'),modes:[['auto','ENCHAÎNE SEUL'],['go','ATTEND LE TOP']].map(([m,tt])=>({t:tt,st:Object.assign(seg(g.g.mode===m),{flex:1,justifyContent:'center'}),go:()=>{ this.snap('passage'); g.g.mode=m; this.bump() }})),
+        help:go?'La conduite s’arrête ici jusqu’au top de la régie (bouton GO ou touche G).':'Le moment suivant démarre tout seul dès que les conditions sont remplies.',conds,isGo:go,hold:this.fm(g.hold),
+        goTxt:canGo?(here?'GO':'VALIDER D’AVANCE'):'TOP DONNÉ',goSt:{height:34,padding:'0 14px',borderRadius:7,display:'flex',alignItems:'center',cursor:canGo?'pointer':'default',fontFamily:"'Venus Rising',sans-serif",fontSize:10,letterSpacing:'.14em',background:canGo&&here?'var(--ort)':'transparent',color:canGo&&here?'#170c08':'var(--ink2)',boxShadow:canGo&&here?'none':'inset 0 0 0 1px rgba(var(--lr),.25)'},
+        timing:'prévu à '+this.fm(g.S)+(g.hold>0?' · attente '+this.fm(g.hold):'')};
+      cardSt={position:'absolute',left:cl2,top:ctop,maxHeight:tlH-36-ctop-8,overflowY:'auto',width:cw,display:'flex',flexDirection:'column',gap:10,padding:14,borderRadius:12,background:'var(--tile)',boxShadow:'inset 0 0 0 1px rgba(224,103,74,.55), 0 14px 40px rgba(0,0,0,.45)',zIndex:8,cursor:'default',scrollbarWidth:'thin'};
+      cardNotch={display:ctop===132?'block':'none',position:'absolute',left:Math.max(12,Math.min(cw-24,gx-cl2-6)),top:-6,width:12,height:12,transform:'rotate(45deg)',background:'var(--tile)',boxShadow:'inset 1px 1px 0 rgba(224,103,74,.55)'} } }
+
+    const N=this.nodes(), q=(s._libQ||'').trim().toLowerCase(), all=Object.values(N), vis=[];
+    const hovTy=s._libHov&&N[s._libHov]?s._libHov:null;
+    const libGroups=R.GRP.map(([gk,gn,gs,gg])=>{ const items=all.filter(n=>n.grp===gk&&(!q||(n.name+' '+n.label+' '+n.desc+' '+n.key).toLowerCase().includes(q))); const open=q?items.length>0:s._libG===gk; if(open) items.forEach(n=>vis.push(n.ty));
+      return {n:gn,s:gs,c:String(items.length),open,g:gg||(B&&B.FAM[gk]?B.FAM[gk].g:'M4 6h16'),toggle:()=>this.setState({_libG:s._libG===gk?null:gk}),
+        st:{display:'flex',alignItems:'center',gap:8,padding:'8px 8px',borderRadius:7,cursor:'pointer',background:open?'var(--tile2)':'transparent'},
+        chevSt:{width:12,display:'flex',justifyContent:'center',color:'var(--ink3)',transform:open?'rotate(90deg)':'none',transition:'transform .15s',flex:'none'},
+        items:items.map(n=>({n:n.name.charAt(0).toUpperCase()+n.name.slice(1),key:n.key,dot:{width:7,height:7,borderRadius:'50%',background:lc(n.col),flex:'none'},hov:()=>this.setState({_libHov:n.ty}),add:()=>{ const lb=this.state._lib; if(lb) this.addStepAt(n.ty,null,lb.wx,lb.wy,lb.link) },
+          st:{display:'flex',alignItems:'center',gap:8,height:30,padding:'0 10px 0 30px',borderRadius:6,cursor:'pointer',background:(hovTy||vis[0])===n.ty?'rgba(var(--lr),.08)':'transparent',boxShadow:(hovTy||vis[0])===n.ty?'inset 2px 0 0 var(--ort)':'none'}}))} }).filter(g=>!q||g.items.length);
+    this._libVis=vis; const lpTy=hovTy||vis[0]||'k:scene', lpN=this.nodeOf(lpTy), lpG=R.GRP.find(x=>x[0]===lpN.grp);
+    let libOn=false, libSt={}, libHint='';
+    if(s._lib){ libOn=true; const lb=s._lib, W=552, vw=window.innerWidth||1400, vh=window.innerHeight||900, H=Math.min(440,vh-80); libSt={position:'fixed',left:Math.max(8,Math.min(vw-W-8,lb.sx+8)),top:Math.max(64,Math.min(vh-H-8,lb.sy-20)),width:W,height:H,display:'flex',borderRadius:12,background:'var(--tile)',boxShadow:'inset 0 0 0 1px rgba(var(--lr),.18), 0 18px 50px rgba(0,0,0,.5)',zIndex:60,overflow:'hidden',cursor:'default'};
+      const evL=lb.link?D.ev.find(x=>x.id===lb.link.ev):null, from=evL?(evL.st.find(x=>x.id===lb.link.a)||{}).name:'';
+      libHint=lb.link?'Le bloc choisi sera relié après « '+from+' ».':'Le bloc sera posé là où tu as cliqué.';
+      const d0=10+8*6; this.PV.lib={kd:lpN.kd,pv:lpN.pv,col:lc(lpN.col),run:true,loop:true,p:lpN.sets.map(x=>x[1]).concat([.5,.5]),prog:.4,rem:d0*.6,dur:d0,val:lpN.kd==='calage'?44:96,lab:'A',chosen:true,pct:V.A,asset:'ouverture.wav',gst:'ARMÉ'} }
+    const lp={grp:(lpG?lpG[1]+' · '+lpG[2]:''),name:lpN.name,desc:lpN.desc,sets:[{l:'durée',v:this.fm(58)}].concat(lpN.sets.map(se=>({l:se[0],v:this.fmtSet(se,Math.round(se[1]*100))})))};
+
+    const aq=(s._adQ||'').trim().toLowerCase(); let adN=0;
+    const adCats=R.ASSETS.map(cat=>{ const items=cat.items.filter(it=>!aq||it[0].toLowerCase().includes(aq)); adN+=items.length; const open=aq?items.length>0:!!s._adOpen[cat.k], col=lc(R.AC[cat.k]);
+      return {n:cat.n,c:String(items.length),open,g:R.AG[cat.k],toggle:()=>this.setState({_adOpen:Object.assign({},s._adOpen,{[cat.k]:!s._adOpen[cat.k]})}),
+        st:{display:'flex',alignItems:'center',gap:8,padding:'8px 8px',borderRadius:7,cursor:'pointer',background:open?'var(--tile2)':'transparent'},
+        chevSt:{width:12,display:'flex',justifyContent:'center',color:'var(--ink3)',transform:open?'rotate(90deg)':'none',transition:'transform .15s',flex:'none'},
+        icSt:{width:24,height:24,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',boxShadow:'inset 0 0 0 1px '+col,color:col,flex:'none'},
+        items:items.map(it=>({n:it[0],meta:it[1],dur:it[2]?this.fm(it[2]):'',g:R.AG[cat.k],tile:{width:28,height:28,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',color:col,flex:'none',boxShadow:'inset 0 0 0 1px rgba(var(--lr),.14)'},down:e=>this.assetDown(cat,it,e)}))} }).filter(c=>!aq||c.items.length);
+    const gh=s._ghost;
+
+    const pg=L.pending, goReady=pg&&t>=pg.ready-.01, drift=L.total-L.planned, narrow=(s._bw+300)<1180;
+    const accHd=on=>({display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',padding:'11px 16px',boxShadow:'inset 0 -1px 0 rgba(var(--lr),.1)',fontFamily:"'Azeret Mono',monospace",fontSize:8,letterSpacing:'.2em',color:on?'var(--ink)':'var(--ink3)',background:on?'transparent':'rgba(var(--lr),.02)'}), accCh=on=>({width:12,display:'flex',justifyContent:'center',color:'var(--ink3)',transform:on?'rotate(90deg)':'none',transition:'transform .15s'});
+    let srchRes=[], srchEmpty=false;
+    if(s._srch){ const q=(s._srchQ||'').toLowerCase().trim(), items=[], tv2=view==='tracks'?'both':view, bv=view==='board'?'both':view;
+      D.ev.forEach((ev,i)=>{ items.push({t:ev.name,sub:'Moment '+(i+1)+' · '+ACTN(ev.act),kind:'MOMENT',col:ACTC[ev.act%5][0],go:()=>{ this.setState({_srch:false,_sel:{t:'m',ev:ev.id},_msel:[],_cam:this.fitR(F[i].r),_fol:false,_view:tv2}); this.seek(L.evs[i].S,true) }});
+        ev.st.forEach(st=>{ const nd=this.nodeOf(st.ty); items.push({t:st.name,sub:nd.label+' · '+ev.name,kind:'ÉTAPE',col:lc(nd.col),go:()=>{ const p=F[i].P[st.id], zz=Math.max(.75,z); this.setState({_srch:false,_sel:{t:'n',ev:ev.id,st:st.id},_msel:[],_cam:{z:zz,px:s._bw/2-(p.x+120)*zz,py:s._bh/2-(p.y+100)*zz},_fol:false,_view:tv2}); const so=stat[ev.id+'/'+st.id]; if(so) this.seek(so.ri.S+.01,true) }}) }) });
+      D.tracks.forEach(tk=>{ const col=lc(tk.col||(R.TT[tk.type]||R.TT.curve)[1]); (tk.clips||[]).forEach(cc=>items.push({t:cc.name,sub:tk.name+' · '+this.fm((evS[cc.ev]||0)+cc.off),kind:'CLIP',col,go:()=>{ tk.open=true; this.setState({_srch:false,_sel:{t:'c',tk:tk.id,id:cc.id},_msel:[],_view:bv}); this.seek((evS[cc.ev]||0)+cc.off,true) }}));
+        (tk.marks||[]).forEach(m=>items.push({t:m.txt,sub:tk.name+' · '+this.fm((evS[m.ev]||0)+m.off),kind:tk.type==='secu'?'ALERTE':'NOTE',col,go:()=>{ tk.open=true; this.setState({_srch:false,_sel:{t:'k',tk:tk.id,id:m.id},_msel:[],_view:bv}); this.seek((evS[m.ev]||0)+m.off,true) }})) });
+      R.ASSETS.forEach(cat=>cat.items.forEach(it=>items.push({t:it[0],sub:cat.n,kind:'ASSET',col:lc(R.AC[cat.k]),go:()=>this.setState({_srch:false,_ad:true,_adQ:it[0],_adOpen:Object.assign({},s._adOpen,{[cat.k]:true})})})));
+      const res=(q?items.filter(x=>(x.t+' '+x.sub+' '+x.kind).toLowerCase().includes(q)):items).slice(0,40); this._srchRes=res; srchEmpty=!res.length; const si=Math.min(s._srchI,res.length-1);
+      srchRes=res.map((x,i)=>Object.assign({},x,{hov:()=>this.setState({_srchI:i}),dot:{width:8,height:8,borderRadius:'50%',background:x.col,flex:'none'},st:{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:7,cursor:'pointer',background:i===si?'var(--tile2)':'transparent',boxShadow:i===si?'inset 2px 0 0 var(--ort)':'none'}})) }
+    let alertOn=false, al={}; D.tracks.filter(x=>x.type==='secu'&&!x.mute).forEach(tk=>{ if(alertOn) return; for(const m of tk.marks){ const abs=(evS[m.ev]||0)+m.off, lead=m.lead==null?10:m.lead; if(!m.ack&&t>=abs-lead&&t<=abs+4){ alertOn=true; al={when:t<abs?'DANS '+this.fm(abs-t):'MAINTENANT',txt:m.txt,m}; break } } });
+    let goPv={title:'',lines:[]}; const goPvOn=!!(s._goHov&&pg&&L.evs[pg.i+1]);
+    if(goPvOn){ const ne=L.evs[pg.i+1], nev=ne.ev; goPv.title='Moment '+(pg.i+2)+' · '+nev.name; const ent=this.entries(nev); const lines=[];
+      nev.st.filter(x=>ent.includes(x.id)).forEach(x=>{ const nd=this.nodeOf(x.ty); lines.push({t:x.name,k:nd.label,dot:dotS(lc(nd.col),false,false)}) });
+      D.tracks.forEach(tk=>{ (tk.clips||[]).forEach(cc=>{ if(cc.ev===nev.id&&cc.off<=8) lines.push({t:cc.name,k:(R.TT[tk.type]||['PISTE'])[0].toUpperCase(),dot:dotS(lc(tk.col||(R.TT[tk.type]||R.TT.curve)[1]),false,false)}) }); (tk.marks||[]).forEach(m=>{ if(m.ev===nev.id&&m.off<=8) lines.push({t:m.txt,k:tk.type==='secu'?'SÉCURITÉ':'NOTE',dot:dotS(tk.type==='secu'?'#c8311f':'#a3aea8',tk.type==='secu',false)}) }) });
+      goPv.lines=lines.slice(0,8) }
+    const pupOn=view==='pupitre';
+    const pup={crumb:(crumbAct+' › '+crumbEv).toUpperCase(),playTxt:s._pl?'PAUSE · ESPACE':'LECTURE · ESPACE',playSt:{height:32,padding:'0 12px',borderRadius:7,display:'flex',alignItems:'center',cursor:'pointer',fontFamily:"'Azeret Mono',monospace",fontSize:8.5,letterSpacing:'.16em',background:s._pl?'#c8311f':'transparent',color:s._pl?'#fff':'var(--ink)',boxShadow:s._pl?'none':'inset 0 0 0 1px rgba(var(--lr),.2)'},
+      goSt:{height:120,borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',cursor:pg?'pointer':'default',fontFamily:"'Venus Rising',sans-serif",fontSize:30,letterSpacing:'.16em',background:goReady?'var(--ort)':'transparent',color:goReady?'#170c08':pg?'var(--ort)':'var(--ink3)',boxShadow:goReady?'0 0 0 8px rgba(224,103,74,.2)':'inset 0 0 0 2px '+(pg?'rgba(224,103,74,.7)':'rgba(var(--lr),.2)'),animation:goReady?'srp 1.1s infinite':'none'}};
+    const vers=this.versList(), versions=vers.map((v,i)=>({n:v.n,d:new Date(v.d).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),open:()=>{ if(this.locked()) return; this.snap('version'); this.restore(JSON.stringify(v.data.project)); this.toast('« '+v.n+' » ouverte') },del:()=>{ const l=this.versList(); l.splice(i,1); localStorage.setItem('sr-conducteur-versions',JSON.stringify(l)); this.forceUpdate() }}));
+    const tRuns=[]; this.runs.slice(-2).forEach((run,ri)=>run.S.forEach((sv,i)=>{ if(!L.evs[i]) return; tRuns.push({tip:run.n+' · '+L.evs[i].ev.name+' a commencé à '+this.fm(sv),st:{position:'absolute',left:X(sv)-3,top:100-ri*4,width:6,height:3,borderRadius:1,background:ri===this.runs.slice(-2).length-1?'rgba(var(--lr),.55)':'rgba(var(--lr),.3)',zIndex:2}}) }));
+    const helpRows=[['Espace','Lecture / pause'],['G','Top régie (GO)'],['P','Pupitre de représentation'],['Ctrl + K','Recherche globale'],['Ctrl + Espace','Tiroir des assets'],['Ctrl + Z / Y','Annuler / refaire'],['V / C','Outil sélection / couper'],['M / K','Nouveau moment / note'],['+ / −','Zoom de la conduite'],['\\','Voir toute la conduite'],['F','Reprendre le suivi caméra'],['Échap','Fermer / désélectionner'],['Suppr','Supprimer la sélection'],['Clic milieu','Déplacer la planche'],['Glisser','Cadre de sélection'],['Maj + clic','Ajouter à la sélection'],['Double-clic','Bibliothèque de blocs'],['Alt + molette','Zoom de la conduite'],['Molette','Zoom de la planche']].map(([k,d])=>({k,d}));
+    return {
+      themeAttr:s._th, boardRef:this.boardRef, tlRef:this.tlRef, trRef:this.trRef, libIn:this.libIn,
+      showCrumb:(s._bw+300)>=1260, crumbAct, crumbEv, crumbSt,
+      modeBtns:[['preparer','PRÉPARER','Écrire et régler, la caméra reste libre'],['jouer','JOUER','La caméra suit le spectacle']].map(([m,tt,tip])=>({t:tt,tip,st:seg(s._mode===m),go:()=>this.setState({_mode:m,_fol:true,_pl:m==='jouer'?s._pl:false})})),
+      speedBtns:[1,20,60].map(v=>({t:'×'+v,st:Object.assign(seg(s._sp===v),{padding:narrow?'0 6px':'0 9px'}),go:()=>this.setState({_sp:v})})),
+      reset:()=>{ if(t>60&&s._pl) this.recordRun(L); D.hold={}; D.go={}; D.tracks.forEach(tk=>(tk.marks||[]).forEach(m=>{ delete m.ack })); this.bump(); this.setState({_t:0,_pl:false,_fol:true}) }, togglePlay:()=>this.togglePlay(), playing:s._pl, paused:!s._pl,
+      playSt:{width:32,height:32,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',background:s._pl?'#c8311f':'transparent',color:s._pl?'#fff':'var(--ink)',boxShadow:s._pl?'0 0 0 4px rgba(200,49,31,.22)':'inset 0 0 0 1px rgba(var(--lr),.22)',animation:s._pl?'srp 1.4s infinite':'none'},
+      liveOn:s._pl,
+      tNow:this.fm(t), tTot:this.fm(L.total),
+      doGo:()=>this.doGo(), goTxt:pg?(goReady?'GO · P'+(pg.i+1):'P'+(pg.i+1)+' '+this.fm(Math.ceil(Math.max(0,pg.ready-t)))):'GO',
+      goSt:{height:34,width:118,padding:0,fontVariantNumeric:'tabular-nums',overflow:'hidden',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flex:'none',cursor:pg?'pointer':'default',fontFamily:"'Venus Rising',sans-serif",fontSize:10.5,letterSpacing:'.14em',whiteSpace:'nowrap',background:goReady?'var(--ort)':'transparent',color:goReady?'#170c08':pg?'var(--ort)':'var(--ink3)',boxShadow:goReady?'0 0 0 4px rgba(224,103,74,.2)':'inset 0 0 0 1px '+(pg?'rgba(224,103,74,.7)':'rgba(var(--lr),.2)'),animation:goReady?'srp 1.1s infinite':'none'},
+      fsOn:!!s._fs, fsOff:!s._fs, fsTip:s._fs?'Quitter le plein écran':'Plein écran',
+      toggleFs:()=>{ const d=document; if(d.fullscreenElement) d.exitFullscreen&&d.exitFullscreen(); else { const el=d.documentElement; const p=el.requestFullscreen?el.requestFullscreen():null; p&&p.catch&&p.catch(()=>this.toast('Plein écran bloqué ici. Ouvre la page dans son propre onglet.')) } },
+      toggleTheme:()=>this.setState({_th:s._th==='dark'?'light':'dark'}),
+      boardSt:{flex:1,minHeight:0,position:'relative',overflow:'hidden',cursor:s._pan?'grabbing':'default',touchAction:'none',display:view==='tracks'?'none':'block'},
+      hdWide:(window.innerWidth||1400)>=1460, hdMid:(window.innerWidth||1400)>=1180, hdSm:(window.innerWidth||1400)>=1000,
+      viewBtns:[['board','Planche seule','M2 2h12v12H2z'],['both','Planche et conduite','M2 2h12v6H2zM2 10h12v4H2z'],['tracks','Conduite seule','M2 3h12M2 7h12M2 11h12']].map(([v,tip,g])=>({tip,g,st:Object.assign(seg(view===v),{padding:'0 7px'}),go:()=>this.setState({_view:v})})),
+      splitOn:view==='both', soloBoard:()=>this.setState({_view:view==='board'?'both':'board'}), soloBoardTip:view==='board'?'Revenir aux deux vues':'Planche seule, plein cadre', soloBoardG:view==='board'?'M5 1.5V5H1.5M9 1.5V5h3.5M9 12.5V9h3.5M5 12.5V9H1.5':'M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9',
+      soloTracks:()=>this.setState({_view:view==='tracks'?'both':'tracks'}), soloTracksTip:view==='tracks'?'Revenir aux deux vues':'Conduite seule, plein cadre', soloTracksG:view==='tracks'?'M5 1.5V5H1.5M9 1.5V5h3.5M9 12.5V9h3.5M5 12.5V9H1.5':'M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9',
+      toggleLock:()=>{ const nl=!s._lock; this.setState({_lock:nl,_tool:'sel'}); this.toast(nl?'Mode scène : la conduite est verrouillée. GO, pause et conditions restent actifs.':'Mode répétition : modifications autorisées.') }, lockTip:s._lock?'Mode scène · verrouillé. Cliquer pour déverrouiller':'Mode répétition · cliquer pour verrouiller la conduite (scène)',
+      lockSt:{height:32,padding:'0 10px',borderRadius:7,display:'flex',alignItems:'center',gap:6,cursor:'pointer',flex:'none',fontFamily:"'Azeret Mono',monospace",fontSize:8.5,letterSpacing:'.16em',background:s._lock?'#c8311f':'transparent',color:s._lock?'#fff':'var(--ink2)',boxShadow:s._lock?'none':'inset 0 0 0 1px rgba(var(--lr),.16)'}, lockG:s._lock?'M3 5V3.5a2.5 2.5 0 0 1 5 0V5':'M3 5V3.5a2.5 2.5 0 0 1 5 0',
+      undo:()=>this.undo(), redo:()=>this.redo(), histTxt:String(this.hist.length), undoSt:{width:26,height:28,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:this.hist.length?'var(--ink)':'var(--ink3)'}, redoSt:{width:26,height:28,borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:14,color:this.redoS.length?'var(--ink)':'var(--ink3)'},
+      boardDown:e=>{ if(e.button===1){ e.preventDefault(); this.pan={x:e.clientX,y:e.clientY,px:cm.px,py:cm.py}; this.setState({_pan:true}); return } if(e.button!==0) return; const p=this.bRel(e); this.mq={x0:p.x,y0:p.y,add:e.shiftKey,moved:false}; if(s._lib||s._addTk) this.setState({_lib:null,_addTk:false}) },
+      boardDbl:e=>{ if(e.target.closest&&e.target.closest('[data-node],[data-ui]')) return; const p=this.bRel(e); this.openLib(p.x,p.y,null) },
+      boardCtx:e=>{ e.preventDefault(); if(e.target.closest&&e.target.closest('[data-node],[data-ui]')) return; const p=this.bRel(e); this.openLib(p.x,p.y,null) },
+      gridSt:{position:'absolute',inset:0,pointerEvents:'none',backgroundImage:'radial-gradient(rgba(var(--lr),.16) 1px, transparent 1.2px)',backgroundSize:(24*z)+'px '+(24*z)+'px',backgroundPosition:cm.px+'px '+cm.py+'px'},
+      frames, wires, wdots, nodes, chips, ports, bGates, lkOn, lkD, mqOn, mqSt, mmOn:s._bh>=300&&lod!=='far', mm, mmDown:e=>{ e.stopPropagation(); if(e.button!==0) return; const r=e.currentTarget.getBoundingClientRect(), wx=mm.bx+(e.clientX-r.left)/mm.k, wy=mm.by+(e.clientY-r.top)/mm.k; this.setState({_cam:{z,px:s._bw/2-wx*z,py:s._bh/2-wy*z},_fol:false}) }, stop:e=>e.stopPropagation(),
+      lodBtns:[['VUE D’ENSEMBLE','far',.36],['ÉTAPES','mid',.75],['RÉGLAGES','near',1.15]].map(([tt,l,zz])=>({t:tt,st:seg(lod===l),go:()=>{ const sl2=s._sel, fi=sl2&&sl2.ev?D.ev.findIndex(x=>x.id===sl2.ev):-1, r=fi>=0?F[fi].r:this.focusRect(L,t); let fx=r.x+r.w/2, fy=r.y+Math.min(r.h/2,220); if(sl2&&sl2.t==='n'&&fi>=0&&F[fi].P[sl2.st]){ fx=F[fi].P[sl2.st].x+120; fy=F[fi].P[sl2.st].y+120 } this.setState({_cam:{z:zz,px:s._bw/2-fx*zz,py:s._bh/2-fy*zz+20},_fol:false}) }})),
+      zoomTxt:Math.round(z*100)+'%', zoomIn:()=>this.zoomBy(1.2), zoomOut:()=>this.zoomBy(1/1.2),
+      openLibBtn:()=>this.openLibCenter(),
+      legOn:s._bh>=300, legHelp:s._bw>=900, folOff:jouer&&!s._fol, folOn:jouer&&s._fol&&s._pl, reframe:()=>this.reframe(),
+      hasToast:!!s._toast, toastTxt:s._toast,
+      libOn, libSt, libHint, libQ:s._libQ, setLibQ:e=>this.setState({_libQ:e.target.value,_libHov:null}), libKey:e=>this.libKey(e), libGroups, lp, closeLib:()=>this.setState({_lib:null}),
+      splitDown:e=>{ e.preventDefault(); this.sp={y:e.clientY,h:s._tlH} },
+      tlSt:view==='board'?{display:'none'}:view==='tracks'?{flex:1,minHeight:0,display:'flex',flexDirection:'column',background:'var(--bg)'}:{flex:'none',height:s._tlH,display:'flex',flexDirection:'column',background:'var(--bg)'},
+      tools:[['sel','SÉLECTION','Choisir et déplacer · touche V','M5 3l12 9-6 1.2L8 19z'],['cut','COUPER','Couper un moment ou un clip · touche C','M6 6l12 12M18 6L6 18M4 4a2 2 0 1 0 4 4 2 2 0 0 0-4-4zM16 16a2 2 0 1 0 4 4 2 2 0 0 0-4-4z']].map(([k,tt,tip,g])=>({t:tt,tip,g,st:Object.assign(seg(s._tool===k),{height:24,padding:'0 8px',fontSize:8}),go:()=>this.setState({_tool:k})})),
+      addMomentBtn:()=>this.addMoment(), addNoteBtn:()=>this.addNote(),
+      toggleAddTk:()=>this.setState({_addTk:!s._addTk}), addTkOn:s._addTk,
+      addTkBtnSt:{height:26,padding:tw<860?'0 10px':'0 9px',borderRadius:6,display:'flex',alignItems:'center',cursor:'pointer',boxShadow:'inset 0 0 0 1px '+(s._addTk?'var(--cy)':'rgba(var(--lr),.18)'),fontFamily:"'Azeret Mono',monospace",fontSize:8,letterSpacing:'.14em',color:'var(--ink)',whiteSpace:'nowrap',background:s._addTk?'var(--tile2)':'transparent'},
+      addTypes:['son','lx','video','tel','txt','notes','secu','curve'].map(k=>({n:R.TT[k][0],d:R.TT[k][2],sw:{width:10,height:10,borderRadius:3,background:lc(R.TT[k][1]),flex:'none'},go:()=>this.addTrack(k)})),
+      showDrift:tw>1060, tracksSolo:view==='tracks', tlNarrow:tw<860, tlWideH:tw>=860, drift:(drift>=0?'+':'−')+this.fm(Math.abs(drift)), driftSt:{fontFamily:"'Venus Rising',sans-serif",fontSize:10,display:'inline-block',width:58,textAlign:'right',fontVariantNumeric:'tabular-nums',whiteSpace:'nowrap',color:drift>30?'var(--ort)':'var(--ink)'},
+      tlDown:e=>{ if(e.button!==0) return; this.scr=true; this.scrubTo(e.clientX); if(s._addTk) this.setState({_addTk:false}) },
+      rTicks, rLabs, tActs, tEvs, tGates, tRows,
+      trInSt:{position:'relative',height:ty+44},
+      addRowSt:{position:'absolute',left:22,top:ty+6,height:28,padding:'0 12px',borderRadius:6,display:'flex',alignItems:'center',gap:8,cursor:'pointer',boxShadow:'inset 0 0 0 1px rgba(var(--lr),.16)',fontFamily:"'Azeret Mono',monospace",fontSize:8,letterSpacing:'.14em',color:'var(--ink2)'},
+      tzTxt:'×'+(tot/span0).toFixed(1), tzIn:()=>this.tz(1/1.5,'ph'), tzOut:()=>this.tz(1.5,'ph'), tzFit:()=>this.setTv(0,1e9),
+      zbSt:{position:'absolute',left:LBL,width:TW,bottom:8,height:10,borderRadius:5,background:'rgba(var(--lr),.07)',zIndex:6,cursor:'pointer'},
+      zbPh:{position:'absolute',left:(t/tot*100)+'%',top:-3,width:2,height:16,marginLeft:-1,background:'var(--ort)',pointerEvents:'none'},
+      zbThSt:{position:'absolute',left:(v0/tot*100)+'%',width:Math.max(2,span0/tot*100)+'%',top:0,height:10,borderRadius:5,background:'rgba(var(--lr),.26)',cursor:'grab'},
+      zbTrack:e=>{ e.stopPropagation(); const r=e.currentTarget.getBoundingClientRect(), c=(e.clientX-r.left)/r.width*tot, nv=Math.max(0,Math.min(tot-span0,c-span0/2)); this.setTv(nv,span0); this.zb={m:'mv',x:e.clientX,v0:nv,sp:span0,TW,tot} },
+      zbThumb:e=>{ e.stopPropagation(); this.zb={m:'mv',x:e.clientX,v0,sp:span0,TW,tot} },
+      zbL:e=>{ e.stopPropagation(); this.zb={m:'l',x:e.clientX,v0,sp:span0,TW,tot} },
+      zbR:e=>{ e.stopPropagation(); this.zb={m:'r',x:e.clientX,v0,sp:span0,TW,tot} },
+      phSt:{position:'absolute',left:X(t),top:0,bottom:26,width:1,background:'var(--ort)',pointerEvents:'none',zIndex:7,display:inView?'block':'none'},
+      cardOn, cd, cardSt, cardNotch, closeCard:()=>this.setState({_gate:null}),
+      asideSt:{width:s._aw,flex:'none',display:'flex',flexDirection:'column',overflowY:'auto',scrollbarWidth:'thin',scrollbarColor:'rgba(var(--lr),.28) transparent'},
+      topSt:{flex:1,minHeight:0,display:view==='tracks'?'none':'flex'}, vsplitSt:{flex:'none',width:8,cursor:'col-resize',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--tile)',boxShadow:'inset 1px 0 0 rgba(var(--lr),.12),inset -1px 0 0 rgba(var(--lr),.12)'}, asDown:e=>{ e.preventDefault(); this.vs={x:e.clientX,w:s._aw} },
+      accR:s._acc.r, accA:s._acc.a, accS:s._acc.s, accV:s._acc.v, toggleAccR:()=>this.setState({_acc:Object.assign({},s._acc,{r:!s._acc.r})}), toggleAccA:()=>this.setState({_acc:Object.assign({},s._acc,{a:!s._acc.a})}), toggleAccS:()=>this.setState({_acc:Object.assign({},s._acc,{s:!s._acc.s})}), toggleAccV:()=>this.setState({_acc:Object.assign({},s._acc,{v:!s._acc.v})}),
+      accRHd:accHd(s._acc.r), accAHd:accHd(s._acc.a), accSHd:accHd(s._acc.s), accVHd:accHd(s._acc.v), accRCh:accCh(s._acc.r), accACh:accCh(s._acc.a), accSCh:accCh(s._acc.s), accVCh:accCh(s._acc.v),
+      ins, msOn, msCount:String(s._msel.length), alignSel:()=>this.alignSel(), selNOn, sn, selTOn, stx, smOn, smv, saOn, sav, scOn, scv, skOn, skv, stOn, stv,
+      desel:()=>this.setState({_sel:null,_msel:[]}), delSel:()=>this.delSel(),
+      sens:[['aff','AFFLUENCE'],['part','PARTICIPATION'],['calme','CALME'],['pen','PENCHANT A']].map(([k,lab])=>Object.assign({lab,disp:String(D.sens[k]),grab:this.kg(()=>D.sens[k],v=>{D.sens[k]=v})},this.kv(D.sens[k],k==='pen'?'#e0674a':'#78b08f'))),
+      voteTxt:V.A+' · '+V.B+' · '+V.C, issueTxt:iss==='A'?'Issue A · la fuite':iss==='B'?'Issue B · le pacte':'Égalité · tirage',
+      adWrapSt:{position:'fixed',left:0,top:56,bottom:0,display:'flex',zIndex:40,transform:s._ad?'translateX(0)':'translateX(-300px)',transition:'transform .22s ease',boxShadow:s._ad?'18px 0 50px rgba(0,0,0,.35)':'none'},
+      toggleAssets:()=>this.setState({_ad:!s._ad}), adQ:s._adQ, setAdQ:e=>this.setState({_adQ:e.target.value}), adCats, adCount:adN+' ÉLÉMENTS',
+      pupOn, pup, togglePup:()=>this.setState({_view:view==='pupitre'?'both':'pupitre'}), srchOn:!!s._srch, srchIn:this.srchIn, srchQ:s._srchQ, setSrchQ:e=>this.setState({_srchQ:e.target.value,_srchI:0}), srchRes, srchEmpty, openSearch:()=>this.setState({_srch:true,_srchQ:'',_srchI:0}), closeSearch:()=>this.setState({_srch:false}),
+      helpOn:!!s._help, toggleHelp:()=>this.setState({_help:!s._help}), helpRows, alertOn, al, ackAlert:()=>{ if(al.m){ al.m.ack=true; this.bump() } }, goPvOn, goPv, goIn:()=>this.setState({_goHov:true}), goOut:()=>this.setState({_goHov:false}),
+      versions, verCount:vers.length+' LOCALES', saveVer:()=>this.saveVer(), exportJson:()=>this.exportJson(), runsTxt:this.runs.length?this.runs.length+' · dernier retard '+(this.runs[this.runs.length-1].drift>=0?'+':'−')+this.fm(Math.abs(this.runs[this.runs.length-1].drift)):'aucun', tRuns,
+      ghostOn:!!gh, ghostName:gh?gh.n:'', ghostHint:gh?gh.hint:'',
+      ghostSt:gh?{position:'fixed',left:gh.x+14,top:gh.y+10,zIndex:90,pointerEvents:'none',display:'flex',flexDirection:'column',gap:4,padding:'8px 11px',borderRadius:8,background:'var(--tile2)',boxShadow:'inset 0 0 0 1px var(--ort), 0 10px 30px rgba(0,0,0,.4)'}:{}
+    } }
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "studio-real",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w conducteur",
+    "build": "npm run build -w @studio-real/modele && npm run build -w conducteur",
+    "test": "npm test -w @studio-real/modele",
+    "verifier-projets": "npm run verifier -w @studio-real/modele"
+  }
+}
