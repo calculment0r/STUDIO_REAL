@@ -46,3 +46,7 @@ html:has(body.ch.fond-libre), body.ch.fond-libre, body.ch.fond-libre .ch-flux { 
 .ch-vote-pops { display: flex; flex-wrap: wrap; gap: 1.2vmin; margin-top: auto; min-height: 5vmin; }
 .ch-pop { font-size: clamp(16px, 2.2vmin, 34px); padding: .4em .8em; border-radius: 99px; background: var(--tile); color: var(--cy); animation: ch-pop .4s ease both; }
 @keyframes ch-pop { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; transform: none; } }
+
+.ch-qr { position: fixed; inset: 0; z-index: 45; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vmin; }
+.ch-qr img { width: 70vmin; height: 70vmin; }
+.ch-qr b { font-family: var(--f-disp); font-size: 5vmin; color: #000; letter-spacing: .08em; }

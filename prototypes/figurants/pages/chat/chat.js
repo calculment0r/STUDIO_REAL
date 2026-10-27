@@ -21,7 +21,7 @@ connecter({
     if (m.t === 'welcome') chat.historique(m.historique);
     else if (m.t === 'chat') chat.ajouter(m);
     else if (m.t === 'media') media(m);
-    else if (m.t === 'ecran') document.getElementById('noir').hidden = m.mode !== 'noir';
+    else if (m.t === 'ecran') { document.getElementById('noir').hidden = m.mode !== 'noir'; document.getElementById('qr').hidden = m.mode !== 'qr'; }
     else if (m.t === 'vote') montrerVote(m);
     else if (m.t === 'vote.pop') pop(m.pseudo);
   },

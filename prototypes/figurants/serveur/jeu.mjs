@@ -248,7 +248,7 @@ export class Jeu {
   }
 
   _ecran(c, m) {
-    if (c.role !== 'regie' || !['mur', 'noir'].includes(m.mode)) return;
+    if (c.role !== 'regie' || !['mur', 'noir', 'qr'].includes(m.mode)) return;
     this.ecran = m.mode;
     this.versRole('chat', { t: 'ecran', mode: this.ecran });
     this.journalRegie('écran : ' + this.ecran);

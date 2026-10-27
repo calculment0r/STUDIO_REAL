@@ -50,6 +50,20 @@
               "plateau": "chaise / table",
               "telephones": "scan du QR, pseudo, puis « Regardez la vidéo »",
               "outil": "régie : tap 1 · Téléphones « Regardez la vidéo »",
+              "cmds": [
+                {
+                  "t": "tel.cmd",
+                  "mode": "video"
+                },
+                {
+                  "t": "ecran",
+                  "mode": "qr"
+                },
+                {
+                  "t": "vote.cmd",
+                  "cmd": "fermer"
+                }
+              ],
               "sortie": "accueil-qr",
               "duree_reperes_min": 5
             }
@@ -92,6 +106,16 @@
               "plateau": "chaise / table",
               "telephones": "FLUX Instagram (vidéo)",
               "outil": "régie : tap 2 · FLUX INSTA",
+              "cmds": [
+                {
+                  "t": "tel.cmd",
+                  "mode": "flux"
+                },
+                {
+                  "t": "ecran",
+                  "mode": "mur"
+                }
+              ],
               "duree_reperes_min": 1
             }
           }
@@ -215,6 +239,16 @@
               "plateau": "Franck écoute",
               "telephones": "« Regardez la scène »",
               "outil": "régie : tap 4 · JUNON",
+              "cmds": [
+                {
+                  "t": "junon",
+                  "cmd": "lancer"
+                },
+                {
+                  "t": "ecran",
+                  "mode": "mur"
+                }
+              ],
               "duree_reperes_min": 2
             }
           }
@@ -256,6 +290,16 @@
               "plateau": "Franck lance l’appel à ÉCO sur son ordinateur",
               "telephones": "notification : vous êtes désormais modérateur",
               "outil": "régie : tap 5 · notification + écran noir · page eco de Franck",
+              "cmds": [
+                {
+                  "t": "tel.cmd",
+                  "mode": "notif"
+                },
+                {
+                  "t": "ecran",
+                  "mode": "noir"
+                }
+              ],
               "duree_reperes_min": 1
             }
           }
@@ -297,6 +341,17 @@
               "plateau": "Franck pose la question 1 à ÉCO",
               "telephones": "les 4 réponses, un vote",
               "outil": "régie : tap Q1 · réponses",
+              "cmds": [
+                {
+                  "t": "ecran",
+                  "mode": "mur"
+                },
+                {
+                  "t": "vote.cmd",
+                  "cmd": "ouvrir",
+                  "numero": 1
+                }
+              ],
               "duree_reperes_min": 1
             }
           }
@@ -338,6 +393,12 @@
               "plateau": "ÉCO argumente le résultat, Franck se défend",
               "telephones": "résultat à l’écran",
               "outil": "régie : tap Q1 · RÉSULTAT",
+              "cmds": [
+                {
+                  "t": "vote.cmd",
+                  "cmd": "reveler"
+                }
+              ],
               "duree_reperes_min": 2
             }
           }
@@ -379,6 +440,17 @@
               "plateau": "Franck pose la question 2 à ÉCO",
               "telephones": "les 4 réponses, un vote",
               "outil": "régie : tap Q2 · réponses",
+              "cmds": [
+                {
+                  "t": "ecran",
+                  "mode": "mur"
+                },
+                {
+                  "t": "vote.cmd",
+                  "cmd": "ouvrir",
+                  "numero": 2
+                }
+              ],
               "duree_reperes_min": 1
             }
           }
@@ -420,6 +492,12 @@
               "plateau": "ÉCO argumente le résultat, Franck se défend",
               "telephones": "résultat à l’écran",
               "outil": "régie : tap Q2 · RÉSULTAT",
+              "cmds": [
+                {
+                  "t": "vote.cmd",
+                  "cmd": "reveler"
+                }
+              ],
               "duree_reperes_min": 2
             }
           }
@@ -461,6 +539,17 @@
               "plateau": "Franck pose la question 3 à ÉCO",
               "telephones": "les 4 réponses, un vote",
               "outil": "régie : tap Q3 · réponses",
+              "cmds": [
+                {
+                  "t": "ecran",
+                  "mode": "mur"
+                },
+                {
+                  "t": "vote.cmd",
+                  "cmd": "ouvrir",
+                  "numero": 3
+                }
+              ],
               "duree_reperes_min": 1
             }
           }
@@ -502,6 +591,12 @@
               "plateau": "ÉCO argumente le résultat, Franck se défend",
               "telephones": "résultat à l’écran",
               "outil": "régie : tap Q3 · RÉSULTAT",
+              "cmds": [
+                {
+                  "t": "vote.cmd",
+                  "cmd": "reveler"
+                }
+              ],
               "duree_reperes_min": 2
             }
           }
@@ -543,6 +638,17 @@
               "plateau": "Franck pose la question 4 à ÉCO",
               "telephones": "les 4 réponses, un vote",
               "outil": "régie : tap Q4 · réponses",
+              "cmds": [
+                {
+                  "t": "ecran",
+                  "mode": "mur"
+                },
+                {
+                  "t": "vote.cmd",
+                  "cmd": "ouvrir",
+                  "numero": 4
+                }
+              ],
               "duree_reperes_min": 1
             }
           }
@@ -584,6 +690,12 @@
               "plateau": "ÉCO argumente le résultat, Franck se défend",
               "telephones": "résultat à l’écran",
               "outil": "régie : tap Q4 · RÉSULTAT",
+              "cmds": [
+                {
+                  "t": "vote.cmd",
+                  "cmd": "reveler"
+                }
+              ],
               "duree_reperes_min": 2
             }
           }
@@ -625,6 +737,17 @@
               "plateau": "Franck pose la question 15 à ÉCO",
               "telephones": "les 4 réponses, un vote",
               "outil": "régie : tap Q15 · réponses",
+              "cmds": [
+                {
+                  "t": "ecran",
+                  "mode": "mur"
+                },
+                {
+                  "t": "vote.cmd",
+                  "cmd": "ouvrir",
+                  "numero": 15
+                }
+              ],
               "duree_reperes_min": 1
             }
           }
@@ -666,6 +789,12 @@
               "plateau": "ÉCO argumente le résultat, Franck se défend",
               "telephones": "résultat à l’écran",
               "outil": "régie : tap Q15 · RÉSULTAT",
+              "cmds": [
+                {
+                  "t": "vote.cmd",
+                  "cmd": "reveler"
+                }
+              ],
               "duree_reperes_min": 2
             }
           }
@@ -707,6 +836,20 @@
               "plateau": "Franck sur son téléphone (page visio/franck)",
               "telephones": "« Regardez la scène »",
               "outil": "régie : tap « Fin des questions » · puis fenêtre visio/scene en plein écran",
+              "cmds": [
+                {
+                  "t": "vote.cmd",
+                  "cmd": "fermer"
+                },
+                {
+                  "t": "ecran",
+                  "mode": "noir"
+                },
+                {
+                  "t": "tel.cmd",
+                  "mode": "scene"
+                }
+              ],
               "duree_reperes_min": 4
             }
           }
@@ -789,6 +932,16 @@
               "plateau": "",
               "telephones": "« Regardez la scène »",
               "outil": "régie : tap PRÉSIDENT BOILOT",
+              "cmds": [
+                {
+                  "t": "junon",
+                  "cmd": "president"
+                },
+                {
+                  "t": "tel.cmd",
+                  "mode": "scene"
+                }
+              ],
               "duree_reperes_min": 2
             }
           }

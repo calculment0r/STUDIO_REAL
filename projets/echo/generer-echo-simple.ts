@@ -14,6 +14,7 @@ interface EtapeDef {
   id: string; nom: string; minutes: number;
   ecran: string; plateau: string; telephones: string;
   outil?: string;             // ce qui fait le travail ce soir (page, appel, régie)
+  cmds?: Record<string, unknown>[];   // envoyées au serveur du spectacle à l'entrée de l'étape (pont-figurants du Conducteur)
   sortie?: string | Record<string, unknown>;
 }
 interface Bloc { nom: string; etapes: EtapeDef[] }
@@ -21,9 +22,9 @@ interface Bloc { nom: string; etapes: EtapeDef[] }
 const BLOCS: Bloc[] = [
   // Le cheminement du soir (27/10) : chaque étape = un tap de la « conduite écho » de la régie figurants (champ outil).
   { nom: '1 · Le fil', etapes: [
-    { id: 'b1_entree', nom: 'Entrée du public · QR', minutes: 5, ecran: 'QR code du public', plateau: 'chaise / table',
+    { id: 'b1_entree', cmds: [{ t: 'tel.cmd', mode: 'video' }, { t: 'ecran', mode: 'qr' }, { t: 'vote.cmd', cmd: 'fermer' }], nom: 'Entrée du public · QR', minutes: 5, ecran: 'QR code du public', plateau: 'chaise / table',
       telephones: 'scan du QR, pseudo, puis « Regardez la vidéo »', outil: 'régie : tap 1 · Téléphones « Regardez la vidéo »', sortie: 'accueil-qr' },
-    { id: 'b1_flux', nom: 'Flux Instagram', minutes: 1, ecran: 'mur (vide)', plateau: 'chaise / table', telephones: 'FLUX Instagram (vidéo)',
+    { id: 'b1_flux', cmds: [{ t: 'tel.cmd', mode: 'flux' }, { t: 'ecran', mode: 'mur' }], nom: 'Flux Instagram', minutes: 1, ecran: 'mur (vide)', plateau: 'chaise / table', telephones: 'FLUX Instagram (vidéo)',
       outil: 'régie : tap 2 · FLUX INSTA' },
     { id: 'b1_choix', nom: 'Abonne / désabonne + pourquoi', minutes: 2, ecran: 'mur : les réponses avec le pseudo, au fil de l’eau', plateau: 'chaise / table',
       telephones: 'à la fin de la vidéo : ABONNEZ-VOUS / DÉSABONNEZ-VOUS, puis « pourquoi ? » et valider', outil: 'automatique en fin de vidéo (tap 3 pour forcer)' },
@@ -33,26 +34,26 @@ const BLOCS: Bloc[] = [
       plateau: 'Franck entre sur scène et lit', telephones: 'merci, regardez l’écran', outil: 'aucun tap : on est en pause' },
   ] },
   { nom: '3 · La ministre', etapes: [
-    { id: 'b3_junon', nom: 'Discours de la ministre Junon (audio)', minutes: 2, ecran: 'mur : commentaires pré-écrits calés sur le discours',
+    { id: 'b3_junon', cmds: [{ t: 'junon', cmd: 'lancer' }, { t: 'ecran', mode: 'mur' }], nom: 'Discours de la ministre Junon (audio)', minutes: 2, ecran: 'mur : commentaires pré-écrits calés sur le discours',
       plateau: 'Franck écoute', telephones: '« Regardez la scène »', outil: 'régie : tap 4 · JUNON' },
   ] },
   { nom: '4 · Modérateurs et Écho', etapes: [
-    { id: 'b4_notif', nom: 'Notification « modérateur »', minutes: 1, ecran: 'noir', plateau: 'Franck lance l’appel à ÉCO sur son ordinateur',
+    { id: 'b4_notif', cmds: [{ t: 'tel.cmd', mode: 'notif' }, { t: 'ecran', mode: 'noir' }], nom: 'Notification « modérateur »', minutes: 1, ecran: 'noir', plateau: 'Franck lance l’appel à ÉCO sur son ordinateur',
       telephones: 'notification : vous êtes désormais modérateur', outil: 'régie : tap 5 · notification + écran noir · page eco de Franck' },
   ] },
   { nom: '5 · Les questions à Écho', etapes: [1, 2, 3, 4, 15].flatMap((n): EtapeDef[] => [
-    { id: `b5_q${n}`, nom: `Q${n} · réponses`, minutes: 1, ecran: 'mur : la question et les 4 réponses en grand, « @x a voté »',
+    { id: `b5_q${n}`, cmds: [{ t: 'ecran', mode: 'mur' }, { t: 'vote.cmd', cmd: 'ouvrir', numero: n }], nom: `Q${n} · réponses`, minutes: 1, ecran: 'mur : la question et les 4 réponses en grand, « @x a voté »',
       plateau: `Franck pose la question ${n} à ÉCO`, telephones: 'les 4 réponses, un vote', outil: `régie : tap Q${n} · réponses` },
-    { id: `b5_q${n}_res`, nom: `Q${n} · résultat`, minutes: 2, ecran: 'mur : les pourcentages forcés, la réponse gagnante en avant',
+    { id: `b5_q${n}_res`, cmds: [{ t: 'vote.cmd', cmd: 'reveler' }], nom: `Q${n} · résultat`, minutes: 2, ecran: 'mur : les pourcentages forcés, la réponse gagnante en avant',
       plateau: 'ÉCO argumente le résultat, Franck se défend', telephones: 'résultat à l’écran', outil: `régie : tap Q${n} · RÉSULTAT` },
   ]) },
   { nom: '6 · La visio de la ministre', etapes: [
-    { id: 'b6_visio', nom: 'Visio Franck ↔ ministre', minutes: 4, ecran: 'les deux vidéos (page visio/scene), son de la ministre seul',
+    { id: 'b6_visio', cmds: [{ t: 'vote.cmd', cmd: 'fermer' }, { t: 'ecran', mode: 'noir' }, { t: 'tel.cmd', mode: 'scene' }], nom: 'Visio Franck ↔ ministre', minutes: 4, ecran: 'les deux vidéos (page visio/scene), son de la ministre seul',
       plateau: 'Franck sur son téléphone (page visio/franck)', telephones: '« Regardez la scène »', outil: 'régie : tap « Fin des questions » · puis fenêtre visio/scene en plein écran' },
     { id: 'b6_pause', nom: 'La ministre raccroche · pause', minutes: 1, ecran: 'noir', plateau: '', telephones: '« Regardez la scène »', outil: 'aucun tap : pause' },
   ] },
   { nom: '7 · Le président Boilot', etapes: [
-    { id: 'b7_president', nom: 'Discours du président Jean Boilot', minutes: 2, ecran: 'mur (audio du discours)', plateau: '', telephones: '« Regardez la scène »',
+    { id: 'b7_president', cmds: [{ t: 'junon', cmd: 'president' }, { t: 'tel.cmd', mode: 'scene' }], nom: 'Discours du président Jean Boilot', minutes: 2, ecran: 'mur (audio du discours)', plateau: '', telephones: '« Regardez la scène »',
       outil: 'régie : tap PRÉSIDENT BOILOT' },
   ] },
 ];
@@ -63,7 +64,7 @@ const k0 = (min: number) => Math.max(0, Math.round((min * 60 - 10) / 6));
 const ev: Moment[] = [];
 BLOCS.forEach((b, act) => {
   for (const e of b.etapes) {
-    const params: Record<string, unknown> = { ecran: e.ecran, plateau: e.plateau, telephones: e.telephones, ...(e.outil ? { outil: e.outil } : {}) };
+    const params: Record<string, unknown> = { ecran: e.ecran, plateau: e.plateau, telephones: e.telephones, ...(e.outil ? { outil: e.outil } : {}), ...(e.cmds ? { cmds: e.cmds } : {}) };
     if (e.sortie) params.sortie = e.sortie;
     ev.push({
       id: e.id, act, name: e.nom, entry: e.id + '_s',
