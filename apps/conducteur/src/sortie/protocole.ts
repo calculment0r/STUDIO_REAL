@@ -161,7 +161,8 @@ export type MessageSortie =
 // ── adresse et configuration ─────────────────────────────────────────────────────────────────────────────────────
 
 /** Adresse publique des pages spectateur (docs/04 §1) ; VITE_ADRESSE_PUBLIC la remplace au build. */
-export const ADRESSE_PUBLIC_DEFAUT = 'https://calculment0r.github.io/STUDIO_REAL/echo/';
+// Spectacle du 27/10 : le serveur du soir, par le tunnel public (les spectateurs sont en 4G/5G)
+export const ADRESSE_PUBLIC_DEFAUT = 'https://highway-regions-temperatures-penn.trycloudflare.com/echo';
 export const CONSIGNE_DEFAUT = 'Scannez pour entrer';
 
 export function configParDefaut(titre?: string): ConfigSortie {
@@ -178,7 +179,9 @@ export function configParDefaut(titre?: string): ConfigSortie {
     if (q === 'defaut') localStorage.removeItem(CLE);
     else if (q && /^https?:\/\//i.test(q)) localStorage.setItem(CLE, q);
     const retenue = localStorage.getItem(CLE);
-    if (retenue) adresse = retenue;
+    // une adresse du réseau local est injoignable en 4G/5G : on l'oublie
+    if (retenue && /^https?://(192.168.|10.|127.|localhost)/i.test(retenue)) localStorage.removeItem(CLE);
+    else if (retenue) adresse = retenue;
   } catch { /* hors navigateur, stockage indisponible */ }
   return { titre: titre?.trim() || 'Studio Real', adresse, consigne: CONSIGNE_DEFAUT };
 }
