@@ -38,7 +38,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              48,
+              0,
               50,
               50
             ],
@@ -47,7 +47,8 @@
               "plateau": "chaise / table",
               "telephones": "scan du QR, pseudo",
               "outil": "QR → page téléphone (serveur figurants)",
-              "sortie": "accueil-qr"
+              "sortie": "accueil-qr",
+              "duree_reperes_min": 5
             }
           }
         ],
@@ -79,7 +80,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              28,
+              0,
               50,
               50
             ],
@@ -87,7 +88,8 @@
               "ecran": "rien",
               "plateau": "chaise / table",
               "telephones": "FLUX Instagram (vidéo)",
-              "sortie": "noir"
+              "sortie": "noir",
+              "duree_reperes_min": 3
             }
           }
         ],
@@ -119,14 +121,15 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              8,
+              0,
               50,
               50
             ],
             "params": {
               "ecran": "rien",
               "plateau": "chaise / table",
-              "telephones": "fin du flux, question : ABONNEZ-VOUS À SON COMPTE / DÉSABONNEZ-VOUS DE SON COMPTE"
+              "telephones": "fin du flux, question : ABONNEZ-VOUS À SON COMPTE / DÉSABONNEZ-VOUS DE SON COMPTE",
+              "duree_reperes_min": 1
             }
           }
         ],
@@ -158,14 +161,15 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              18,
+              0,
               50,
               50
             ],
             "params": {
               "ecran": "rien",
               "plateau": "chaise / table",
-              "telephones": "une fois le choix fait au clic, une case avec champ texte s’affiche : écrire pourquoi ce choix"
+              "telephones": "une fois le choix fait au clic, une case avec champ texte s’affiche : écrire pourquoi ce choix",
+              "duree_reperes_min": 2
             }
           }
         ],
@@ -197,7 +201,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              38,
+              0,
               50,
               50
             ],
@@ -205,7 +209,8 @@
               "ecran": "textes des spectateurs affichés sur le grand écran",
               "plateau": "l’acteur entre sur le plateau et lit",
               "telephones": "rien",
-              "outil": "mur de commentaires (page chat du serveur figurants)"
+              "outil": "mur de commentaires (page chat du serveur figurants)",
+              "duree_reperes_min": 4
             }
           }
         ],
@@ -237,14 +242,15 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              28,
+              0,
               50,
               50
             ],
             "params": {
               "ecran": "VOIX OFF DE LA MINISTRE JUNON",
               "plateau": "s’assoit et clique sur son ordi",
-              "telephones": "rien"
+              "telephones": "rien",
+              "duree_reperes_min": 3
             }
           }
         ],
@@ -276,7 +282,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              8,
+              0,
               50,
               50
             ],
@@ -284,7 +290,8 @@
               "ecran": "téléphone de la ministre : la question",
               "plateau": "(1) Franck pose des questions à ÉCHO",
               "telephones": "rien",
-              "outil": "page ministre · régie VOTE : choisir la question 1 à 5"
+              "outil": "page ministre · régie VOTE : choisir la question 1 à 5",
+              "duree_reperes_min": 1
             }
           }
         ],
@@ -316,7 +323,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              8,
+              0,
               50,
               50
             ],
@@ -324,7 +331,8 @@
               "ecran": "téléphone de la ministre : les votes montent (sans les réponses)",
               "plateau": "Franck attend",
               "telephones": "(2) écrivent leur réponse · ce soir : 4 réponses proposées, un vote",
-              "outil": "régie VOTE : OUVRIR"
+              "outil": "régie VOTE : OUVRIR",
+              "duree_reperes_min": 1
             }
           }
         ],
@@ -356,7 +364,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              8,
+              0,
               50,
               50
             ],
@@ -364,7 +372,8 @@
               "ecran": "(3) synthèse d’Écho : la phrase de résultat",
               "plateau": "Franck lit",
               "telephones": "résultat à l’écran",
-              "outil": "régie VOTE : RÉVÉLER"
+              "outil": "régie VOTE : RÉVÉLER",
+              "duree_reperes_min": 1
             }
           }
         ],
@@ -396,7 +405,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              28,
+              0,
               50,
               50
             ],
@@ -404,7 +413,8 @@
               "ecran": "résultat affiché",
               "plateau": "Franck appelle Écho : « question numéro X », il se défend",
               "telephones": "rien",
-              "outil": "appel ElevenLabs « ECO » sur l’ordinateur à part · puis régie VOTE : FERMER, question suivante (×5)"
+              "outil": "appel ElevenLabs « ECO » sur l’ordinateur à part · puis régie VOTE : FERMER, question suivante (×5)",
+              "duree_reperes_min": 3
             }
           }
         ],
@@ -436,14 +446,15 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              38,
+              0,
               50,
               50
             ],
             "params": {
               "ecran": "Google Meet de Junon",
               "plateau": "Google Meet de Nora",
-              "telephones": "rien"
+              "telephones": "rien",
+              "duree_reperes_min": 4
             }
           }
         ],
@@ -475,7 +486,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              28,
+              0,
               50,
               50
             ],
@@ -483,7 +494,8 @@
               "ecran": "voix d’Écho",
               "plateau": "question de Franck",
               "telephones": "rien",
-              "outil": "appel ElevenLabs « ECO »"
+              "outil": "appel ElevenLabs « ECO »",
+              "duree_reperes_min": 3
             }
           }
         ],
@@ -515,7 +527,7 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              8,
+              0,
               50,
               50
             ],
@@ -523,7 +535,8 @@
               "ecran": "ellipse",
               "plateau": "ellipse",
               "telephones": "ellipse",
-              "sortie": "noir"
+              "sortie": "noir",
+              "duree_reperes_min": 1
             }
           }
         ],
@@ -555,14 +568,15 @@
             "dx": 0,
             "dy": 0,
             "k": [
-              28,
+              0,
               50,
               50
             ],
             "params": {
               "ecran": "président Boilot pitch",
               "plateau": "",
-              "telephones": ""
+              "telephones": "",
+              "duree_reperes_min": 3
             }
           }
         ],

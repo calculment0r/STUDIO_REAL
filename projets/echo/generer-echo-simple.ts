@@ -67,7 +67,7 @@ BLOCS.forEach((b, act) => {
     if (e.sortie) params.sortie = e.sortie;
     ev.push({
       id: e.id, act, name: e.nom, entry: e.id + '_s',
-      st: [{ id: e.id + '_s', name: e.nom, ty: 'k:scene', c: 0, r: 0, dx: 0, dy: 0, k: [k0(e.minutes), 50, 50], params }],
+      st: [{ id: e.id + '_s', name: e.nom, ty: 'k:scene', c: 0, r: 0, dx: 0, dy: 0, k: [0, 50, 50], params: { ...params, duree_reperes_min: e.minutes } }],   // 10 s puis ATTENTE DU TOP
       tr: [{ a: e.id + '_s', b: '', g: [], mode: 'all' }],
       gate: { mode: 'go', g: [] },
     });

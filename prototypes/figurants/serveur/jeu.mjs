@@ -3,6 +3,7 @@
 // et il refiltre tout texte (humain ou figurant) avant diffusion : aucune voie de contournement.
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { Fenetre } from './util.mjs';
 import { FluxAsr } from './asr-flux.mjs';
 
@@ -215,6 +216,27 @@ export class Jeu {
     if (!publie) this.journalRegie(`réponse de ${c.pseudo} refusée par le filtre`);
   }
 
+  /** Discours de Junon (bloc 3) : l'audio part sur le mur (page chat, son de la salle) et les commentaires pré-écrits
+   *  de junon-commentaires.json tombent à leur seconde, par la porte unique du filtre. */
+  _junon(c, m) {
+    if (c.role !== 'regie') return;
+    for (const x of this.minuteursJunon || []) clearTimeout(x);
+    this.minuteursJunon = [];
+    if (m.cmd === 'arreter') { this.versRole('chat', { t: 'media', action: 'stop' }); this.journalRegie('Junon : arrêt'); return; }
+    if (m.cmd !== 'lancer') return;
+    let j;
+    try { j = JSON.parse(fs.readFileSync(path.join(path.dirname(this.fichierPropositions), 'junon-commentaires.json'), 'utf8')); }
+    catch (e) { this.journalRegie('Junon : junon-commentaires.json illisible'); return; }
+    const ps = new Map(this.banques.personas.map((p) => [p.pseudo, p]));
+    this.versRole('chat', { t: 'media', action: 'play', src: j.audio });
+    for (const k of j.commentaires || []) {
+      const p = ps.get(k.p) || { id: null, pseudo: String(k.p || 'abonne'), couleur: '--ink2' };
+      this.minuteursJunon.push(setTimeout(() => this.diffuserChat({ pseudo: p.pseudo, couleur: p.couleur || '--ink2', texte: String(k.texte || ''),
+        origine: 'N1', pid: p.id, ref: 'junon', fournisseur: 'banque' }, { figurant: false }), Math.max(0, Number(k.t) || 0) * 1000));
+    }
+    this.journalRegie(`Junon : lancé (${(j.commentaires || []).length} commentaires)`);
+  }
+
   _voteChoix(c, m) {
     const v = this.vote;
     if (c.role !== 'telephone' || !v || v.etat !== 'compte' || Number(m.numero) !== v.numero) return;
@@ -285,6 +307,7 @@ export class Jeu {
       case 'vote.cmd': return this._voteCmd(c, m);
       case 'vote.choix': return this._voteChoix(c, m);
       case 'tel.cmd': return this._telCmd(c, m);
+      case 'junon': return this._junon(c, m);
       case 'choix.reponse': return this._choixReponse(c, m);
       case 'diag':                                          // diagnostic de la page comédien (micro, moteur audio)
         if (c.role !== 'comedien') return;

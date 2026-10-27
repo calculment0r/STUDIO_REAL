@@ -312,7 +312,7 @@ export const useMagasin = create<Magasin>((set, get) => {
     cadrage: null,
     cadrerMoment: (moment) => set(s => ({ selection: { moment }, cadrage: { moment, n: (s.cadrage?.n ?? 0) + 1 } })),
 
-    vitesse: 20,
+    vitesse: 1,          // temps réel par défaut (spectacle) ; accélérer à la main pour répéter
     changerVitesse: (vitesse) => set({ vitesse }),
     basculerLecture: () => { if (get().enLecture) get().pause(); else get().lancer(); },
     revenirAuDebut: () => {

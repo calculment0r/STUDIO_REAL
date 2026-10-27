@@ -23,3 +23,6 @@ html:has(body.ch.fond-libre), body.ch.fond-libre, body.ch.fond-libre .ch-flux { 
 /* commentaires des spectateurs (m.grand) : nettement plus gros que ceux des figurants IA */
 .ch-flux .lg.lg-grand { font-size: 1.5em; padding: .32em .1em; }
 .ch-flux .lg.lg-grand .lg-t { font-weight: 600; color: var(--ink); }
+
+.ch-son { position: fixed; right: 16px; bottom: 16px; z-index: 50; padding: 12px 18px; border-radius: 10px; font-size: 16px;
+  background: var(--ort); color: var(--on-ort); }

@@ -546,3 +546,7 @@ function telCmd(mode) {
 $('bTelFlux').addEventListener('click', () => telCmd('flux'));
 $('bTelChoix').addEventListener('click', () => telCmd('choix'));
 $('bTelPhrases').addEventListener('click', () => telCmd('phrases'));
+
+// ---------- discours de Junon (bloc 3) : l'audio sur le mur + les commentaires pré-écrits ----------
+$('bJunon').addEventListener('click', () => { ws.envoyer({ t: 'junon', cmd: 'lancer' }, true); journal('→ Junon : lancer', Date.now(), true); });
+$('bJunonStop').addEventListener('click', () => { ws.envoyer({ t: 'junon', cmd: 'arreter' }, true); journal('→ Junon : arrêt', Date.now(), true); });
