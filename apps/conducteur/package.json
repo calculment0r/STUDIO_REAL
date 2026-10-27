@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pages": "tsc -b && vite build --base ./ --outDir ../../conducteur --emptyOutDir"
   },
   "dependencies": {
     "@studio-real/modele": "*",
