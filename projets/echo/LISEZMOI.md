@@ -8,9 +8,9 @@ Trois actes : *Le fil*, *Écho*, *Le reflet*.
 - `echo.conducteur.json` : le projet complet, format `studio-real/conducteur@1`. Il est **embarqué dans le Conducteur** :
   fenêtre Projet → **Spectacle ÉCHO**, ou l'adresse `…/?projet=echo` ; « Importer » marche aussi. 0 erreur, 0 avertissement
   (`npm run verifier -w @studio-real/modele`) ; `simuler()` le joue jusqu'au bout sans étape bloquée.
-- `generer-echo.ts` : le générateur du projet. Il **extrait** les textes de `DEROULE-AUTEUR.md` (questions, synthèses,
+- `generer-echo-simple.ts` : le générateur du projet. Il **extrait** les textes de `DEROULE-AUTEUR.md` (questions, synthèses,
   pourcentages, effets sur Jim, discours, dialogue, didascalies) au lieu de les recopier : ils sont dans les `params` **mot pour
-  mot** (206 textes contrôlés). À relancer si l'auteur modifie son texte : `npx tsx projets/echo/generer-echo.ts`
+  mot** (206 textes contrôlés). À relancer si l'auteur modifie son texte : `npx tsx projets/echo/generer-echo-simple.ts`
   (il réécrit le JSON : exporter d'abord ce qui a été modifié à la main dans le Conducteur).
 
 **En chiffres** : 3 actes · 14 moments (un accueil + les 10 séquences, la 6 coupée en 4 blocs de questions) · 138 étapes ·
