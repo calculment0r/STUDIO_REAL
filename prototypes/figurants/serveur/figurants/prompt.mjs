@@ -52,12 +52,16 @@ SECOURS['souffleur.haiku.user'] = SECOURS['n2.haiku.user'].replace('<evenement>{
 
 function propre(s, max = 400) { return String(s ?? '').replace(/[<>{}]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max); }
 
-/** Fiche résumée d'un persona (format de prompts.md). */
-export function fiche(p) {
-  const b = [p.id, p.pseudo, p.archetype || p.type, propre(p.bio, 240)];
+/**
+ * Fiche résumée d'un persona (format de prompts.md).
+ * `leger` (petit modèle local) : sans tics ni exemples. Mesuré le 27/10 : qwen3:8b les recopie tels quels
+ * (« chef t'es un génie », « ok je sors ») au lieu de réagir à la phrase du streamer.
+ */
+export function fiche(p, { leger = false } = {}) {
+  const b = [p.id, p.pseudo, p.archetype || p.type, propre(p.bio, leger ? 120 : 240)];
   if (p.registre) b.push('registre : ' + propre(p.registre, 80));
-  if (p.voix.tics?.length) b.push('tics : ' + p.voix.tics.slice(0, 3).map((x) => propre(x, 30)).join(', '));
-  if (p.voix.exemples.length) b.push('exemples : ' + p.voix.exemples.slice(0, 3).map((e) => `« ${propre(e, 70)} »`).join(' / '));
+  if (!leger && p.voix.tics?.length) b.push('tics : ' + p.voix.tics.slice(0, 3).map((x) => propre(x, 30)).join(', '));
+  if (!leger && p.voix.exemples.length) b.push('exemples : ' + p.voix.exemples.slice(0, 3).map((e) => `« ${propre(e, 70)} »`).join(' / '));
   if (p.regles.length) b.push('règles : ' + p.regles.map((x) => propre(x, 120)).join(' ; '));
   if (p.faits.length) b.push('faits : ' + p.faits.map((x) => propre(x, 140)).join(' ; '));
   return b.filter(Boolean).join(' | ');
@@ -96,14 +100,14 @@ export function construirePrompt(banques, o) {
     evenement: o.evenement || 'fin_enonce',
     chat_reel: (o.chatReel || []).map((t, i) => `S${i + 1}: ${propre(t, 80)}`).join('\n'),
     deja_dit: (o.dejaDit || []).map((t) => propre(t, 60)).join(' | '),
-    distribution: (o.distribution || []).map(fiche).join('\n'),
+    distribution: (o.distribution || []).map((p) => fiche(p, { leger: o.leger })).join('\n'),
     a_ecrire: o.aEcrire.map((a) => `${a.persona.id} angle=${a.angle}`).join('\n'),
     nb: String(o.aEcrire.length),
     intention: propre(o.intention, 300),
   };
   if (o.mode === 'unique') {
     const a = o.aEcrire[0];
-    vars.persona = fiche(a.persona); vars.persona_id = a.persona.id; vars.a_ecrire = a.angle;
+    vars.persona = fiche(a.persona, { leger: o.leger }); vars.persona_id = a.persona.id; vars.a_ecrire = a.angle;
     const sys = P['n2.qwen.system']; const usr = P[o.type === 'souffleur' ? 'souffleur.qwen.user' : 'n2.qwen.user'];
     if (sys && usr) return { systeme: remplir(sys, vars), utilisateur: remplir(usr, vars), version: 'prompts.v1:qwen' };
   }

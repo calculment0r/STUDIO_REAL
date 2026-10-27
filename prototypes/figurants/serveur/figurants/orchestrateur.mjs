@@ -8,7 +8,7 @@
 
 import { hasard, entier, choisir, proba, choisirPondere, logNormale, melanger, borne } from '../util.mjs';
 import { styliser, compterEmojis, couper } from './styliseur.mjs';
-import { quasiDoublon, cleTexte } from './similarite.mjs';
+import { quasiDoublon, cleTexte, jaccard } from './similarite.mjs';
 import { construirePrompt, lireReplique } from './prompt.mjs';
 import { StatsLatence } from './fournisseurs.mjs';
 import { texteMotif } from '../banques.mjs';
@@ -480,7 +480,7 @@ export class Orchestrateur {
       type: souffleur ? 'souffleur' : 'n2', segment: seg, humeur: this.etat.humeur,
       // Anthropic : tous les personas du segment (préfixe système identique, donc en cache) ;
       // Ollama : seulement ceux de l'appel, un petit modèle se perd dans 19 fiches
-      distribution: f.nom === 'ollama' ? personas : this.personasActifs(),
+      distribution: f.nom === 'ollama' ? personas : this.personasActifs(), leger: f.nom === 'ollama',
       transcription: this.texteTranscription(recentes.length ? recentes.map((x) => x.texte) : [dernierePhrase]), dernierePhrase, evenement: req.evenement,
       chatReel: this.jeu.chatHumainsRecents(12), dejaDit: this.histoFig.slice(-20).map((x) => x.texte), intention: req.intention,
     };
@@ -558,6 +558,13 @@ export class Orchestrateur {
 
   _ligneN2(req, p, texteBrut, { fournisseur, tRequete, tLigne, tPremier, version }) {
     const souffleur = req.origine === 'souffleur';
+    // Une réplique d'IA qui ne fait que recopier un exemple de la fiche du persona n'a rien à voir avec la phrase :
+    // on la jette (la banque N0/N1 sait déjà dire ces phrases-là, plus vite).
+    if (!souffleur) {
+      const cle = cleTexte(texteBrut);
+      const exemple = (p.voix?.exemples || []).find((e) => jaccard(cle, cleTexte(e)) >= 0.5);
+      if (exemple) { this.compteurs.recopies = (this.compteurs.recopies || 0) + 1; this.journal.ecrire({ e: 'n2_recopie', pid: p.id, texte: texteBrut, exemple }); return; }
+    }
     const texte = styliser(texteBrut, p);
     const v = this.preparer(texte, p, { origine: req.origine, ref: req.ref, fournisseur, iaBrute: true });
     if (!v.ok) return;

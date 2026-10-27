@@ -1,9 +1,10 @@
 // Banc de pertinence N2 : envoie des phrases du comédien au serveur qui tourne, puis mesure
 // combien de répliques N2 reprennent un mot concret de la phrase, et le délai phrase → affichage.
-//   node banc-pertinence.mjs [ws://localhost:8787/ws]
+//   node banc-pertinence.mjs [ws://localhost:8787/ws] [jeton-régie]
 import WebSocket from 'ws';
 
 const URL = process.argv[2] || 'ws://localhost:8787/ws';
+const JETON = process.argv[3];
 const PHRASES = [
   'Bon le chat, je vois un chien qui porte une baguette, je le suis ou pas ?',
   'Attendez, la boulangère vient de me donner un gâteau tout vert, je le goûte ?',
@@ -24,7 +25,7 @@ ws.on('message', (b) => {
   if (m.t === 'chat' && m.origine === 'N2') n2.push({ texte: m.texte, ts: m.ts, pseudo: m.pseudo });
 });
 await new Promise((r) => ws.on('open', r));
-ws.send(JSON.stringify({ t: 'hello', role: 'regie', tc: Date.now() }));
+ws.send(JSON.stringify({ t: 'hello', role: 'regie', jeton: JETON, tc: Date.now() }));
 const com = new WebSocket(URL);
 await new Promise((r) => com.on('open', r));
 com.send(JSON.stringify({ t: 'hello', role: 'comedien', tc: Date.now() }));
