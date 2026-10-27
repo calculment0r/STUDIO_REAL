@@ -1,0 +1,7 @@
+/* Thème du conducteur : un seul point d'entrée, importé par src/main.tsx.
+   Ordre : polices → jetons du portail (port de tokens.css) → couche conducteur → base → composants communs. */
+@import './polices.css';
+@import './jetons-portail.css';
+@import './jetons.css';
+@import './base.css';
+@import './composants.css';

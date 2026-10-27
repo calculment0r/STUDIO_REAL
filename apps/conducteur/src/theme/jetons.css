@@ -1,0 +1,163 @@
+/* ============================================================
+   CONDUCTEUR — couche de jetons propre au conducteur, posée APRÈS jetons-portail.css (le port de tokens.css).
+
+   1. Les valeurs du design (conception/conducteur/source/Studio Real Conducteur.dc.html, blocs
+      [data-theme="dark"] et [data-theme="light"] de son <style>) : la référence rendue les applique par-dessus
+      tokens.css, on fait donc de même (--bg, --ink, --ink2, --ink3, --cy redonnés, --tile, --well2, --lr…).
+   2. Les couleurs que le design écrivait en dur (#e0674a, #3f9a6a, #c8311f, #170c08, #78b08f…) et ses
+      palettes (familles de blocs FC, assets AC, pistes TT, table LIGHT du thème clair de conducteur-core.js) :
+      chacune devient un jeton. Aucun composant n'écrit une couleur ; un jeton manque, on l'ajoute ici.
+
+   Règle des deux blocs : tout nom posé sous :root est redonné sous [data-theme="light"] (même spécificité,
+   ce fichier vient après le portail : sans ça la valeur sombre gagnerait aussi en clair).
+   ============================================================ */
+
+:root,
+[data-theme="dark"] {
+  /* le design, thème sombre */
+  --bg:    #0a0d0b;
+  --tile:  #0f1311;   /* panneaux, boutons groupés */
+  --tile2: #171d1a;   /* survol, élément actif */
+  --well2: #070a08;   /* puits (horloge, aperçus) */
+  --ink:   #e6eae7;
+  --ink2:  #a3aea8;
+  --ink3:  #7f8b86;
+  --lr:    185, 207, 216;          /* filets : rgba(var(--lr), α) */
+  --cy:    #b9cfd8;                /* encre tech, valeurs lues */
+  --cy-rgb: 185, 207, 216;
+  --ort:   #e0674a;                /* l'action, l'en-cours */
+  --ort-rgb: 224, 103, 74;
+  --on-ort: #170c08;               /* encre sur l'aplat orange */
+  --gt:    #3f9a6a;                /* joué, franchi */
+  --gt-rgb: 63, 154, 106;
+  --gdeep: #1a3f2c;                /* aplat vert profond (bouton choisi) */
+  --gink:  #cfe3d6;                /* encre sur le vert profond */
+  --vert-pale: #78b08f;            /* salle simulée, caméra qui suit */
+  --rec:   #c8311f;                /* en lecture, scène verrouillée, sécurité */
+  --rec-rgb: 200, 49, 31;
+  --on-rec: #ffffff;
+  --port:  #76878e;                /* rond d'entrée d'une étape */
+
+  /* ombres et voiles des éléments qui flottent */
+  --ombre-1: rgba(0, 0, 0, .35);
+  --ombre-2: rgba(0, 0, 0, .45);
+  --ombre-3: rgba(0, 0, 0, .5);
+  --voile-modal: rgba(0, 0, 0, .45);
+  --voile-aide:  rgba(0, 0, 0, .5);
+
+  /* familles de blocs (FC de conducteur-core.js) */
+  --fam-trig:  #e59578;
+  --fam-flow:  #b9cfd8;
+  --fam-data:  #78b08f;
+  --fam-cible: #d9a486;
+  --fam-fx:    #e0674a;
+  --fam-ui:    #f0b49b;
+  --fam-scene: #8fa5ad;
+  --fam-gate:  #d47a5c;
+  --fam-autre: #8fa5ad;
+
+  /* catégories d'assets (AC) */
+  --asset-son:   #e59578;
+  --asset-lx:    #f0b49b;
+  --asset-video: #b9cfd8;
+  --asset-img:   #8fa5ad;
+  --asset-txt:   #d9a486;
+  --asset-role:  #d9a486;
+  --asset-tel:   #78b08f;
+  --asset-osc:   #d47a5c;
+
+  /* types de pistes (TT) */
+  --piste-son:   #e59578;
+  --piste-lx:    #f0b49b;
+  --piste-video: #b9cfd8;
+  --piste-tel:   #78b08f;
+  --piste-txt:   #d9a486;
+  --piste-notes: #a3aea8;
+  --piste-curve: #8fa5ad;
+  --piste-secu:  #c8311f;
+
+  /* la rampe corail des actes, du plus clair au plus sourd */
+  --rampe-1: #f0b49b;
+  --rampe-2: #e59578;
+  --rampe-3: #d47a5c;
+  --rampe-4: #a3502f;
+  --rampe-5: #7a3a22;
+  --on-rampe: #170c08;
+
+  /* typographie : Venus Rising pour titres et chiffres (repli Chakra Petch 700, voir polices.css) */
+  --f-chiffre: var(--f-disp);
+
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg:    #e9e8e2;
+  --tile:  #f5f4f0;
+  --tile2: #e2e1da;
+  --well2: #dcdbd3;
+  --ink:   #141a17;
+  --ink2:  #3a4440;
+  --ink3:  #59635e;
+  --lr:    24, 34, 29;
+  --cy:    #2c5363;
+  --cy-rgb: 44, 83, 99;
+  --ort:   #b8492e;
+  --ort-rgb: 184, 73, 46;
+  --on-ort: #fdf3ee;
+  --gt:    #24613f;
+  --gt-rgb: 36, 97, 63;
+  --gdeep: #1a3f2c;
+  --gink:  #e6f1ea;
+  --vert-pale: #24613f;
+  --rec:   #c8311f;
+  --rec-rgb: 200, 49, 31;
+  --on-rec: #ffffff;
+  --port:  #4a5f66;
+
+  --ombre-1: rgba(20, 30, 24, .16);
+  --ombre-2: rgba(20, 30, 24, .22);
+  --ombre-3: rgba(20, 30, 24, .26);
+  --voile-modal: rgba(22, 28, 25, .30);
+  --voile-aide:  rgba(22, 28, 25, .36);
+
+  /* table LIGHT de conducteur-core.js */
+  --fam-trig:  #b8492e;
+  --fam-flow:  #2c5363;
+  --fam-data:  #24613f;
+  --fam-cible: #7a3a22;
+  --fam-fx:    #b8492e;
+  --fam-ui:    #a3502f;
+  --fam-scene: #4a5f66;
+  --fam-gate:  #a3502f;
+  --fam-autre: #4a5f66;
+
+  --asset-son:   #b8492e;
+  --asset-lx:    #a3502f;
+  --asset-video: #2c5363;
+  --asset-img:   #4a5f66;
+  --asset-txt:   #7a3a22;
+  --asset-role:  #7a3a22;
+  --asset-tel:   #24613f;
+  --asset-osc:   #a3502f;
+
+  --piste-son:   #b8492e;
+  --piste-lx:    #a3502f;
+  --piste-video: #2c5363;
+  --piste-tel:   #24613f;
+  --piste-txt:   #7a3a22;
+  --piste-notes: #3a4440;
+  --piste-curve: #4a5f66;
+  --piste-secu:  #c8311f;
+
+  /* la rampe reste corail (aplats des actes), son encre reste sombre */
+  --rampe-1: #f0b49b;
+  --rampe-2: #e59578;
+  --rampe-3: #d47a5c;
+  --rampe-4: #a3502f;
+  --rampe-5: #7a3a22;
+  --on-rampe: #170c08;
+
+  --f-chiffre: var(--f-disp);
+
+  color-scheme: light;
+}

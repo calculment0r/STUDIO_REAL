@@ -1,0 +1,4 @@
+# Copier ce fichier en .dev.vars (ignoré par git) et remplacer la valeur.
+# Jeton d'administration : crée et liste les projets, accède à tous. 16 caractères minimum.
+# Générer : node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
+JETON_ADMIN=remplacer-par-un-jeton-long-et-aleatoire

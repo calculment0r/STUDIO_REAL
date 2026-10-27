@@ -26,6 +26,24 @@ export interface EtatLecture {
   /** issue choisie au dernier vote (sert à l'entrée des moments suivants) */ issue?: string;
   memoires: Record<string, number | string | boolean>;
   /** parcours effectué : [moment, étape, t d'entrée] */ parcours: [string, string, number][];
+  // Ajouts STUDIO_REAL (facultatifs, remplis par creerLecteur) :
+  /** 'etape' : une étape joue · 'passage' : entre deux moments (etape = null, tEtape = temps dans le passage) · 'fin' */
+  phase?: 'etape' | 'passage' | 'fin';
+  /** attente mesurée à chaque passage « go » (id du moment → s), pour les hachures de la conduite (= Projet.hold) */
+  attentes?: Record<string, number>;
+  /** alertes à reporter dans la piste Sécurité (garde-fou échu, boucle bornée, étape bloquée…) */
+  alertes?: AlerteLecture[];
+  /** tours faits par les boucles du moment courant (id de l'étape → nombre d'entrées) */
+  tours?: Record<string, number>;
+}
+
+/** Alerte produite pendant la lecture (ajout STUDIO_REAL). */
+export interface AlerteLecture {
+  t: number;
+  moment: string;
+  etape?: string;
+  type: 'delai' | 'boucle' | 'bloque' | 'force';
+  txt: string;
 }
 
 export interface Lecteur {

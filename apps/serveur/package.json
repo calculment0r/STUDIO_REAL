@@ -1,0 +1,25 @@
+{
+  "name": "serveur",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Serveur du Conducteur STUDIO_REAL : Cloudflare Worker + Durable Object + D1 + R2 (local d'abord).",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
+    "test": "vitest run",
+    "test:logique": "vitest run tests/logique",
+    "test:integration": "vitest run tests/integration"
+  },
+  "dependencies": {
+    "@studio-real/modele": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261027.1",
+    "@types/node": "^26.6.5",
+    "typescript": "~5.8.3",
+    "vitest": "^3.2.7",
+    "wrangler": "^4.153.0"
+  }
+}

@@ -1,0 +1,47 @@
+// Configuration Wrangler du serveur du Conducteur.
+// LOCAL D'ABORD : `npx wrangler dev` simule D1, R2 et le Durable Object sur la machine (dossier .wrangler/state).
+// Les identifiants ci-dessous (database_id) sont des valeurs de remplacement : à remplacer le jour du déploiement
+// (voir README.md § Déployer plus tard). Aucun secret ici : JETON_ADMIN vient de .dev.vars (local) ou d'un secret.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "studio-real-conducteur",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+
+  // Le build de apps/conducteur (vite build → dist) est servi sur le même domaine que l'API.
+  // Seules /api/* passent par le Worker ; le reste est servi directement (application monopage).
+  "assets": {
+    "directory": "../conducteur/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "studio-real-conducteur",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  "r2_buckets": [
+    { "binding": "MEDIAS", "bucket_name": "studio-real-medias" }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "SALLE", "class_name": "SalleProjet" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SalleProjet"] }],
+
+  "vars": {
+    "ORIGINES_AUTORISEES": "http://localhost:5173,http://127.0.0.1:5173",
+    "TAILLE_MAX_MEDIA": "52428800",
+    "TAILLE_MAX_PROJET": "1800000"
+  },
+
+  "observability": { "enabled": true }
+}

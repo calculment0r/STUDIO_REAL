@@ -92,6 +92,8 @@ export interface Sortie {
   mode: 'all' | 'any';
   /** Nom affiché de la sortie (ex. « condition remplie », « délai dépassé »). */
   nom?: string;
+  /** Poids de la sortie d'un bloc Tirage au sort (défaut 1 ; voir blocs-moteur.ts). Ajout STUDIO_REAL. */
+  poids?: number;
 }
 
 export interface Passage {

@@ -1,0 +1,113 @@
+/* Planche — styles propres (jetons du thème uniquement : --bg, --tile, --tile2, --well2, --ink*, --lr, --cy, --ort, --gt,
+   --gdeep, --gink ; couleurs de familles fournies par le catalogue des blocs). --z = zoom courant (posé sur la boîte). */
+
+.planche {
+  position: relative; flex: 1; min-height: 0; width: 100%; height: 100%;
+  overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  background: var(--bg); color: var(--ink); outline: none;
+  font-family: var(--f-ui);
+}
+.planche--pan { cursor: grabbing; }
+.planche-grille {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(var(--lr), .16) 1px, transparent 1.2px);
+}
+.planche-monde { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; will-change: transform; }
+.planche-svg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.planche-svg path { fill: none; vector-effect: non-scaling-stroke; }
+
+/* Élément à taille d'écran constante posé en un point du monde. */
+.planche-ecran { position: absolute; width: 0; height: 0; transform: scale(calc(1 / var(--z))); transform-origin: 0 0; }
+
+.planche-titre { font-family: var(--f-disp); font-weight: 700; font-variant-numeric: tabular-nums; }
+.planche-chiffre { font-family: var(--f-chiffre, var(--f-disp)); font-weight: 700; font-variant-numeric: tabular-nums; }
+.planche-micro { font-family: var(--f-mono); font-size: 8px; letter-spacing: .16em; text-transform: uppercase; }
+
+/* Cadres de moments */
+.planche-cadre { position: absolute; border-radius: calc(16px / var(--z)); transition: opacity .35s; }
+
+/* Blocs */
+.planche-bloc { position: absolute; overflow: hidden; transition: box-shadow .15s, opacity .35s; }
+.planche-bloc__tete { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 14px 0 16px; cursor: grab; position: relative; }
+.planche-bloc__nom { font-family: var(--f-disp); font-weight: 700; font-size: 10.5px; letter-spacing: .06em; line-height: 1.25;
+  text-transform: uppercase; color: var(--ink); white-space: nowrap; overflow: hidden; display: block; }
+.planche-bloc__sous { font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.planche-bloc__apercu { margin: 6px 12px 0; height: 92px; border-radius: 7px; background: var(--well2); overflow: hidden; }
+.planche-bloc__prog { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(var(--lr), .07); }
+.planche-bloc__prog > span { display: block; height: 100%; }
+.planche-bloque { position: absolute; right: 14px; bottom: 5px; padding: 2px 6px; border-radius: 4px; background: var(--ort); color: var(--bg);
+  font-family: var(--f-mono); font-size: 7px; letter-spacing: .18em; }
+
+/* Rotatifs */
+.planche-rotatifs { height: 64px; display: flex; gap: 10px; padding: 10px 14px 0; }
+.planche-rotatif { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 60px; }
+.planche-rotatif__bouton { position: relative; width: 32px; height: 32px; display: block; cursor: ns-resize; touch-action: none; }
+.planche-rotatif__val { font-size: 10.5px; font-weight: 600; color: var(--ink); line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.planche-rotatif__lab { font-family: var(--f-mono); font-size: 7px; letter-spacing: .12em; color: var(--ink3); text-transform: uppercase; white-space: nowrap; }
+
+/* Sorties détaillées dans le bloc */
+.planche-sorties { padding: 8px 14px 0; display: flex; flex-direction: column; gap: 3px; height: 72px; overflow: hidden; }
+.planche-sortie { display: flex; align-items: center; gap: 6px; height: 16px; cursor: pointer; border-radius: 3px; }
+.planche-sortie--sel { box-shadow: inset 0 0 0 1px var(--cy); }
+.planche-sortie__fl { font-size: 7px; line-height: 1; padding: 2px 3px; color: var(--ink2); cursor: pointer; }
+.planche-sortie__fl[aria-disabled='true'] { color: rgba(var(--lr), .18); cursor: default; }
+
+/* Pastilles (vue d'ensemble) */
+.planche-pastille { position: absolute; border-radius: 999px; overflow: hidden; transition: background .3s, opacity .35s; cursor: grab; }
+
+/* Ronds d'entrée / de sortie */
+.planche-rond { position: absolute; border-radius: 50%; cursor: crosshair; z-index: 4; transition: transform .12s, background .12s;
+  display: flex; align-items: center; justify-content: center; }
+.planche-rond:hover { transform: scale(1.4); }
+.planche-rond__no { font-family: var(--f-disp); font-weight: 700; font-size: 6.5px; line-height: 1; pointer-events: none; }
+
+/* Règles sur les liens */
+.planche-regle { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; gap: 4px; padding: 6px 9px;
+  border-radius: 6px; background: var(--bg); cursor: pointer; white-space: nowrap; }
+.planche-regle__ligne { display: flex; align-items: center; gap: 6px; }
+.planche-regle__txt { font-family: var(--f-mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis; }
+
+.planche-point { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+/* Liens animés */
+.planche-lien--actif { animation: planche-fourmis .8s linear infinite; }
+.planche-impulsion { position: absolute; left: 0; top: 0; width: 0; height: 0; offset-rotate: 0deg; animation: planche-parcours 2.2s linear infinite; pointer-events: none; }
+.planche-impulsion > span { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--ort);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ort) 25%, transparent), 0 0 10px var(--ort); }
+
+/* Passages entre moments */
+.planche-passage { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transform: translate(-50%, -8px); }
+.planche-passage__losange { width: 16px; height: 16px; transform: rotate(45deg); border-radius: 3px; }
+
+/* Barre d'outils, mini-carte */
+.planche-outils { position: absolute; left: 12px; top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; z-index: 8; cursor: default; }
+.planche-groupe { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); align-items: center; }
+.planche-seg { height: 28px; padding: 0 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;
+  font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .16em; background: transparent; color: var(--ink2); border: 0; }
+.planche-seg:hover { color: var(--ink); }
+.planche-seg--on { background: var(--gdeep); color: var(--gink); }
+.planche-zoom { font-family: var(--f-disp); font-weight: 700; font-size: 9px; width: 46px; text-align: center; color: var(--ink);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.planche-btn { width: 30px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--ink2); font-size: 15px;
+  background: transparent; border: 0; }
+.planche-btn:hover { color: var(--ink); }
+.planche-mini { position: absolute; right: 12px; bottom: 12px; width: 168px; height: 84px; border-radius: 8px; background: var(--bg);
+  box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); overflow: hidden; cursor: pointer; z-index: 6; }
+.planche-mini > span { position: absolute; border-radius: 2px; }
+.planche-bandeau { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 8; padding: 6px 12px; border-radius: 6px;
+  background: var(--tile2); box-shadow: inset 0 0 0 1px rgba(var(--lr), .2); color: var(--ink2); }
+
+.planche-pulse { animation: planche-pulse 1.2s infinite; }
+.planche-defile { display: inline-block; white-space: nowrap; animation: planche-defile var(--duree, 8s) linear infinite; }
+
+@keyframes planche-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .3 } }
+@keyframes planche-defile { 0%, 18% { transform: translateX(0) } 82%, 100% { transform: translateX(-50%) } }
+@keyframes planche-fourmis { from { stroke-dashoffset: 0 } to { stroke-dashoffset: -12 } }
+@keyframes planche-parcours { from { offset-distance: 0% } to { offset-distance: 100% } }
+
+@media (prefers-reduced-motion: reduce) {
+  .planche-pulse, .planche-defile, .planche-lien--actif, .planche-impulsion { animation: none; }
+  .planche-impulsion { display: none; }
+}

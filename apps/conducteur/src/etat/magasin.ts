@@ -1,11 +1,36 @@
-// Magasin d'état du conducteur (zustand). Socle minimal posé pour que CONDUITE et PLANCHE démarrent ;
-// le chantier COQUILLE l'enrichit (persistance, annuler/rétablir, lecture branchée sur le moteur) sans casser cette API.
+// Magasin d'état du conducteur (zustand) — chantier COQUILLE.
+//
+// CONTRAT (ARCHITECTURE.md, inchangé) : `projet`, `selection: { moment?, etape? }`, `mode`, `lecture`, `enLecture`,
+// `zoomPlanche`, `zoomConduite`, `theme` et les actions `selectionner`, `modifierProjet(fn)`, `changerMode`, `lancer`,
+// `pause`, `top`, `allerA`, `zoomerPlanche`, `zoomerConduite`, `basculerTheme`. CONDUITE et PLANCHE n'utilisent que ça.
+//
+// Ajouts (tous facultatifs pour les autres chantiers) : sélection étendue (sortie, passage, acte, piste, clip, note),
+// annuler / rétablir, vitesse de lecture, salle simulée, verrou « scène », versions locales, export / import JSON,
+// messages à la régie. La lecture passe par src/etat/moteur.ts (moteur du chantier MODÈLE, ou provisoire).
 import { create } from 'zustand';
-import { exempleDemo, type EtatLecture, type Projet } from '@studio-real/modele';
+import {
+  exempleDemo,
+  type CategorieAssets, type EtatLecture, type Execution, type Lecteur, type Projet, type SalleSimulee, type Signaux,
+} from '@studio-real/modele';
+import { creerLecteur, signauxSalle } from './moteur';
+import { ASSETS_DEMO } from './assets';
+import {
+  ecrireCourant, ecrireVersions, emballer, lireCourant, lireFichier, lireVersions, oublierCourant, telecharger,
+  type VersionLocale,
+} from './persistance';
 
 export type ModeConducteur = 'ecrire' | 'repeter' | 'jouer';
 
-export interface Selection { moment?: string; etape?: string }
+/** Ce qui est choisi. `moment` + `etape` : une étape ; `moment` + `sortie` (index dans moment.tr) : une sortie ;
+ *  `moment` + `passage` : le passage vers le moment suivant ; `moment` seul : le moment ; `acte` : un acte ;
+ *  `piste` (+ `clip` ou `note`) : une piste de la conduite ou un de ses éléments. */
+export interface Selection {
+  moment?: string; etape?: string;
+  sortie?: number; passage?: boolean; acte?: number;
+  piste?: string; clip?: string; note?: string;
+}
+
+interface EntreeHistorique { projet: Projet; etiquette: string; t: number }
 
 export interface Magasin {
   projet: Projet;
@@ -20,46 +45,336 @@ export interface Magasin {
   theme: 'sombre' | 'clair';
 
   selectionner: (s: Selection) => void;
-  /** Modifie le projet par une fonction qui reçoit une copie (immutabilité simple). */
-  modifierProjet: (fn: (p: Projet) => void) => void;
+  /** Modifie le projet par une fonction qui reçoit une copie (immutabilité simple). `etiquette` regroupe les gestes
+   *  continus (rotatif, glisser) en une seule entrée d'annulation s'ils se suivent à moins de 0,9 s. */
+  modifierProjet: (fn: (p: Projet) => void, etiquette?: string) => void;
   changerMode: (m: ModeConducteur) => void;
   lancer: () => void;
   pause: () => void;
+  /** Top régie : franchit le passage « go » qui attend (ou l'arme s'il n'est pas encore prêt). */
   top: () => void;
   allerA: (moment: string, etape?: string) => void;
   zoomerPlanche: (z: number) => void;
   zoomerConduite: (z: number) => void;
   basculerTheme: () => void;
+
+  // ── ajouts COQUILLE ──
+  vitesse: number;
+  changerVitesse: (v: number) => void;
+  basculerLecture: () => void;
+  revenirAuDebut: () => void;
+  /** Passage « go » armé d'avance (id du moment) : il passera dès qu'il sera prêt. */
+  topArme: string | null;
+  reglerSalle: (k: keyof SalleSimulee, v: number) => void;
+  /** Signaux de la salle à l'instant (salle simulée). */
+  signaux: () => Signaux;
+
+  assets: CategorieAssets[];
+  executions: Execution[];
+
+  passe: EntreeHistorique[];
+  futur: Projet[];
+  annuler: () => void;
+  retablir: () => void;
+
+  verrou: boolean;
+  basculerVerrou: () => void;
+
+  message: string;
+  signaler: (m: string) => void;
+
+  versions: VersionLocale[];
+  enregistrerVersion: () => void;
+  ouvrirVersion: (i: number) => void;
+  supprimerVersion: (i: number) => void;
+  exporter: () => void;
+  importer: (texte: string) => void;
+  revenirDemo: () => void;
 }
 
-export const useMagasin = create<Magasin>((set, get) => ({
-  projet: exempleDemo(),
-  selection: { moment: 'e1' },
-  mode: 'ecrire',
-  lecture: null,
-  enLecture: false,
-  zoomPlanche: 1,
-  zoomConduite: 0.6,
-  theme: 'sombre',
+// ─── hors React : le lecteur, sa révision, l'exécution en cours ───────────────────────────────────────
+let lecteur: Lecteur | null = null;
+let revision = 0;          // change à chaque modification du projet (sauf la salle simulée)
+let revisionLecteur = -1;
+let decalT = 0, decalRetard = 0;   // continuité de l'horloge quand le lecteur est recréé après une modification
+let execution: Execution | null = null;
+let minuteurMessage: ReturnType<typeof setTimeout> | undefined;
+/** Fait avancer la lecture de dt secondes de spectacle (posé par le magasin, appelé par la boucle). */
+let avancerLecture: (dt: number) => void = () => {};
 
-  selectionner: (s) => set({ selection: s }),
-  modifierProjet: (fn) => {
-    const copie = structuredClone(get().projet);
-    fn(copie);
-    set({ projet: copie });
-  },
-  changerMode: (mode) => set({ mode }),
-  // Branchés sur le moteur par le chantier COQUILLE (creerLecteur / signauxSalle de @studio-real/modele).
-  lancer: () => set({ enLecture: true }),
-  pause: () => set({ enLecture: false }),
-  top: () => {},
-  allerA: (moment, etape) => set({ selection: { moment, etape } }),
-  zoomerPlanche: (z) => set({ zoomPlanche: Math.min(3, Math.max(0.2, z)) }),
-  zoomerConduite: (z) => set({ zoomConduite: Math.min(8, Math.max(0.05, z)) }),
-  basculerTheme: () => {
-    const theme = get().theme === 'sombre' ? 'clair' : 'sombre';
-    document.documentElement.toggleAttribute('data-theme', theme === 'clair');
-    if (theme === 'clair') document.documentElement.setAttribute('data-theme', 'light');
-    set({ theme });
-  },
-}));
+const lireTheme = (): 'sombre' | 'clair' => {
+  try { return localStorage.getItem('sr-conducteur-theme') === 'clair' ? 'clair' : 'sombre'; } catch { return 'sombre'; }
+};
+const poserTheme = (t: 'sombre' | 'clair') => {
+  if (typeof document !== 'undefined') document.documentElement.setAttribute('data-theme', t === 'clair' ? 'light' : 'dark');
+};
+
+const reprise = typeof localStorage !== 'undefined' ? lireCourant() : null;
+const themeInitial = lireTheme();
+poserTheme(themeInitial);
+const VERROU = 'Verrouillé · mode scène. Désactive SCÈNE en haut pour modifier.';
+
+export const useMagasin = create<Magasin>((set, get) => {
+  const signaler = (m: string) => {
+    clearTimeout(minuteurMessage);
+    set({ message: m });
+    minuteurMessage = setTimeout(() => set({ message: '' }), 2800);
+  };
+
+  /** Le lecteur du projet courant ; recréé (au même moment, à la même étape) quand le projet a changé. */
+  const assurerLecteur = (): Lecteur => {
+    if (lecteur && revisionLecteur === revision) return lecteur;
+    const s = get(), avant = s.lecture;
+    lecteur = creerLecteur(s.projet, { mode: s.mode === 'jouer' ? 'scene' : 'repetition' });
+    revisionLecteur = revision;
+    decalT = 0; decalRetard = 0;
+    const m = avant && !avant.termine ? s.projet.ev.find(x => x.id === avant.moment) : undefined;
+    if (avant && m) {
+      const etape = avant.etape && m.st.some(x => x.id === avant.etape) ? avant.etape : undefined;
+      const e = lecteur.allerA(m.id, etape);
+      decalT = avant.t - e.t; decalRetard = avant.retard - e.retard;
+    }
+    return lecteur;
+  };
+
+  const publier = (e: EtatLecture) => set({ lecture: { ...e, t: e.t + decalT, retard: e.retard + decalRetard } });
+
+  const journal = (type: string, extra: Record<string, unknown> = {}) => {
+    if (!execution) return;
+    execution.evenements.push({ t: Math.round(get().lecture?.t ?? 0), type, ...extra });
+  };
+  const ouvrirExecution = () => {
+    if (execution) return;
+    execution = { id: 'x' + Date.now().toString(36), debut: Date.now(), mode: get().mode === 'jouer' ? 'scene' : 'repetition', evenements: [] };
+  };
+  /** Ferme l'exécution en cours ; elle compte comme un soir joué si elle a duré plus d'une minute. */
+  const fermerExecution = () => {
+    if (!execution) return;
+    const l = get().lecture;
+    journal('fin', { retard: Math.round(l?.retard ?? 0) });
+    const x = execution;
+    execution = null;
+    if ((l?.t ?? 0) < 60) return;
+    set(s => ({ executions: [...s.executions, x] }));
+    signaler('Soir ' + get().executions.length + ' enregistré');
+  };
+
+  const pousserHistorique = (avant: Projet, etiquette: string) => {
+    const now = performance.now(), passe = get().passe, dernier = passe[passe.length - 1];
+    if (dernier && dernier.etiquette === etiquette && now - dernier.t < 900) { dernier.t = now; set({ futur: [] }); return; }
+    set({ passe: [...passe, { projet: avant, etiquette, t: now }].slice(-80), futur: [] });
+  };
+
+  const remplacerProjet = (p: Projet) => { revision++; set({ projet: p }); };
+
+  avancerLecture = (dt) => {
+    const l = assurerLecteur();
+    let e = l.etat();
+    const avant = (e.moment ?? '') + '/' + (e.etape ?? '');
+    let reste = dt;
+    while (reste > 1e-6 && !e.termine) {
+      const d = Math.min(0.5, reste);
+      reste -= d;
+      e = l.avancer(d, signauxSalle(get().projet.sens, e.tEtape));
+      const arme = get().topArme;
+      if (arme && e.attenteGo && e.moment === arme) { e = l.top(); set({ topArme: null }); journal('top', { moment: arme }); }
+    }
+    publier(e);
+    const apres = (e.moment ?? '') + '/' + (e.etape ?? '');
+    if (apres !== avant) journal(e.etape ? 'etape' : 'passage', { moment: e.moment, etape: e.etape });
+    if (e.termine) { set({ enLecture: false }); fermerExecution(); }
+  };
+
+  return {
+    projet: reprise?.project ?? exempleDemo(),
+    selection: {},
+    mode: 'ecrire',
+    lecture: null,
+    enLecture: false,
+    zoomPlanche: 1,
+    zoomConduite: 0.6,
+    theme: themeInitial,
+
+    selectionner: (s) => set({ selection: s }),
+
+    modifierProjet: (fn, etiquette = 'modification') => {
+      const s = get();
+      if (s.verrou) { signaler(VERROU); return; }
+      const copie = structuredClone(s.projet);
+      fn(copie);
+      pousserHistorique(s.projet, etiquette);
+      remplacerProjet(copie);
+    },
+
+    changerMode: (mode) => {
+      if (mode === 'ecrire') set({ enLecture: false });
+      set({ mode });
+    },
+
+    lancer: () => {
+      const l = assurerLecteur();
+      const e = get().lecture;
+      if (!e || e.termine) { decalT = 0; decalRetard = 0; publier(l.reinitialiser()); }
+      ouvrirExecution();
+      set({ enLecture: true });
+    },
+    pause: () => set({ enLecture: false }),
+
+    top: () => {
+      const s = get(), l = assurerLecteur(), e = l.etat();
+      if (e.termine) { signaler('Le spectacle est terminé.'); return; }
+      const i = s.projet.ev.findIndex(m => m.id === e.moment), m = s.projet.ev[i];
+      if (!m) return;
+      const dernier = i >= s.projet.ev.length - 1;
+      if (!dernier && m.gate.mode === 'go' && (e.attenteGo || !e.etape)) {
+        publier(l.top());
+        journal('top', { moment: m.id });
+        set({ topArme: null });
+        signaler('Top donné · passage P' + (i + 1) + ' franchi');
+      } else if (!dernier && m.gate.mode === 'go') {
+        set({ topArme: m.id });
+        signaler('Top armé · P' + (i + 1) + ' passera dès que prêt');
+      } else signaler('Aucun passage n’attend de top.');
+    },
+
+    allerA: (moment, etape) => {
+      set({ selection: { moment, etape } });
+      publier(assurerLecteur().allerA(moment, etape));
+      journal('aller', { moment, etape });
+    },
+
+    zoomerPlanche: (z) => set({ zoomPlanche: Math.min(3, Math.max(0.2, z)) }),
+    zoomerConduite: (z) => set({ zoomConduite: Math.min(8, Math.max(0.05, z)) }),
+
+    basculerTheme: () => {
+      const theme = get().theme === 'sombre' ? 'clair' : 'sombre';
+      poserTheme(theme);
+      try { localStorage.setItem('sr-conducteur-theme', theme); } catch { /* rien */ }
+      set({ theme });
+    },
+
+    vitesse: 1,
+    changerVitesse: (vitesse) => set({ vitesse }),
+    basculerLecture: () => { if (get().enLecture) get().pause(); else get().lancer(); },
+    revenirAuDebut: () => {
+      fermerExecution();
+      const l = assurerLecteur();
+      decalT = 0; decalRetard = 0;
+      publier(l.reinitialiser());
+      set({ enLecture: false, topArme: null });
+    },
+    topArme: null,
+
+    reglerSalle: (k, v) => {
+      const s = get();
+      if (s.verrou) { signaler(VERROU); return; }
+      pousserHistorique(s.projet, 'salle');
+      // la salle ne change pas la structure : le lecteur continue (les signaux sont relus à chaque image)
+      set({ projet: { ...s.projet, sens: { ...s.projet.sens, [k]: Math.max(0, Math.min(100, Math.round(v))) } } });
+    },
+    signaux: () => { const s = get(); return signauxSalle(s.projet.sens, s.lecture?.tEtape ?? 0); },
+
+    assets: reprise?.assets?.length ? reprise.assets : ASSETS_DEMO,
+    executions: reprise?.runs ?? [],
+
+    passe: [],
+    futur: [],
+    annuler: () => {
+      const s = get(), h = s.passe[s.passe.length - 1];
+      if (!h) { signaler('Rien à annuler.'); return; }
+      set({ passe: s.passe.slice(0, -1), futur: [...s.futur, s.projet] });
+      remplacerProjet(h.projet);
+      signaler('Annulé · ' + h.etiquette);
+    },
+    retablir: () => {
+      const s = get(), p = s.futur[s.futur.length - 1];
+      if (!p) { signaler('Rien à rétablir.'); return; }
+      set({ futur: s.futur.slice(0, -1), passe: [...s.passe, { projet: s.projet, etiquette: 'rétablir', t: 0 }] });
+      remplacerProjet(p);
+    },
+
+    verrou: false,
+    basculerVerrou: () => {
+      const v = !get().verrou;
+      set({ verrou: v });
+      signaler(v ? 'Mode scène : la conduite est verrouillée. Top, pause et conditions restent actifs.' : 'Mode répétition : modifications autorisées.');
+    },
+
+    message: '',
+    signaler,
+
+    versions: typeof localStorage !== 'undefined' ? lireVersions() : [],
+    enregistrerVersion: () => {
+      const s = get(), l = lireVersions();
+      l.unshift({ n: 'Version ' + (l.length + 1), d: new Date().toISOString(), data: emballer(s.projet, s.assets, s.executions) });
+      if (!ecrireVersions(l)) { signaler('Stockage local plein.'); return; }
+      set({ versions: lireVersions() });
+      signaler('Version enregistrée en local.');
+    },
+    ouvrirVersion: (i) => {
+      const s = get(), v = s.versions[i];
+      if (!v) return;
+      if (s.verrou) { signaler(VERROU); return; }
+      try {
+        const f = lireFichier(JSON.stringify(v.data));
+        pousserHistorique(s.projet, 'version');
+        set({ selection: {}, assets: f.assets.length ? f.assets : s.assets });
+        remplacerProjet(f.project);
+        signaler('« ' + v.n + ' » ouverte');
+      } catch (err) { signaler((err as Error).message); }
+    },
+    supprimerVersion: (i) => {
+      const l = lireVersions();
+      l.splice(i, 1);
+      ecrireVersions(l);
+      set({ versions: lireVersions() });
+    },
+    exporter: () => { const s = get(); telecharger(emballer(s.projet, s.assets, s.executions)); },
+    importer: (texte) => {
+      const s = get();
+      if (s.verrou) { signaler(VERROU); return; }
+      try {
+        const f = lireFichier(texte);
+        pousserHistorique(s.projet, 'import');
+        set({ selection: {}, assets: f.assets.length ? f.assets : ASSETS_DEMO, executions: f.runs });
+        remplacerProjet(f.project);
+        signaler('Projet importé · ' + f.project.ev.length + ' moments');
+      } catch (err) { signaler((err as Error).message); }
+    },
+    revenirDemo: () => {
+      const s = get();
+      pousserHistorique(s.projet, 'démonstration');
+      oublierCourant();
+      set({ selection: {}, assets: ASSETS_DEMO, executions: [] });
+      remplacerProjet(exempleDemo());
+    },
+  };
+});
+
+/** Démarre la boucle de lecture : requestAnimationFrame, relayé par setInterval quand l'onglet est caché
+ *  (la représentation continue). Renvoie la fonction d'arrêt. */
+export function demarrerBoucle(): () => void {
+  let raf = 0, dernier = 0, dernierCache = performance.now();
+  const image = (ts: number) => {
+    raf = requestAnimationFrame(image);
+    const dt = dernier ? Math.min(0.1, (ts - dernier) / 1000) : 0;
+    dernier = ts;
+    const s = useMagasin.getState();
+    if (s.enLecture && dt > 0) avancerLecture(dt * s.vitesse);
+  };
+  raf = requestAnimationFrame(image);
+  const relais = setInterval(() => {
+    const now = performance.now(), s = useMagasin.getState();
+    if (document.hidden) {
+      if (s.enLecture) avancerLecture(Math.min(1, (now - dernierCache) / 1000) * s.vitesse);
+      dernier = 0;
+    }
+    dernierCache = now;
+  }, 250);
+  return () => { cancelAnimationFrame(raf); clearInterval(relais); };
+}
+
+// Enregistrement automatique du projet en cours (reprise après rechargement).
+useMagasin.subscribe((s, p) => {
+  if (s.projet !== p.projet || s.assets !== p.assets || s.executions !== p.executions) ecrireCourant(emballer(s.projet, s.assets, s.executions));
+});

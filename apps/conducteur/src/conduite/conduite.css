@@ -1,0 +1,234 @@
+/* ============================================================
+   La conduite (bas de l'écran) : actes → moments → passages, pistes,
+   règle, tête de lecture, barre de zoom. Jetons seulement : aucune
+   couleur en dur (les teintes des pistes viennent des données).
+   Les alias --cd-* retombent sur les jetons du gabarit (--tile, --ort…)
+   ou sur ceux du thème commun (--panel, --or…) selon ce qui est posé.
+   ============================================================ */
+
+.cd {
+  --cd-lbl: 176px;
+  --cd-fond: var(--bg);
+  --cd-tuile: var(--tile, var(--panel));
+  --cd-tuile2: var(--tile2, var(--panel2));
+  --cd-encre: var(--ink);
+  --cd-encre2: var(--ink2);
+  --cd-encre3: var(--ink3);
+  --cd-or: var(--ort, var(--or));
+  --cd-vert: var(--gt, var(--grn2));
+  --cd-cy: var(--cy);
+  --cd-sur-or: var(--on-rampe, var(--on-or));
+  --cd-sur-sourd: var(--on-coral1, var(--ink));
+  /* filets du design : rgba(var(--lr), α) */
+  --cd-filet: rgba(var(--lr), .14);
+  --cd-filet2: rgba(var(--lr), .2);
+  --cd-ombre: var(--ombre-2, var(--drop));
+  --cd-f-disp: var(--f-chiffre, var(--f-disp, 'Venus Rising', 'Chakra Petch', sans-serif));
+  --cd-f-mono: var(--f-mono, 'Azeret Mono', ui-monospace, monospace);
+  --cd-f-ui: var(--f-ui, 'Chakra Petch', sans-serif);
+  /* la rampe corail des actes, du plus clair au plus sourd */
+  --cd-acte-0: var(--rampe-1);
+  --cd-acte-1: var(--rampe-2);
+  --cd-acte-2: var(--rampe-3);
+  --cd-acte-3: var(--rampe-4);
+  --cd-acte-4: var(--rampe-5);
+
+  position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; min-height: 220px;
+  background: var(--cd-fond); color: var(--cd-encre); font-family: var(--cd-f-ui); outline: none;
+  user-select: none; -webkit-user-select: none;
+}
+.cd:focus-visible { box-shadow: inset 0 0 0 1px var(--cd-filet2); }
+
+/* ── la barre du haut ─────────────────────────────────────── */
+.cd-barre { height: 36px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 34px; position: relative; z-index: 20; }
+.cd-titre { font-family: var(--cd-f-disp); font-size: 11px; letter-spacing: .14em; flex: none; }
+.cd-bt {
+  height: 26px; padding: 0 9px; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; flex: none;
+  background: transparent; border: none; box-shadow: inset 0 0 0 1px var(--cd-filet2);
+  font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .14em; color: var(--cd-encre); white-space: nowrap;
+}
+.cd-bt:hover { background: var(--cd-tuile2); }
+.cd-bt b { color: var(--cd-or); font-size: 12px; font-weight: 400; line-height: 1; }
+.cd-message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--cd-encre2); }
+.cd-espace { flex: 1; min-width: 0; }
+.cd-zoom { display: flex; align-items: center; height: 24px; border-radius: 6px; background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-filet); flex: none; }
+.cd-zoom button { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--cd-encre2); font-size: 13px; background: none; border: none; padding: 0; }
+.cd-zoom button:hover { color: var(--cd-encre); }
+.cd-zoom .cd-zoom-val { font-family: var(--cd-f-disp); font-size: 8px; width: 42px; text-align: center; color: var(--cd-encre); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cd-zoom .cd-tout { width: auto; padding: 0 9px; font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .14em; box-shadow: inset 1px 0 0 var(--cd-filet); }
+.cd-retard { display: flex; align-items: center; gap: 7px; font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .14em; color: var(--cd-encre3); padding-left: 10px; box-shadow: inset 1px 0 0 var(--cd-filet); flex: none; }
+.cd-retard span { font-family: var(--cd-f-disp); font-size: 10px; display: inline-block; width: 58px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--cd-encre); letter-spacing: 0; }
+.cd-retard span[data-fort] { color: var(--cd-or); }
+
+/* menus (ajouter une piste, clic droit) */
+.cd-menu {
+  position: absolute; width: 250px; padding: 6px; border-radius: 10px; background: var(--cd-tuile); z-index: 40;
+  box-shadow: inset 0 0 0 1px var(--cd-filet2), 0 14px 40px var(--cd-ombre); display: flex; flex-direction: column; gap: 2px;
+}
+.cd-menu.fixe { position: fixed; width: 230px; }
+.cd-menu-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 6px; cursor: pointer; background: none; border: none; text-align: left; color: var(--cd-encre); font-family: inherit; }
+.cd-menu-item:hover { background: var(--cd-tuile2); }
+.cd-menu-item:disabled { opacity: .4; cursor: default; background: none; }
+.cd-menu-item .n { font-size: 12px; font-weight: 600; }
+.cd-menu-item .d { font-size: 10.5px; color: var(--cd-encre3); }
+.cd-menu-item .col { display: flex; flex-direction: column; gap: 3px; }
+.cd-menu-item .pastille { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.cd-menu-tete { padding: 4px 8px; font-family: var(--cd-f-mono); font-size: 7px; letter-spacing: .16em; color: var(--cd-encre3); }
+
+/* ── le corps ─────────────────────────────────────────────── */
+.cd-corps { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.cd-etiquettes { position: absolute; left: 0; top: 0; height: 132px; width: var(--cd-lbl); background: var(--cd-fond); z-index: 5; pointer-events: none; }
+.cd-etiquettes span { position: absolute; left: 34px; font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .18em; color: var(--cd-encre3); }
+.cd-voie { position: absolute; left: var(--cd-lbl); right: 0; top: 0; height: 132px; overflow: hidden; }
+.cd-defile { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transform: translateX(var(--cd-x, 0px)); }
+
+/* la règle (commun/tete.css, .sr-mk) */
+.cd-regle { position: absolute; left: 0; top: 0; height: 26px; cursor: text; }
+.cd-regle-zone { position: absolute; left: 0; right: 0; top: 0; height: 26px; cursor: text; z-index: 1; }
+.sr-mk {
+  position: absolute; top: 0; bottom: 0; padding-left: 5px; display: flex; align-items: center;
+  font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .06em; color: var(--cd-encre3);
+  box-shadow: inset 1px 0 0 var(--cd-filet2); white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums;
+}
+.sr-mk.sub { top: 16px; box-shadow: inset 1px 0 0 var(--cd-filet); }
+
+/* les actes */
+.cd-acte {
+  position: absolute; top: 30px; height: 26px; border-radius: 6px; display: flex; align-items: center; gap: 9px; padding: 0 9px;
+  overflow: hidden; cursor: pointer; background: var(--cd-acte-0); color: var(--cd-sur-or);
+}
+.cd-acte[data-n="1"] { background: var(--cd-acte-1); }
+.cd-acte[data-n="2"] { background: var(--cd-acte-2); }
+.cd-acte[data-n="3"] { background: var(--cd-acte-3); color: var(--cd-sur-sourd); }
+.cd-acte[data-n="4"] { background: var(--cd-acte-4); color: var(--cd-sur-sourd); }
+.cd-acte .num { font-family: var(--cd-f-disp); font-size: 15px; line-height: 1; flex: none; }
+.cd-acte .nom { font-family: var(--cd-f-disp); font-size: 8.5px; letter-spacing: .12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+.cd-acte input { min-width: 0; flex: 1; height: 18px; border: none; outline: none; border-radius: 4px; padding: 0 5px; background: var(--cd-fond); color: var(--cd-encre); font-family: var(--cd-f-ui); font-size: 11px; }
+
+/* les moments */
+.cd-moment {
+  position: absolute; top: 62px; height: 40px; border-radius: 7px; background: var(--cd-tuile); display: flex; align-items: center;
+  overflow: hidden; cursor: pointer; box-shadow: inset 0 0 0 1px var(--cd-acc, var(--cd-filet2));
+}
+.cd-moment::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--avance, 0) * 100%);
+  background: color-mix(in srgb, var(--cd-vert) 16%, transparent); pointer-events: none;
+}
+.cd-moment[data-vif]::before { background: color-mix(in srgb, var(--cd-or) 16%, transparent); }
+.cd-moment[data-vif] { box-shadow: inset 0 0 0 1.5px var(--cd-or); }
+.cd-moment[data-sel] { box-shadow: inset 0 0 0 1.5px var(--cd-cy); }
+.cd-moment .nom { position: relative; font-size: 11px; font-weight: 600; color: var(--cd-encre); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px 0 8px; }
+.cd-moment .cran { position: absolute; top: 8px; bottom: 8px; width: 1px; background: var(--cd-filet2); }
+.cd-moment .poignee { position: absolute; right: 0; top: 0; bottom: 0; width: 7px; cursor: ew-resize; }
+.cd-moment .poignee:hover { background: color-mix(in srgb, var(--cd-cy) 25%, transparent); }
+.cd-plus {
+  position: absolute; width: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: transparent; border: none; box-shadow: inset 0 0 0 1px var(--cd-filet2); color: var(--cd-or); font-size: 14px; padding: 0;
+}
+.cd-plus:hover { background: var(--cd-tuile2); }
+
+/* les passages */
+.cd-passage-attente { position: absolute; top: 115px; height: 0; border-top: 2px dotted var(--cd-vert); pointer-events: none; }
+.cd-passage-retenue {
+  position: absolute; top: 110px; height: 10px; border-radius: 2px; pointer-events: none;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cd-or) 55%, transparent) 0 3px, transparent 3px 6px);
+}
+.cd-passage { position: absolute; top: 104px; width: 22px; height: 22px; margin-left: -11px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; background: none; border: none; padding: 0; }
+.cd-passage i { width: 12px; height: 12px; transform: rotate(45deg); border-radius: 2px; background: var(--cd-fond); box-shadow: inset 0 0 0 1.5px var(--cd-vert); }
+.cd-passage[data-go] i { box-shadow: inset 0 0 0 1.5px var(--cd-or); }
+.cd-passage[data-franchi] i { background: var(--cd-vert); }
+.cd-passage[data-go][data-franchi] i { background: var(--cd-or); }
+.cd-passage[data-ouvert] i { outline: 4px solid color-mix(in srgb, var(--cd-cy) 30%, transparent); }
+.cd-passage[data-attend] i { animation: cd-pulse 1s infinite; }
+@keyframes cd-pulse { 50% { background: var(--cd-or); } }
+
+/* ── les pistes ───────────────────────────────────────────── */
+.cd-pistes {
+  position: absolute; left: 0; right: 0; top: 132px; bottom: 26px; overflow-y: auto; overflow-x: hidden;
+  box-shadow: inset 0 1px 0 var(--cd-filet); scrollbar-width: thin; scrollbar-color: var(--cd-filet2) transparent;
+}
+.cd-pistes-in { position: relative; }
+.cd-piste { position: absolute; left: 0; right: 0; box-shadow: inset 0 -1px 0 var(--cd-filet); overflow: hidden; }
+.cd-piste:nth-child(even) { background: rgba(var(--lr), .025); }
+.cd-piste-tete {
+  position: absolute; left: 22px; top: 0; bottom: 0; width: calc(var(--cd-lbl) - 26px); display: flex; align-items: center; gap: 6px;
+  padding: 0 8px 0 10px; background: var(--cd-fond); z-index: 5; box-shadow: inset 3px 0 0 var(--cd-piste);
+}
+.cd-piste[data-ouverte] .cd-piste-tete { align-items: flex-start; padding-top: 8px; }
+.cd-chevron { width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; color: var(--cd-encre2); cursor: pointer; transition: transform .15s; flex: none; background: none; border: none; padding: 0; }
+.cd-piste[data-ouverte] .cd-chevron { transform: rotate(90deg); }
+.cd-piste-nom {
+  flex: 1; min-width: 0; font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--cd-encre);
+  line-height: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-top: 1px;
+}
+.cd-piste[data-ouverte] .cd-piste-nom { white-space: normal; max-height: 36px; }
+.cd-piste-voie { position: absolute; left: var(--cd-lbl); right: 0; top: 0; bottom: 0; overflow: hidden; }
+.cd-piste-defile { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transform: translateX(var(--cd-x, 0px)); }
+.cd-courbe { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.cd-point { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--cd-fond); box-shadow: inset 0 0 0 2px var(--cd-piste); cursor: ns-resize; z-index: 2; }
+.cd-clip {
+  position: absolute; border-radius: 5px; background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-piste); overflow: hidden;
+  cursor: grab; display: flex; align-items: flex-end; z-index: 1;
+}
+.cd-clip[data-actif] { box-shadow: inset 0 0 0 1px var(--cd-cy), 0 0 0 2px color-mix(in srgb, var(--cd-cy) 25%, transparent); z-index: 2; cursor: grabbing; }
+.cd-clip svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.cd-clip .nom { position: relative; font-size: 10.5px; font-weight: 600; color: var(--cd-encre); padding: 0 8px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.cd-clip .poignee { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.cd-clip .poignee:hover { background: color-mix(in srgb, var(--cd-cy) 25%, transparent); }
+.cd-repere { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; gap: 5px; cursor: grab; z-index: 1; }
+.cd-repere[data-actif] { z-index: 2; cursor: grabbing; }
+.cd-repere .drapeau { width: 2px; align-self: stretch; background: var(--cd-piste); flex: none; }
+.cd-repere[data-actif] .drapeau { background: var(--cd-cy); }
+.cd-repere .txt { font-size: 10.5px; color: var(--cd-encre); background: var(--cd-tuile2); padding: 3px 7px; border-radius: 4px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.cd-repere[data-actif] .txt { box-shadow: inset 0 0 0 1px var(--cd-cy); }
+.cd-preavis {
+  position: absolute; top: 4px; bottom: 4px; border-radius: 3px 0 0 3px; pointer-events: none;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cd-piste) 40%, transparent) 0 3px, transparent 3px 6px);
+}
+.cd-preavis-poignee { position: absolute; top: 4px; bottom: 4px; width: 6px; margin-left: -3px; cursor: ew-resize; z-index: 2; }
+.cd-preavis-poignee:hover { background: color-mix(in srgb, var(--cd-piste) 45%, transparent); }
+.cd-ajout-piste {
+  position: absolute; left: 22px; height: 28px; padding: 0 12px; border-radius: 6px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: none; border: none; box-shadow: inset 0 0 0 1px var(--cd-filet2); font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .14em; color: var(--cd-encre2);
+}
+.cd-ajout-piste b { color: var(--cd-or); font-size: 12px; font-weight: 400; }
+
+/* ── la tête de lecture (commun/tete.css, .sr-ph) ───────────── */
+.cd-calque-tete { position: absolute; left: var(--cd-lbl); right: 0; top: 0; bottom: 26px; overflow: hidden; pointer-events: none; z-index: 7; }
+.sr-ph { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; background: var(--cd-or); pointer-events: none; z-index: var(--sr-ph-z, 9); will-change: transform; }
+.sr-ph i { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 11px; height: 11px; border-radius: 0 0 var(--r1, 4px) var(--r1, 4px); background: var(--cd-or); }
+.cd-attente-vive {
+  position: absolute; top: 110px; height: 10px; border-radius: 2px; left: 0; width: 0; display: none;
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cd-or) 55%, transparent) 0 3px, transparent 3px 6px);
+}
+
+/* ── la barre de zoom ─────────────────────────────────────── */
+.cd-zb { position: absolute; left: var(--cd-lbl); right: 14px; bottom: 8px; height: 10px; border-radius: 5px; background: rgba(var(--lr), .07); z-index: 6; cursor: pointer; touch-action: none; }
+.cd-zb-tete { position: absolute; top: -3px; width: 2px; height: 16px; margin-left: -1px; background: var(--cd-or); pointer-events: none; left: 0; }
+.cd-zb-pouce { position: absolute; top: 0; height: 10px; border-radius: 5px; background: rgba(var(--lr), .26); cursor: grab; min-width: 2px; }
+.cd-zb-rond { position: absolute; top: -2px; width: 14px; height: 14px; border-radius: 50%; background: var(--cd-fond); box-shadow: inset 0 0 0 2px var(--cd-cy); cursor: ew-resize; }
+.cd-zb-rond:hover { background: var(--cd-cy); }
+.cd-zb-rond.g { left: -7px; }
+.cd-zb-rond.d { right: -7px; }
+
+/* ── la carte d'un passage ─────────────────────────────────── */
+.cd-carte {
+  position: absolute; top: 132px; width: 300px; max-height: calc(100% - 140px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+  padding: 14px; border-radius: 12px; background: var(--cd-tuile); z-index: 8; cursor: default; scrollbar-width: thin;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-or) 55%, transparent), 0 14px 40px var(--cd-ombre);
+}
+.cd-carte .tag { font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .18em; color: var(--cd-encre3); text-transform: uppercase; display: flex; justify-content: space-between; }
+.cd-carte .tag button { background: none; border: none; color: var(--cd-encre2); cursor: pointer; font-size: 12px; padding: 0; }
+.cd-carte .titre { font-family: var(--cd-f-disp); font-size: 10px; letter-spacing: .1em; line-height: 1.4; }
+.cd-seg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--cd-fond); box-shadow: inset 0 0 0 1px var(--cd-filet); }
+.cd-seg button { flex: 1; height: 26px; border-radius: 6px; border: none; background: none; cursor: pointer; font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .14em; color: var(--cd-encre2); }
+.cd-seg button[data-on] { background: var(--cd-tuile2); color: var(--cd-encre); box-shadow: inset 0 0 0 1px var(--cd-filet2); }
+.cd-carte .cond { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.cd-carte .cond i { width: 7px; height: 7px; border-radius: 50%; background: var(--cd-vert); flex: none; }
+.cd-carte .cond i[data-go] { background: var(--cd-or); }
+.cd-carte .temps { font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .12em; color: var(--cd-encre3); font-variant-numeric: tabular-nums; }
+
+/* sélections venues du magasin (panneau de droite) */
+.cd-acte[data-sel] { box-shadow: 0 0 0 2px var(--cd-cy); }
+.cd-piste[data-sel] .cd-piste-tete { box-shadow: inset 3px 0 0 var(--cd-piste), inset 0 0 0 1px var(--cd-cy); }
+.cd-piste-nom { cursor: pointer; }
