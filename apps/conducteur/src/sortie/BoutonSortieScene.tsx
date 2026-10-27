@@ -1,4 +1,5 @@
-// Bouton de la régie : ouvre (ou ramène) la fenêtre de sortie écran scène et montre son état.
+// Bouton de la régie : ouvre (ou ramène) la fenêtre de sortie écran scène et montre son état (et, dans sa bulle,
+// une vidéo introuvable sur la sortie ou une autre régie qui a pris la main).
 //   fermée    → pastille éteinte
 //   ouverte   → pastille ambre (la fenêtre existe mais ne répond pas encore)
 //   connectée → pastille verte (battement reçu il y a moins de 3,5 s)
@@ -21,12 +22,17 @@ export const IcoSortieScene = () => (
 export function BoutonSortieScene({ ecran = 'secondaire', className = 'btn-carre' }: { ecran?: 'secondaire' | 'courant'; className?: string }) {
   const fenetre = useSortie((s) => s.fenetre);
   const salle = useSortie((s) => s.salle);
-  const titre = LIBELLES[fenetre] + (salle === 'connecte' ? ' · relais par la salle actif' : '');
+  const absent = useSortie((s) => (s.fenetre === 'connectee' ? s.sortie?.absent : undefined));
+  const autre = useSortie((s) => s.fenetre === 'connectee' && s.autreRegie);
+  const titre = LIBELLES[fenetre] + (salle === 'connecte' ? ' · relais par la salle actif' : '')
+    + (autre ? ' · une autre régie a la main (moniteur, autre machine)' : '')
+    + (absent ? ` · ⚠ ${absent} introuvable sur la sortie : choisir le dossier médias (touche M sur la sortie)` : '');
   return (
     <button
       type="button"
       className={className + ' so-bouton' + (fenetre === 'connectee' ? ' on' : '')}
       data-etat={fenetre}
+      data-alerte={absent ? 'media-absent' : undefined}
       onClick={() => ouvrirSortieScene({ ecran })}
       title={titre}
       aria-label={titre}

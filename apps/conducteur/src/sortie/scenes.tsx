@@ -28,6 +28,8 @@ export interface Services {
   secours: (v: boolean) => void;
   /** asset de secours par défaut (configuration) */
   secoursDefaut?: string;
+  /** un média demandé est introuvable (oui) ou de nouveau trouvé / plus à l'écran (non) : remonte aux régies */
+  absent?: (asset: string, oui: boolean) => void;
 }
 export const ContexteServices = createContext<Services | null>(null);
 
@@ -93,8 +95,18 @@ export function Fondus({ scene, n, fondu, miniature = false }: { scene: Scene | 
       return [...l.slice(-2), { cle, scene, n, fondu, visible: fondu <= 0 }];
     });
     if (fondu <= 0) return;
-    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setCouches((l) => l.map((c) => (c.cle === cle ? { ...c, visible: true } : c)))));
-    return () => cancelAnimationFrame(raf);
+    // la couche est d'abord peinte transparente, puis rendue visible : la transition CSS fait le fondu. Deux images
+    // d'animation suffisent ; mais une fenêtre cachée (onglet en arrière-plan) suspend requestAnimationFrame : un
+    // minuteur garantit la bascule quand même (sans quoi la nouvelle scène resterait transparente sous l'ancienne).
+    let fait = false, raf2 = 0;
+    const montrer = () => {
+      if (fait) return;
+      fait = true;
+      setCouches((l) => l.map((c) => (c.cle === cle && c.n === n ? { ...c, visible: true } : c)));
+    };
+    const raf = requestAnimationFrame(() => { raf2 = requestAnimationFrame(montrer); });
+    const minuteur = setTimeout(montrer, 100);
+    return () => { cancelAnimationFrame(raf); cancelAnimationFrame(raf2); clearTimeout(minuteur); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cle]);
   // l'ancienne couche part quand la nouvelle est entièrement visible
@@ -252,6 +264,23 @@ function SceneStreamer({ scene, miniature }: { scene: Extract<Scene, { type: 'st
 
 // ── vidéos locales ──────────────────────────────────────────────────────────────────────────────────────────────
 
+/** Message plein écran d'un média introuvable : le nom, et quoi faire. */
+function MediaAbsent({ asset }: { asset: string }) {
+  const s = useContext(ContexteServices);
+  useEffect(() => {
+    s?.absent?.(asset, true);
+    return () => s?.absent?.(asset, false);
+  }, [asset, s]);
+  return (
+    <div className="so-absent" role="alert">
+      <div className="so-absent-titre">{asset} introuvable — choisir le dossier médias</div>
+      <div className="so-absent-aide so-micro">
+        touche M ou bouton « Dossier médias » · médias actuels : {s?.medias.etat.source === 'aucun' ? 'aucun' : `${s?.medias.etat.source} (${s?.medias.etat.nombre})`}
+      </div>
+    </div>
+  );
+}
+
 function LecteurVideo({ asset, boucle, son, cadrage, surFin }: { asset: string; boucle: boolean; son: boolean; cadrage: 'contain' | 'cover' | 'auto'; surFin?: () => void }) {
   const s = useContext(ContexteServices);
   const hote = useRef<HTMLDivElement>(null);
@@ -295,7 +324,7 @@ function LecteurVideo({ asset, boucle, son, cadrage, surFin }: { asset: string; 
   }, [asset, boucle, son, cadrage, s, essai]);
   return (
     <div ref={hote} className="so-lecteur">
-      {absente && <div className="so-absent so-micro">MÉDIA ABSENT · {asset}</div>}
+      {absente && <MediaAbsent asset={asset} />}
     </div>
   );
 }
@@ -323,7 +352,7 @@ function SceneImage({ scene, miniature }: { scene: Extract<Scene, { type: 'image
   return (
     <div className="so-streamer">
       {url && <img className="so-image" src={url} alt={scene.legende ?? scene.asset} />}
-      {url === null && <div className="so-absent so-micro">MÉDIA ABSENT · {scene.asset}</div>}
+      {url === null && <MediaAbsent asset={scene.asset} />}
       {scene.legende && <div className="so-legende">{scene.legende}</div>}
     </div>
   );

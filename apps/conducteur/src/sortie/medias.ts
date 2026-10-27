@@ -3,7 +3,8 @@
 //   1. dossier choisi une fois (File System Access API, showDirectoryPicker) ; la poignée est gardée en IndexedDB,
 //      le navigateur redemande seulement l'autorisation de lecture (un clic) à la réouverture ;
 //   2. fichiers choisis à la main (<input type="file" multiple>), pour les navigateurs sans showDirectoryPicker ;
-//   3. en développement, /medias-locales/ servi par vite.config.ts depuis C:\STUDIO_REAL\medias-locales\ (hors git).
+//   3. en développement, /medias-locales/ servi par vite.config.ts depuis C:\STUDIO_REAL\medias-locales\ (hors git) ;
+//      pendant l'essai réel (build servi par wrangler dev), essai-reel.mjs copie ce dossier dans dist/medias-locales/.
 // Un asset se retrouve par son nom exact, sans tenir compte de la casse, ou par son nom sans extension.
 
 type Poignee = FileSystemFileHandle;
@@ -84,15 +85,21 @@ export class BibliothequeMedias {
     return this.demarrage;
   }
 
+  /** Liste des médias servis sur la même origine : /medias-locales/ (serveur Vite, liste JSON) ou
+   *  /medias-locales/index.json (build servi par wrangler dev pendant l'essai réel : essai-reel.mjs y copie
+   *  C:\STUDIO_REAL\medias-locales\). Ailleurs (application monopage), la réponse est du HTML : ignorée. */
   private async chargerDev(): Promise<void> {
-    try {
-      const r = await fetch('/medias-locales/', { headers: { accept: 'application/json' } });
-      if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) return;
-      const l = (await r.json()) as unknown;
-      if (!Array.isArray(l)) return;
-      for (const nom of l) if (typeof nom === 'string' && EXT_MEDIA.test(nom)) for (const k of clesNom(nom)) this.dev.set(k, '/medias-locales/' + encodeURIComponent(nom));
-      this.maj({});
-    } catch { /* pas de serveur de développement */ }
+    for (const chemin of ['/medias-locales/', '/medias-locales/index.json']) {
+      try {
+        const r = await fetch(chemin, { headers: { accept: 'application/json' }, cache: 'no-store' });
+        if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) continue;
+        const l = (await r.json()) as unknown;
+        if (!Array.isArray(l)) continue;
+        for (const nom of l) if (typeof nom === 'string' && EXT_MEDIA.test(nom)) for (const k of clesNom(nom)) this.dev.set(k, '/medias-locales/' + encodeURIComponent(nom));
+        this.maj({});
+        return;
+      } catch { /* pas de médias servis ici */ }
+    }
   }
 
   private async restaurerDossier(): Promise<void> {

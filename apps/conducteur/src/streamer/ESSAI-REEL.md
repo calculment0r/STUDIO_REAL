@@ -44,6 +44,16 @@ Le script construit l'interface (`index.html`, `sortie.html`, `streamer.html` �
    La sortie ne montre la vidéo que sur une scène « streamer » (pilotée par la régie).
 4. **« MONITEUR DU FLUX »** : la vidéo seule, **son coupé par défaut** (bouton « Activer le son »), chemin et
    statistiques, latence mesurée par mire, et une zone « Consigne privée au streamer » (Entrée / Urgent).
+5. **Bascule de la sortie** : barre **SCÈNE** du moniteur — DIRECT / VIDÉO (`test-h3.mp4` par défaut) / NOIR /
+   QR PUBLIC, avec le temps de fondu. Le moniteur publie sur le canal local (sortie dans ce navigateur) ET par la
+   salle (sortie sur une autre machine) ; la sortie écoute toujours les deux. Au bout de la barre, le **retour** de la
+   sortie : « connectée · montre video », ou « ⚠ test-h3.mp4 introuvable — choisir le dossier médias ».
+   La conduite du Conducteur (`/` sur la même adresse, même navigateur) pilote la sortie par le même chemin : un clip
+   de la piste vidéo lu fait basculer la sortie. Plusieurs régies à la fois : **la dernière commande gagne**.
+   Les vidéos : le script copie `C:\STUDIO_REAL\medias-locales\` dans le build (servies sous `/medias-locales/`),
+   donc `test-h3.mp4` est trouvé sans rien choisir. En spectacle, choisir le dossier sur la sortie (touche M).
+   Gardez la fenêtre de sortie **visible** (glissée sur le projecteur ou à côté) : un onglet caché retarde la
+   lecture des vidéos jusqu'à ce qu'on le montre.
 
 ## Sur l'iPhone
 

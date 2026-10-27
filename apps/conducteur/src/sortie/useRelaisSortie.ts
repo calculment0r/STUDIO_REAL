@@ -75,6 +75,9 @@ export function brancherRelaisSortie(o: { salle?: boolean } = {}): () => void {
   const desabonnerSalle = useSalle.subscribe(suivreSalle);
   suivreSalle();
 
+  // inspection (essais de bout en bout, console) : la conduite et la régie de sortie, comme __recepteur au moniteur
+  if (typeof window !== 'undefined') (window as unknown as { __conduite?: unknown }).__conduite = { magasin: useMagasin, sortie: useSortie };
+
   return () => {
     desabonner(); desabonnerSalle(); finVideo();
     clearTimeout(minuteur);

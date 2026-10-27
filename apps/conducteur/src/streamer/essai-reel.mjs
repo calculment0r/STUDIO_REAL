@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Essai RÉEL du flux streamer (vrai iPhone + PC de sortie), tout sur UNE adresse https (tunnel cloudflared) :
-//   1. construit l'interface (Vite, sans contrôle de types : index.html, sortie.html, streamer.html → apps/conducteur/dist) ;
+//   1. construit l'interface (Vite, sans contrôle de types : index.html, sortie.html, streamer.html → apps/conducteur/dist)
+//      et y copie C:\STUDIO_REAL\medias-locales\ (→ /medias-locales/, même origine : la sortie trouve test-h3.mp4) ;
 //   2. lance le serveur local (`npm run dev -w serveur` = wrangler dev : interface + API + salle WebSocket, même origine) ;
 //   3. crée (ou reprend) le projet de test « Essai streamer » et son jeton, avec le JETON_ADMIN de apps/serveur/.dev.vars ;
 //   4. facultatif : demande à Cloudflare des identifiants TURN ÉPHÉMÈRES si CF_TURN_CLE_ID et CF_TURN_CLE_JETON sont
@@ -11,7 +12,7 @@
 // Usage (depuis C:\STUDIO_REAL) :
 //   node apps/conducteur/src/streamer/essai-reel.mjs --tunnel https://xxxx.trycloudflare.com [--port 8787] [--sans-construire]
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,6 +43,34 @@ if (!args.includes('--sans-construire')) {
   const r = spawnSync(process.execPath, ['--input-type=module', '-e', code], { cwd: CONDUCTEUR, stdio: 'inherit', env: { ...process.env, NODE_ENV: 'production' } });
   if (r.status !== 0) { console.error('[essai] la construction a échoué'); process.exit(1); }
 }
+
+// ── 1 bis. médias locaux sur la même origine ──
+// wrangler dev sert dist/ mais n'a pas la route /medias-locales/ du serveur Vite : on copie C:\STUDIO_REAL\medias-locales\
+// (hors git) dans dist/medias-locales/ (dist est hors git aussi), avec la liste index.json que lit la sortie
+// (src/sortie/medias.ts). « test-h3.mp4 » est ainsi trouvé sans choisir de dossier. En spectacle, la sortie lit le
+// dossier choisi sur la machine du projecteur (bouton « Dossier médias », touche M), prioritaire sur cette copie.
+function copierMedias() {
+  const source = join(RACINE, 'medias-locales');
+  const dest = join(CONDUCTEUR, 'dist', 'medias-locales');
+  if (!existsSync(join(CONDUCTEUR, 'dist'))) { console.warn('[essai] dist/ absent : lancez sans --sans-construire'); return []; }
+  rmSync(dest, { recursive: true, force: true });
+  if (!existsSync(source)) { console.warn(`[essai] ${source} absent : aucune vidéo locale (la sortie dira « introuvable »)`); return []; }
+  mkdirSync(dest, { recursive: true });
+  const noms = readdirSync(source).filter((n) => /\.(mp4|webm|mov|m4v|mkv|ogv|png|jpe?g|webp|gif|avif|svg|mp3|wav|ogg|m4a)$/i.test(n));
+  let trop = 0;
+  const copies = [];
+  for (const n of noms) {
+    // wrangler refuse les fichiers d'assets de plus de 25 Mio : ceux-là passent par le dossier choisi sur la sortie
+    if (statSync(join(source, n)).size > 25 * 1024 * 1024) { trop++; continue; }
+    copyFileSync(join(source, n), join(dest, n));
+    copies.push(n);
+  }
+  writeFileSync(join(dest, 'index.json'), JSON.stringify(copies));
+  if (trop) console.warn(`[essai] ${trop} média(s) de plus de 25 Mio non copiés : choisir le dossier médias sur la sortie (touche M)`);
+  return copies;
+}
+const medias = copierMedias();
+console.log(`[essai] médias locaux servis sous /medias-locales/ : ${medias.length ? medias.join(', ') : 'aucun'}`);
 
 // ── 2. serveur local ──
 function jetonAdmin() {
@@ -124,6 +153,8 @@ console.log(`
  Ouvrez sur le PC :
    ${base}/streamer.html#${frag}
  ${tunnel ? 'Le téléphone recevra son adresse depuis cette page (bouton « Copier l\'adresse »).' : '⚠ Sans --tunnel : la caméra de l\'iPhone exige HTTPS, seul le PC peut tester.'}
+ Bascule de la sortie : barre SCÈNE du MONITEUR (DIRECT / VIDÉO / NOIR / QR PUBLIC), ou la conduite du
+ Conducteur (${base}/ dans le même navigateur) ; médias : ${medias.length ? medias.join(', ') : 'aucun (choisir le dossier sur la sortie)'}.
  Ctrl+C pour tout arrêter.
 ════════════════════════════════════════════════════════════════════════════
 `);

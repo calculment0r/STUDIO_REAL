@@ -15,9 +15,17 @@
 //   heure      battement (1 par seconde) : témoin de connexion et synchro
 // Messages sortie → régie (MessageSortie) :
 //   bonjour    la sortie s'ouvre (ou se reconnecte) : la régie renvoie config + scène + état
-//   present    battement (1 par seconde) avec la scène montrée, l'état du flux, du secours et des médias
+//   present    battement (1 par seconde) avec la scène montrée, l'état du flux, du secours et des médias (dont la
+//              vidéo introuvable : etat.absent) et la régie dont la scène est montrée (source)
 //   fin-video  une vidéo jouée « une seule fois » est finie (la régie peut en faire un signal 'video.fin')
 //   au-revoir  la fenêtre se ferme
+//
+// PLUSIEURS RÉGIES (Conducteur, moniteur du flux, autre machine par la salle) pilotent la même sortie : chaque scène
+// porte `source` (identifiant de la régie) et `depuis` (heure de la DÉCISION, horloge de la régie ; un renvoi garde
+// celle d'origine). La sortie garde la décision la plus récente (arbitrage.ts) — la dernière commande gagne — sans
+// dépendre des numéros `n` (propres à chaque régie) ni de l'accord des horloges : l'âge de la décision
+// (heure - depuis, même horloge) est retranché de l'heure d'arrivée locale. La sortie écoute TOUJOURS le canal local,
+// plus la salle si son adresse en donne une ; un message arrivé par les deux chemins n'est traité qu'une fois.
 
 export const VERSION_SORTIE = 1;
 /** Nom du BroadcastChannel (même origine, même navigateur). */
@@ -132,11 +140,13 @@ export interface EtatSortie {
   /** d'où viennent les vidéos locales */
   medias: 'dossier' | 'fichiers' | 'dev' | 'aucun';
   pleinEcran: boolean;
+  /** vidéo (ou image) demandée mais introuvable dans les médias de la sortie */
+  absent?: string;
 }
 
 export type MessageRegie =
   | { t: 'etat'; v: number; heure: number; etat: EtatScene }
-  | { t: 'scene'; v: number; heure: number; scene: Scene; n: number; fondu: number }
+  | { t: 'scene'; v: number; heure: number; scene: Scene; n: number; fondu: number; source?: string; depuis?: number }
   | { t: 'evenement'; v: number; heure: number; evenement: EvenementScene }
   | { t: 'config'; v: number; heure: number; config: ConfigSortie }
   | { t: 'precharger'; v: number; heure: number; assets: string[] }
@@ -144,7 +154,7 @@ export type MessageRegie =
 
 export type MessageSortie =
   | { t: 'bonjour'; v: number; id: string; heure: number }
-  | { t: 'present'; v: number; id: string; heure: number; scene: TypeScene | null; n: number; etat?: EtatSortie }
+  | { t: 'present'; v: number; id: string; heure: number; scene: TypeScene | null; n: number; etat?: EtatSortie; source?: string }
   | { t: 'fin-video'; v: number; id: string; heure: number; asset: string; n: number }
   | { t: 'au-revoir'; v: number; id: string };
 
@@ -183,8 +193,8 @@ export const adresseLisible = (a: string): string => a.replace(/^https?:\/\//, '
 // ── constructeurs ────────────────────────────────────────────────────────────────────────────────────────────────
 
 export const msgEtat = (etat: EtatScene, heure = Date.now()): MessageRegie => ({ t: 'etat', v: VERSION_SORTIE, heure, etat });
-export const msgScene = (scene: Scene, n: number, fondu = FONDU_DEFAUT_MS, heure = Date.now()): MessageRegie =>
-  ({ t: 'scene', v: VERSION_SORTIE, heure, scene, n, fondu: borneFondu(fondu) });
+export const msgScene = (scene: Scene, n: number, fondu = FONDU_DEFAUT_MS, heure = Date.now(), o: { source?: string; depuis?: number } = {}): MessageRegie =>
+  ({ t: 'scene', v: VERSION_SORTIE, heure, scene, n, fondu: borneFondu(fondu), ...(o.source ? { source: o.source } : {}), ...(o.depuis !== undefined ? { depuis: o.depuis } : {}) });
 export const msgPrecharger = (assets: string[], heure = Date.now()): MessageRegie => ({ t: 'precharger', v: VERSION_SORTIE, heure, assets });
 export const msgEvenement = (evenement: EvenementScene, heure = Date.now()): MessageRegie =>
   ({ t: 'evenement', v: VERSION_SORTIE, heure, evenement });
@@ -196,6 +206,8 @@ export const cleScene = (s: Scene): string => JSON.stringify(s);
 
 // ── validation (tout ce qui arrive d'un canal est une donnée non sûre) ─────────────────────────────────────────
 
+/** Identifiant d'une régie (source d'une scène). */
+export const RE_SOURCE = /^[A-Za-z0-9_-]{1,80}$/;
 const estObjet = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
 const estTexte = (x: unknown, max = 400): x is string => typeof x === 'string' && x.length <= max;
 const estNombre = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -267,7 +279,8 @@ export function lireMessageRegie(x: unknown): MessageRegie | null {
     case 'etat': return etatValide(x.etat) ? (x as unknown as MessageRegie) : null;
     case 'scene':
       return sceneValide(x.scene) && estNombre(x.n) && estNombre(x.fondu)
-        ? ({ ...(x as unknown as Extract<MessageRegie, { t: 'scene' }>), fondu: borneFondu(x.fondu) }) : null;
+        && (x.source === undefined || (typeof x.source === 'string' && RE_SOURCE.test(x.source))) && (x.depuis === undefined || estNombre(x.depuis))
+        ?({ ...(x as unknown as Extract<MessageRegie, { t: 'scene' }>), fondu: borneFondu(x.fondu) }) : null;
     case 'precharger':
       return Array.isArray(x.assets) && x.assets.length <= 8 && x.assets.every((a) => estTexte(a) && a.length > 0) ? (x as unknown as MessageRegie) : null;
     case 'evenement': return evenementValide(x.evenement) ? (x as unknown as MessageRegie) : null;

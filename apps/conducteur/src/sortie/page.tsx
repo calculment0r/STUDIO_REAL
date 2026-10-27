@@ -3,12 +3,16 @@
 //
 // Adresse :
 //   sortie.html                                         même machine que la régie (BroadcastChannel)
-//   sortie.html?serveur=https://…&projet=p_…&jeton=sr_…  autre machine : par la salle du serveur
+//   sortie.html?serveur=https://…&projet=p_…&jeton=sr_…  par la salle du serveur (autre machine) ET le canal local :
+//                                                        la sortie écoute TOUJOURS le canal local en plus de la salle
+// Plusieurs régies peuvent la piloter (Conducteur, moniteur, autre machine) : la décision la plus récente gagne
+// (arbitrage.ts). Une vidéo introuvable s'affiche en clair et remonte aux régies (present.etat.absent).
 //   options d'essai : &scene=accueil-qr|noir|streamer|titre|video|chrono  &titre=…  &adresse=…  &code=…  &asset=…
 //                     &duree=…  &demo=1 (faux public sur le calque)
 // Touches : F plein écran · D faux public · W webcam de test · M dossier des médias.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EtatLecture, Projet } from '@studio-real/modele';
+import { arbitrerScene, FiltreDoublons, type DecisionScene } from './arbitrage';
 import { transportLocal, type Transport } from './canal';
 import type { CalqueReactions } from './calque/calque';
 import { GestionFlux, type EtatFlux } from './flux';
@@ -62,7 +66,10 @@ export function PageSortie() {
     return { ...c, ...(adresse ? { adresse } : {}), ...(code ? { code } : {}) };
   }, [q]);
   const [config, setConfig] = useState<ConfigSortie>(configDepart);
-  const [scene, setScene] = useState<{ scene: Scene; n: number; fondu: number }>(() => ({ scene: sceneDeDepart(q, configDepart), n: 0, fondu: 0 }));
+  // n : numéro LOCAL de la couche (les numéros des régies se recoupent) ; nRegie, source : d'où vient la scène
+  const [scene, setScene] = useState<{ scene: Scene; n: number; nRegie: number; fondu: number; source: string }>(
+    () => ({ scene: sceneDeDepart(q, configDepart), n: 0, nRegie: 0, fondu: 0, source: '' }));
+  const [absents, setAbsents] = useState<string[]>([]);
   const [etat, setEtat] = useState<{ etat: EtatScene | null; heure: number }>({ etat: null, heure: 0 });
   const [liaison, setLiaison] = useState<Liaison>('attente');
   const [temoinVisible, setTemoinVisible] = useState(true);
@@ -78,7 +85,12 @@ export function PageSortie() {
 
   const horloge = useRef(new Horloge());
   const dernierRegie = useRef(0);
-  const transport = useRef<Transport | null>(null);
+  const transports = useRef<Transport[]>([]);
+  const decision = useRef<DecisionScene | null>(null);
+  const filtre = useRef(new FiltreDoublons());
+  const numero = useRef(0);
+  const absentsRef = useRef<string[]>([]);
+  absentsRef.current = absents;
   const calque = useRef<CalqueReactions | null>(null);
   const hoteCalque = useRef<HTMLDivElement>(null);
   const cadre = useRef<HTMLDivElement>(null);
@@ -90,13 +102,30 @@ export function PageSortie() {
   const bib = useMemo(() => new BibliothequeMedias(), []);
   const pool = useMemo(() => new PoolVideos(bib), [bib]);
   const gestionFlux = useMemo(() => new GestionFlux(), []);
-  const envoyer = useCallback((m: MessageSortie) => transport.current?.envoyer(m), []);
+  const envoyer = useCallback((m: MessageSortie) => { for (const t of transports.current) t.envoyer(m); }, []);
+  const etatSortie = useCallback((): EtatSortie => {
+    const a = absentsRef.current[absentsRef.current.length - 1];
+    return {
+      flux: gestionFlux.etat.statut === 'direct' ? 'direct' : gestionFlux.etat.statut === 'test' ? 'test' : 'aucun',
+      secours: !!document.querySelector('.so-streamer .so-lecteur video'),
+      medias: bib.etat.source, pleinEcran: !!document.fullscreenElement, ...(a ? { absent: a } : {}),
+    };
+  }, [gestionFlux, bib]);
+  const presence = useCallback(() => {
+    const s = sceneRef.current;
+    envoyer({ t: 'present', v: VERSION_SORTIE, id, heure: Date.now(), scene: s.scene.type, n: s.nRegie, etat: etatSortie(), ...(s.source ? { source: s.source } : {}) });
+  }, [envoyer, etatSortie, id]);
+  // média introuvable (ou retrouvé) : la régie le sait tout de suite, pas au battement suivant
+  const absent = useCallback((asset: string, oui: boolean) => {
+    setAbsents((l) => (oui ? (l.includes(asset) ? l : [...l, asset]) : l.filter((x) => x !== asset)));
+  }, []);
+  useEffect(() => { presence(); }, [absents, presence]);
   const services = useMemo<Services>(() => ({
     medias: bib, pool, flux: gestionFlux, calque: () => calque.current,
-    finVideo: (asset) => envoyer({ t: 'fin-video', v: VERSION_SORTIE, id, heure: Date.now(), asset, n: sceneRef.current.n }),
-    sonBloque: setSonBloque, secours: setSecours,
+    finVideo: (asset) => envoyer({ t: 'fin-video', v: VERSION_SORTIE, id, heure: Date.now(), asset, n: sceneRef.current.nRegie }),
+    sonBloque: setSonBloque, secours: setSecours, absent,
     ...(config.secours ? { secoursDefaut: config.secours } : {}),
-  }), [bib, pool, gestionFlux, envoyer, id, config.secours]);
+  }), [bib, pool, gestionFlux, envoyer, id, config.secours, absent]);
 
   useEffect(() => bib.abonner(setMedias), [bib]);
   useEffect(() => { void bib.demarrer(); }, [bib]);
@@ -108,8 +137,10 @@ export function PageSortie() {
   useEffect(() => () => gestionFlux.arreter(), [gestionFlux]);
 
   // ── messages de la régie ──
-  const changerScene = useCallback((s: Scene, n: number, fondu: number) => {
-    setScene((p) => (JSON.stringify(p.scene) === JSON.stringify(s) ? p : { scene: s, n, fondu }));
+  const changerScene = useCallback((s: Scene, nRegie: number, fondu: number, source: string) => {
+    setScene((p) => (JSON.stringify(p.scene) === JSON.stringify(s)
+      ? (p.source === source && p.nRegie === nRegie ? p : { ...p, nRegie, source })
+      : { scene: s, n: ++numero.current, nRegie, fondu, source }));
   }, []);
 
   const evenement = useCallback((ev: EvenementScene) => {
@@ -136,11 +167,20 @@ export function PageSortie() {
     const m = lireMessageRegie(brut);
     if (!m) return;
     const local = Date.now();
+    // le même message arrivé par le canal local ET par la salle : traité une fois
+    if (!filtre.current.nouveau(m, local)) return;
     horloge.current.noter(m.heure, local);
     dernierRegie.current = local;
     setLiaison((l) => (l === 'connecte' ? l : 'connecte'));
     switch (m.t) {
-      case 'scene': changerScene(m.scene, m.n, m.fondu); break;
+      case 'scene': {
+        // plusieurs régies : la décision la plus récente gagne ; un renvoi plus ancien est ignoré
+        const d = arbitrerScene(decision.current, m, local);
+        if (!d) break;
+        decision.current = d;
+        changerScene(m.scene, m.n, m.fondu, d.source);
+        break;
+      }
       case 'etat': setEtat({ etat: m.etat, heure: m.heure }); break;
       case 'evenement': evenement(m.evenement); break;
       case 'config': setConfig(m.config); break;
@@ -149,44 +189,50 @@ export function PageSortie() {
     }
   }, [changerScene, evenement, pool]);
 
-  // ── transport, battement, reconnexion ──
+  // ── transports (canal local TOUJOURS, plus la salle de l'adresse), battement, reconnexion ──
   useEffect(() => {
-    let projetSalle: Projet | null = null, lectureSalle: EtatLecture | null = null, nLocal = 1_000_000;
-    const t: Transport = salleParams
-      ? new TransportSalle({ ...salleParams, role: 'poste', personne: id, nom: 'Sortie scène' })
-      : transportLocal();
-    transport.current = t;
-    const a = t.ecouter(recevoir);
-    const b = t instanceof TransportSalle ? t.ecouterSalle((m: MessageSalleBrut) => {
+    // secours : la sortie traduit elle-même la lecture de la salle si une conduite y joue (message « lecture » reçu
+    // pendant cette session : un état de lecture ancien gardé par le serveur ne compte pas) et qu'aucune régie ne parle
+    let projetSalle: Projet | null = null, lectureSalle: EtatLecture | null = null, lectureVivante = false;
+    const salle = salleParams ? new TransportSalle({ ...salleParams, role: 'poste', personne: id, nom: 'Sortie scène' }) : null;
+    const liste: Transport[] = [transportLocal(), ...(salle ? [salle] : [])];
+    transports.current = liste;
+    const desabonner: (() => void)[] = [];
+    for (const t of liste) {
+      desabonner.push(t.ecouter(recevoir));
+      desabonner.push(t.statut((st) => { if (st === 'connecte') t.envoyer({ t: 'bonjour', v: VERSION_SORTIE, id, heure: Date.now() }); }));
+    }
+    if (salle) desabonner.push(salle.ecouterSalle((m: MessageSalleBrut) => {
       if (m.t === 'bienvenue') { projetSalle = (m.projet as Projet | null) ?? projetSalle; lectureSalle = ((m.lecture as { etat?: EtatLecture } | null)?.etat) ?? lectureSalle; }
       if (m.t === 'instantane') projetSalle = (m.projet as Projet) ?? projetSalle;
-      if (m.t === 'lecture') lectureSalle = (m.etat as EtatLecture) ?? lectureSalle;
-    }) : () => {};
-    const c = t.statut((s) => { if (s === 'connecte') envoyer({ t: 'bonjour', v: VERSION_SORTIE, id, heure: Date.now() }); });
-    envoyer({ t: 'bonjour', v: VERSION_SORTIE, id, heure: Date.now() });
+      if (m.t === 'lecture') { lectureSalle = (m.etat as EtatLecture) ?? lectureSalle; lectureVivante = true; }
+    }));
     let tic = 0;
     const battement = setInterval(() => {
       tic++;
-      const s = sceneRef.current;
-      const etatSortie: EtatSortie = {
-        flux: gestionFlux.etat.statut === 'direct' ? 'direct' : gestionFlux.etat.statut === 'test' ? 'test' : 'aucun',
-        secours: !!document.querySelector('.so-streamer .so-lecteur video'),
-        medias: bib.etat.source, pleinEcran: !!document.fullscreenElement,
-      };
-      envoyer({ t: 'present', v: VERSION_SORTIE, id, heure: Date.now(), scene: s.scene.type, n: s.n, etat: etatSortie });
+      presence();
       const silence = Date.now() - dernierRegie.current;
       if (dernierRegie.current && silence > PERTE_MS) setLiaison('perdu');
       if (silence > PERTE_MS && tic % 2 === 0) envoyer({ t: 'bonjour', v: VERSION_SORTIE, id, heure: Date.now() });
-      // secours : salle joignable mais aucune régie ne publie de scène → la sortie traduit elle-même la lecture
-      if (projetSalle && lectureSalle && silence > 5000) {
+      if (projetSalle && lectureSalle && lectureVivante && silence > 5000) {
         const r = traduire({ projet: projetSalle, lecture: lectureSalle, enLecture: true, config: configDepart });
-        setScene((p) => (JSON.stringify(p.scene) === JSON.stringify(r.scene) ? p : { scene: r.scene, n: ++nLocal, fondu: FONDU_DEFAUT_MS }));
+        const p = sceneRef.current;
+        if (JSON.stringify(p.scene) !== JSON.stringify(r.scene)) {
+          const maintenant = Date.now();
+          decision.current = { source: 'secours', depuis: maintenant, local: maintenant };
+          setScene({ scene: r.scene, n: ++numero.current, nRegie: 0, fondu: FONDU_DEFAUT_MS, source: 'secours' });
+        }
       }
     }, BATTEMENT_MS);
     const auRevoir = () => envoyer({ t: 'au-revoir', v: VERSION_SORTIE, id });
     window.addEventListener('pagehide', auRevoir);
-    return () => { clearInterval(battement); window.removeEventListener('pagehide', auRevoir); a(); b(); c(); t.fermer(); transport.current = null; };
-  }, [recevoir, envoyer, id, salleParams, gestionFlux, bib, configDepart]);
+    return () => {
+      clearInterval(battement); window.removeEventListener('pagehide', auRevoir);
+      for (const f of desabonner) f();
+      for (const t of liste) t.fermer();
+      transports.current = [];
+    };
+  }, [recevoir, envoyer, presence, id, salleParams, configDepart]);
 
   // témoin : visible 3 s après la connexion, toujours quand la liaison manque
   useEffect(() => {
@@ -273,7 +319,7 @@ export function PageSortie() {
           </div>
 
           <div className={'so-temoin ' + liaison + (temoinVisible || !repos ? '' : ' cache')} role="status">
-            <i />{texteLiaison}{salleParams ? ' · salle' : ''}{secours ? ' · secours' : ''}
+            <i />{texteLiaison}{salleParams ? ' · canal local + salle' : ' · canal local'}{secours ? ' · secours' : ''}
           </div>
           {alerte && <div className="so-alerte" role="alert">{alerte}</div>}
 

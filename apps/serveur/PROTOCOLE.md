@@ -99,7 +99,7 @@ pas d'`ack`, même en refus).
 | `mode` | `cseq`, `mode:'ecrire'\|'repeter'\|'jouer'` | `ack` + `mode` à tous (+ `verrou` si passage en Scène) |
 | `lecture` | `etat`, `cseq?` | `lecture` aux autres (+ `ack` si `cseq`) |
 | `enregistrer` | `cseq`, `message?` (≤ 200) | `ack` (`res:{version}` ou `{version, inchange:true}`, `statut:'conflit'`) + `version` à tous |
-| `scene` | `message` (objet, ≤ 32 Ko) : message de la sortie écran scène (régie ↔ sortie, voir apps/conducteur/src/sortie/protocole.ts) | `scene` aux autres ; rien n'est gardé |
+| `scene` | `message` (objet, ≤ 32 Ko) : message de la sortie écran scène (régie ↔ sortie, voir apps/conducteur/src/sortie/protocole.ts ; opaque pour le serveur — plusieurs régies peuvent publier, la sortie arbitre par `message.source` / `message.depuis`) | `scene` aux autres ; rien n'est gardé |
 | `rtc` | `vers` (session cible, ou `'*'` = tous les autres), `signal` (objet opaque, ≤ 64 Ko) : signalisation WebRTC du flux du streamer (annonce, offre/réponse SDP, candidats ICE, consignes ; voir apps/conducteur/src/flux/protocole.ts) | `rtc` à la session visée (tous ses sockets) ou aux autres ; `erreur{code:'rtc-absent'}` si la session visée n'est pas là ; rien n'est gardé |
 | `resync` | — | `instantane{raison:'resync'}` |
 | `ping` | `id?` | `pong` |

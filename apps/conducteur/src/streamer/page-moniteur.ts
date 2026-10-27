@@ -7,32 +7,59 @@ import { mesurerLatenceMire } from '../flux/mire';
 import { noteQualite, resumeStats } from '../flux/stats';
 import type { ConfigPage } from './config';
 import { el } from './dom';
-import { ajouterTransport, demarrerRelais, publierScene } from '../sortie/relais';
+import { ajouterTransport, definirSalleFlux, demarrerRelais, publierScene, useSortie, type EtatRelais } from '../sortie/relais';
 import { transportLocal } from '../sortie/canal';
+import { TransportSalle } from '../sortie/salle';
+
+/** Identifiant de personne pour la salle ([A-Za-z0-9_-]{6,64}). */
+function idMoniteur(): string {
+  const a = new Uint8Array(10);
+  crypto.getRandomValues(a);
+  return 'moniteur_' + Array.from(a, (x) => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join('');
+}
+
+/** Retour de la sortie lu dans le battement « present » : connectée ou non, scène montrée, média introuvable. */
+export function texteRetourSortie(s: Pick<EtatRelais, 'fenetre' | 'sceneVue' | 'sortie' | 'salle' | 'autreRegie'>): string {
+  const salle = s.salle === 'connecte' ? ' · salle connectée' : s.salle === 'aucune' ? '' : ` · salle ${s.salle}`;
+  if (s.fenetre !== 'connectee') return `sortie : non vue (ouvrez-la depuis la page de démarrage)${salle}`;
+  const absent = s.sortie?.absent ? ` · ⚠ ${s.sortie.absent} introuvable — choisir le dossier médias sur la sortie (touche M)` : '';
+  return `sortie : connectée · montre ${s.sceneVue ?? '?'}${s.autreRegie ? ' (autre régie)' : ''}${absent}${salle}`;
+}
 
 /**
- * Barre « SCÈNE » : pilotage manuel de la sortie Écran scène ouverte dans ce même navigateur (canal local) —
- * direct du streamer, vidéo précalculée (lue en local par la sortie, depuis son « Dossier médias »), noir, QR du public,
- * avec le temps de fondu. Sert à l'essai réel de bascule direct ↔ vidéo ; en spectacle, c'est la conduite qui pilote.
+ * Barre « SCÈNE » : pilotage manuel de la sortie Écran scène — direct du streamer, vidéo précalculée (lue en local par
+ * la sortie, depuis ses médias), noir, QR du public, avec le temps de fondu. Publie sur le canal local (sortie dans ce
+ * navigateur) ET par la salle du projet (sortie sur une autre machine) ; la sortie garde la commande la plus récente,
+ * d'où qu'elle vienne (Conducteur, autre moniteur). Le retour de la sortie (scène montrée, vidéo introuvable)
+ * s'affiche au bout de la barre. En spectacle, c'est la conduite qui pilote, par le même chemin.
  */
-function barreScene(): HTMLElement {
+function barreScene(c: ConfigPage): HTMLElement {
   ajouterTransport(transportLocal());
+  if (c.projet && c.jeton) {
+    // la sortie de ce navigateur, ouverte sans adresse de salle, reçoit le flux du streamer de la même salle
+    definirSalleFlux({ serveur: c.serveur, projet: c.projet, jeton: c.jeton });
+    ajouterTransport(new TransportSalle({ serveur: c.serveur, projet: c.projet, jeton: c.jeton, role: 'regie', personne: idMoniteur(), nom: 'Moniteur · scène' }));
+  }
   demarrerRelais();
   const fondu = el('input', { type: 'range', min: 0, max: 2000, step: 100, value: 800, title: 'fondu (ms)' });
   const fonduTxt = el('span', { class: 'pc-stats' }, '0,8 s');
   fondu.addEventListener('input', () => { fonduTxt.textContent = (Number(fondu.value) / 1000).toFixed(1).replace('.', ',') + ' s'; });
-  const asset = el('input', { value: 'test-h3.mp4', size: 18, title: 'nom du fichier dans le dossier médias de la sortie' });
+  const asset = el('input', { value: 'test-h3.mp4', size: 18, title: 'nom du fichier dans le dossier médias de la sortie', 'data-asset-scene': '' });
+  const retour = el('span', { class: 'pc-stats', 'data-retour-sortie': '' }, '');
+  const majRetour = () => { retour.textContent = texteRetourSortie(useSortie.getState()); };
+  useSortie.subscribe(majRetour);
+  majRetour();
   const boucle = el('input', { type: 'checkbox', checked: true });
   const f = () => Number(fondu.value);
   const bouton = (txt: string, cmd: () => void) => el('button', { class: 'pc-bouton', onclick: cmd }, txt);
   return el('div', { class: 'pc-bas' },
     el('span', { class: 'pc-stats' }, 'SCÈNE'),
     bouton('DIRECT', () => publierScene({ scene: 'streamer' }, { fondu: f() })),
-    bouton('VIDÉO', () => publierScene({ scene: 'video', asset: asset.value.trim(), boucle: boucle.checked, cadrage: 'contain' }, { fondu: f() })),
+    bouton('VIDÉO', () => { const a = asset.value.trim(); if (a) publierScene({ scene: 'video', asset: a, boucle: boucle.checked, cadrage: 'contain' }, { fondu: f() }); }),
     asset, el('label', { class: 'pc-stats' }, boucle, ' boucle'),
     bouton('NOIR', () => publierScene({ scene: 'noir' }, { fondu: f() })),
     bouton('QR PUBLIC', () => publierScene({ scene: 'accueil-qr' }, { fondu: f() })),
-    el('span', { class: 'pc-stats' }, 'fondu'), fondu, fonduTxt);
+    el('span', { class: 'pc-stats' }, 'fondu'), fondu, fonduTxt, retour);
 }
 
 const LIBELLES: Record<EtatFlux['phase'], string> = {
@@ -60,7 +87,7 @@ export function pageMoniteur(racine: HTMLElement, c: ConfigPage): void {
 
   racine.append(el('div', { class: 'pc' },
     el('header', { class: 'pc-tete' }, el('h1', {}, 'FLUX STREAMER'), etatTxt, statsTxt, mireTxt, el('span', { style: 'flex:1' }), btSon, btPlein),
-    barreScene(),
+    barreScene(c),
     el('div', { class: 'pc-video' }, video),
     el('footer', { class: 'pc-bas' }, saisie, el('button', { class: 'pc-bouton', onclick: () => envoyer('info') }, 'Envoyer'), btUrgent, vu)));
 

@@ -26,6 +26,10 @@ export interface EtatRelais {
   scene: Scene | null;
   n: number;
   fondu: number;
+  /** heure de la décision de cette scène (renvoyée telle quelle : la sortie garde la décision la plus récente) */
+  depuis: number;
+  /** la sortie montre la scène d'une AUTRE régie (moniteur, autre machine) : elle a pris la main après nous */
+  autreRegie: boolean;
   /** 'auto' : la scène suit la lecture ; 'manuel' : une commande la tient jusqu'à relacherScene() */
   mode: 'auto' | 'manuel';
   etat: EtatScene | null;
@@ -53,10 +57,17 @@ let titreProjet: string | undefined;
 let salleFlux: ConfigSortie['flux'];
 const configEffective = (): ConfigSortie => ({ ...configParDefaut(titreProjet), ...configPerso, ...(salleFlux ? { flux: salleFlux } : {}) });
 
-export const useSortie = create<EtatRelais>(() => ({
-  fenetre: 'fermee', scene: null, n: 0, fondu: FONDU_DEFAUT_MS, mode: 'auto', etat: null, heureEtat: 0,
+const etatInitial = (): EtatRelais => ({
+  fenetre: 'fermee', scene: null, n: 0, fondu: FONDU_DEFAUT_MS, depuis: 0, autreRegie: false, mode: 'auto', etat: null, heureEtat: 0,
   config: configEffective(), sortie: null, sceneVue: null, vuLe: 0, finVideo: null, salle: 'aucune', precharger: [],
-}));
+});
+export const useSortie = create<EtatRelais>(etatInitial);
+
+/** Identifiant de CETTE régie (une par page) : la sortie arbitre les scènes de plusieurs régies (arbitrage.ts). */
+export const SOURCE_REGIE = 'regie_' + (() => {
+  try { const a = new Uint8Array(10); globalThis.crypto.getRandomValues(a); return Array.from(a, (x) => 'abcdefghijklmnopqrstuvwxyz0123456789'[x % 36]).join(''); }
+  catch { return Math.random().toString(36).slice(2, 12); }
+})();
 
 // ── commandes de scène ───────────────────────────────────────────────────────────────────────────────────────────
 
@@ -93,6 +104,8 @@ export function sceneDeCommande(cmd: CommandeScene | Scene, config: ConfigSortie
 const transports = new Set<Transport>();
 const desabonnements = new Map<Transport, () => void>();
 const finsVideo = new Set<(asset: string, n: number) => void>();
+/** fins de vidéo déjà signalées (la même peut arriver par deux chemins) */
+const finsVues: string[] = [];
 let derniersPrecharges: string[] = [];
 let chronoManuel: { debut: number; duree: number } | null = null;
 let battement: ReturnType<typeof setInterval> | undefined;
@@ -115,7 +128,8 @@ function rejouer(t?: Transport) {
   const s = useSortie.getState();
   const env = (m: unknown) => (t ? t.envoyer(m) : diffuser(m));
   env(msgConfig(s.config));
-  if (s.scene) env(msgScene(s.scene, s.n, 0));
+  // renvoi : l'heure de décision d'origine (une commande plus récente d'une autre régie reste à l'écran)
+  if (s.scene) env(msgScene(s.scene, s.n, 0, Date.now(), { source: SOURCE_REGIE, depuis: s.depuis }));
   if (s.etat) env(msgEtat(etatAvecChrono(s.etat)));
   if (s.precharger.length) env(msgPrecharger(s.precharger));
 }
@@ -126,11 +140,21 @@ function recevoir(brut: unknown) {
   const maintenant = Date.now();
   switch (m.t) {
     case 'bonjour': useSortie.setState({ vuLe: maintenant }); rejouer(); break;
-    case 'present': useSortie.setState({ vuLe: maintenant, sceneVue: m.scene, ...(m.etat ? { sortie: m.etat } : {}) }); break;
-    case 'fin-video':
+    case 'present': {
+      const autreRegie = !!m.source && m.source !== SOURCE_REGIE;
+      useSortie.setState({ vuLe: maintenant, sceneVue: m.scene, autreRegie, ...(m.etat ? { sortie: m.etat } : {}) });
+      break;
+    }
+    case 'fin-video': {
+      // la même fin peut arriver par le canal local ET par la salle : un seul signal
+      const cle = `${m.id}|${m.asset}|${m.n}|${m.heure}`;
+      if (finsVues.includes(cle)) break;
+      finsVues.push(cle);
+      if (finsVues.length > 20) finsVues.shift();
       useSortie.setState({ vuLe: maintenant, finVideo: { asset: m.asset, n: m.n, heure: maintenant } });
       for (const f of finsVideo) f(m.asset, m.n);
       break;
+    }
     case 'au-revoir': useSortie.setState({ vuLe: 0, sortie: null, sceneVue: null }); break;
   }
   majFenetre();
@@ -169,12 +193,15 @@ export function arreterRelais(): void {
   if (utilisateurs === 0 && battement) { clearInterval(battement); battement = undefined; }
 }
 
-function envoyerScene(scene: Scene, fondu: number) {
+/** Envoie une scène, datée de sa décision. `forcer` : renvoyée même si c'est déjà la nôtre (une autre régie a pu
+ *  prendre la main entre-temps : un clic sur un bouton de scène doit TOUJOURS reprendre la sortie). */
+function envoyerScene(scene: Scene, fondu: number, forcer = false) {
   const s = useSortie.getState();
-  if (s.scene && cleScene(s.scene) === cleScene(scene)) return;
+  if (!forcer && s.scene && cleScene(s.scene) === cleScene(scene)) return;
   const n = s.n + 1;
-  useSortie.setState({ scene, n, fondu });
-  diffuser(msgScene(scene, n, fondu));
+  const depuis = Math.max(Date.now(), s.depuis + 1);
+  useSortie.setState({ scene, n, fondu, depuis });
+  diffuser(msgScene(scene, n, fondu, depuis, { source: SOURCE_REGIE, depuis }));
 }
 
 /** Montre une scène sur la sortie. Par défaut la commande est TENUE (mode manuel) jusqu'à relacherScene(). */
@@ -183,7 +210,7 @@ export function publierScene(cmd: CommandeScene | Scene, o: { fondu?: number; ma
   const fondu = borneFondu(o.fondu ?? ('fondu' in cmd ? cmd.fondu : undefined) ?? FONDU_DEFAUT_MS);
   chronoManuel = scene.type === 'chrono' ? { debut: Date.now(), duree: scene.duree } : null;
   if (o.maintenir !== false) useSortie.setState({ mode: 'manuel' });
-  envoyerScene(scene, fondu);
+  envoyerScene(scene, fondu, true);
   const e = useSortie.getState().etat;
   if (chronoManuel && e) diffuser(msgEtat(etatAvecChrono(e)));
   return scene;
@@ -279,12 +306,9 @@ export function surFinVideo(fn: (asset: string, n: number) => void): () => void 
 /** Remise à zéro (tests). */
 export function reinitialiserRelais(): void {
   for (const t of [...transports]) { desabonnements.get(t)?.(); transports.delete(t); }
-  desabonnements.clear(); finsVideo.clear();
+  desabonnements.clear(); finsVideo.clear(); finsVues.length = 0;
   derniersPrecharges = []; dernierEtat = ''; chronoManuel = null; configPerso = {}; titreProjet = undefined; salleFlux = undefined; fenetreRef = null; rappelAuto = null;
   if (battement) clearInterval(battement);
   battement = undefined; utilisateurs = 0;
-  useSortie.setState({
-    fenetre: 'fermee', scene: null, n: 0, fondu: FONDU_DEFAUT_MS, mode: 'auto', etat: null, heureEtat: 0,
-    config: configEffective(), sortie: null, sceneVue: null, vuLe: 0, finVideo: null, salle: 'aucune', precharger: [],
-  });
+  useSortie.setState(etatInitial());
 }
