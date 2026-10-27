@@ -1,6 +1,6 @@
 // Générateur du projet ÉCHO (projets/echo/echo.conducteur.json).
 // Les textes de l'auteur sont EXTRAITS de DEROULE-AUTEUR.md (jamais retapés) : mot pour mot garanti.
-// Usage (depuis la racine du dépôt) : npx tsx projets/echo/generer-echo.ts
+// Usage (depuis la racine du dépôt) : npx tsx projets/echo/generer-echo-complet.ts
 // Il réécrit echo.conducteur.json : à relancer si l'auteur modifie DEROULE-AUTEUR.md (les modifications faites à la main
 // dans le Conducteur seraient écrasées : exporter d'abord).
 import { readFileSync, writeFileSync } from 'node:fs';
