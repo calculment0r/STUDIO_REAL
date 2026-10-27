@@ -19,41 +19,41 @@ interface EtapeDef {
 interface Bloc { nom: string; etapes: EtapeDef[] }
 
 const BLOCS: Bloc[] = [
+  // Le cheminement du soir (27/10) : chaque étape = un tap de la « conduite écho » de la régie figurants (champ outil).
   { nom: '1 · Le fil', etapes: [
-    { id: 'b1_entree', nom: 'Entrée du public · QR', minutes: 5, ecran: 'QR code du public', plateau: 'chaise / table', telephones: 'scan du QR, pseudo',
-      outil: 'QR → page téléphone (serveur figurants)', sortie: 'accueil-qr' },
-    { id: 'b1_flux', nom: 'Flux Instagram', minutes: 3, ecran: 'rien', plateau: 'chaise / table', telephones: 'FLUX Instagram (vidéo)', sortie: 'noir' },
-    { id: 'b1_choix', nom: 'Abonnez-vous / désabonnez-vous', minutes: 1, ecran: 'rien', plateau: 'chaise / table',
-      telephones: 'fin du flux, question : ABONNEZ-VOUS À SON COMPTE / DÉSABONNEZ-VOUS DE SON COMPTE' },
-    { id: 'b1_pourquoi', nom: 'Pourquoi ce choix', minutes: 2, ecran: 'rien', plateau: 'chaise / table',
-      telephones: 'une fois le choix fait au clic, une case avec champ texte s’affiche : écrire pourquoi ce choix' },
+    { id: 'b1_entree', nom: 'Entrée du public · QR', minutes: 5, ecran: 'QR code du public', plateau: 'chaise / table',
+      telephones: 'scan du QR, pseudo, puis « Regardez la vidéo »', outil: 'régie : tap 1 · Téléphones « Regardez la vidéo »', sortie: 'accueil-qr' },
+    { id: 'b1_flux', nom: 'Flux Instagram', minutes: 1, ecran: 'mur (vide)', plateau: 'chaise / table', telephones: 'FLUX Instagram (vidéo)',
+      outil: 'régie : tap 2 · FLUX INSTA' },
+    { id: 'b1_choix', nom: 'Abonne / désabonne + pourquoi', minutes: 2, ecran: 'mur : les réponses avec le pseudo, au fil de l’eau', plateau: 'chaise / table',
+      telephones: 'à la fin de la vidéo : ABONNEZ-VOUS / DÉSABONNEZ-VOUS, puis « pourquoi ? » et valider', outil: 'automatique en fin de vidéo (tap 3 pour forcer)' },
   ] },
   { nom: '2 · Les commentaires', etapes: [
-    { id: 'b2_lecture', nom: 'Jim lit les commentaires', minutes: 4, ecran: 'textes des spectateurs affichés sur le grand écran',
-      plateau: 'l’acteur entre sur le plateau et lit', telephones: 'rien', outil: 'mur de commentaires (page chat du serveur figurants)' },
+    { id: 'b2_lecture', nom: 'Franck lit les commentaires · pause', minutes: 4, ecran: 'mur : les commentaires restent affichés',
+      plateau: 'Franck entre sur scène et lit', telephones: 'merci, regardez l’écran', outil: 'aucun tap : on est en pause' },
   ] },
   { nom: '3 · La ministre', etapes: [
-    { id: 'b3_voix_junon', nom: 'Voix off de la ministre Junon', minutes: 3, ecran: 'VOIX OFF DE LA MINISTRE JUNON',
-      plateau: 's’assoit et clique sur son ordi', telephones: 'rien' },
+    { id: 'b3_junon', nom: 'Discours de la ministre Junon (audio)', minutes: 2, ecran: 'mur : commentaires pré-écrits calés sur le discours',
+      plateau: 'Franck écoute', telephones: '« Regardez la scène »', outil: 'régie : tap 4 · JUNON' },
   ] },
-  { nom: '4 · Les questions à Écho', etapes: [
-    { id: 'b4_question', nom: '(1) Franck pose sa question à Écho', minutes: 1, ecran: 'téléphone de la ministre : la question',
-      plateau: '(1) Franck pose des questions à ÉCHO', telephones: 'rien', outil: 'page ministre · régie VOTE : choisir la question 1 à 5' },
-    { id: 'b4_reponses', nom: '(2) Le public répond', minutes: 1, ecran: 'téléphone de la ministre : les votes montent (sans les réponses)',
-      plateau: 'Franck attend', telephones: '(2) écrivent leur réponse · ce soir : 4 réponses proposées, un vote', outil: 'régie VOTE : OUVRIR' },
-    { id: 'b4_synthese', nom: '(3) Synthèse d’Écho', minutes: 1, ecran: '(3) synthèse d’Écho : la phrase de résultat',
-      plateau: 'Franck lit', telephones: 'résultat à l’écran', outil: 'régie VOTE : RÉVÉLER' },
-    { id: 'b4_dialogue', nom: 'Franck discute avec Écho', minutes: 3, ecran: 'résultat affiché', plateau: 'Franck appelle Écho : « question numéro X », il se défend',
-      telephones: 'rien', outil: 'appel ElevenLabs « ECO » sur l’ordinateur à part · puis régie VOTE : FERMER, question suivante (×5)' },
+  { nom: '4 · Modérateurs et Écho', etapes: [
+    { id: 'b4_notif', nom: 'Notification « modérateur »', minutes: 1, ecran: 'noir', plateau: 'Franck lance l’appel à ÉCO sur son ordinateur',
+      telephones: 'notification : vous êtes désormais modérateur', outil: 'régie : tap 5 · notification + écran noir · page eco de Franck' },
   ] },
-  { nom: '5 · Le Google Meet', etapes: [
-    { id: 'b5_meet', nom: 'Google Meet Junon / Nora', minutes: 4, ecran: 'Google Meet de Junon', plateau: 'Google Meet de Nora', telephones: 'rien' },
-    { id: 'b5_voix_echo', nom: 'Voix d’Écho · question de Franck', minutes: 3, ecran: 'voix d’Écho', plateau: 'question de Franck', telephones: 'rien',
-      outil: 'appel ElevenLabs « ECO »' },
+  { nom: '5 · Les questions à Écho', etapes: [1, 2, 3, 4, 15].flatMap((n): EtapeDef[] => [
+    { id: `b5_q${n}`, nom: `Q${n} · réponses`, minutes: 1, ecran: 'mur : la question et les 4 réponses en grand, « @x a voté »',
+      plateau: `Franck pose la question ${n} à ÉCO`, telephones: 'les 4 réponses, un vote', outil: `régie : tap Q${n} · réponses` },
+    { id: `b5_q${n}_res`, nom: `Q${n} · résultat`, minutes: 2, ecran: 'mur : les pourcentages forcés, la réponse gagnante en avant',
+      plateau: 'ÉCO argumente le résultat, Franck se défend', telephones: 'résultat à l’écran', outil: `régie : tap Q${n} · RÉSULTAT` },
+  ]) },
+  { nom: '6 · La visio de la ministre', etapes: [
+    { id: 'b6_visio', nom: 'Visio Franck ↔ ministre', minutes: 4, ecran: 'les deux vidéos (page visio/scene), son de la ministre seul',
+      plateau: 'Franck sur son téléphone (page visio/franck)', telephones: '« Regardez la scène »', outil: 'régie : tap « Fin des questions » · puis fenêtre visio/scene en plein écran' },
+    { id: 'b6_pause', nom: 'La ministre raccroche · pause', minutes: 1, ecran: 'noir', plateau: '', telephones: '« Regardez la scène »', outil: 'aucun tap : pause' },
   ] },
-  { nom: '6 · Ellipse et président', etapes: [
-    { id: 'b6_ellipse', nom: 'Ellipse', minutes: 1, ecran: 'ellipse', plateau: 'ellipse', telephones: 'ellipse', sortie: 'noir' },
-    { id: 'b6_president', nom: 'Le président Boilot · pitch', minutes: 3, ecran: 'président Boilot pitch', plateau: '', telephones: '' },
+  { nom: '7 · Le président Boilot', etapes: [
+    { id: 'b7_president', nom: 'Discours du président Jean Boilot', minutes: 2, ecran: 'mur (audio du discours)', plateau: '', telephones: '« Regardez la scène »',
+      outil: 'régie : tap PRÉSIDENT BOILOT' },
   ] },
 ];
 

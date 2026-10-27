@@ -13,13 +13,16 @@
         "n": "3 · La ministre"
       },
       {
-        "n": "4 · Les questions à Écho"
+        "n": "4 · Modérateurs et Écho"
       },
       {
-        "n": "5 · Le Google Meet"
+        "n": "5 · Les questions à Écho"
       },
       {
-        "n": "6 · Ellipse et président"
+        "n": "6 · La visio de la ministre"
+      },
+      {
+        "n": "7 · Le président Boilot"
       }
     ],
     "ev": [
@@ -45,8 +48,8 @@
             "params": {
               "ecran": "QR code du public",
               "plateau": "chaise / table",
-              "telephones": "scan du QR, pseudo",
-              "outil": "QR → page téléphone (serveur figurants)",
+              "telephones": "scan du QR, pseudo, puis « Regardez la vidéo »",
+              "outil": "régie : tap 1 · Téléphones « Regardez la vidéo »",
               "sortie": "accueil-qr",
               "duree_reperes_min": 5
             }
@@ -85,11 +88,11 @@
               50
             ],
             "params": {
-              "ecran": "rien",
+              "ecran": "mur (vide)",
               "plateau": "chaise / table",
               "telephones": "FLUX Instagram (vidéo)",
-              "sortie": "noir",
-              "duree_reperes_min": 3
+              "outil": "régie : tap 2 · FLUX INSTA",
+              "duree_reperes_min": 1
             }
           }
         ],
@@ -109,12 +112,12 @@
       {
         "id": "b1_choix",
         "act": 0,
-        "name": "Abonnez-vous / désabonnez-vous",
+        "name": "Abonne / désabonne + pourquoi",
         "entry": "b1_choix_s",
         "st": [
           {
             "id": "b1_choix_s",
-            "name": "Abonnez-vous / désabonnez-vous",
+            "name": "Abonne / désabonne + pourquoi",
             "ty": "k:scene",
             "c": 0,
             "r": 0,
@@ -126,10 +129,11 @@
               50
             ],
             "params": {
-              "ecran": "rien",
+              "ecran": "mur : les réponses avec le pseudo, au fil de l’eau",
               "plateau": "chaise / table",
-              "telephones": "fin du flux, question : ABONNEZ-VOUS À SON COMPTE / DÉSABONNEZ-VOUS DE SON COMPTE",
-              "duree_reperes_min": 1
+              "telephones": "à la fin de la vidéo : ABONNEZ-VOUS / DÉSABONNEZ-VOUS, puis « pourquoi ? » et valider",
+              "outil": "automatique en fin de vidéo (tap 3 pour forcer)",
+              "duree_reperes_min": 2
             }
           }
         ],
@@ -147,54 +151,14 @@
         }
       },
       {
-        "id": "b1_pourquoi",
-        "act": 0,
-        "name": "Pourquoi ce choix",
-        "entry": "b1_pourquoi_s",
-        "st": [
-          {
-            "id": "b1_pourquoi_s",
-            "name": "Pourquoi ce choix",
-            "ty": "k:scene",
-            "c": 0,
-            "r": 0,
-            "dx": 0,
-            "dy": 0,
-            "k": [
-              0,
-              50,
-              50
-            ],
-            "params": {
-              "ecran": "rien",
-              "plateau": "chaise / table",
-              "telephones": "une fois le choix fait au clic, une case avec champ texte s’affiche : écrire pourquoi ce choix",
-              "duree_reperes_min": 2
-            }
-          }
-        ],
-        "tr": [
-          {
-            "a": "b1_pourquoi_s",
-            "b": "",
-            "g": [],
-            "mode": "all"
-          }
-        ],
-        "gate": {
-          "mode": "go",
-          "g": []
-        }
-      },
-      {
         "id": "b2_lecture",
         "act": 1,
-        "name": "Jim lit les commentaires",
+        "name": "Franck lit les commentaires · pause",
         "entry": "b2_lecture_s",
         "st": [
           {
             "id": "b2_lecture_s",
-            "name": "Jim lit les commentaires",
+            "name": "Franck lit les commentaires · pause",
             "ty": "k:scene",
             "c": 0,
             "r": 0,
@@ -206,10 +170,10 @@
               50
             ],
             "params": {
-              "ecran": "textes des spectateurs affichés sur le grand écran",
-              "plateau": "l’acteur entre sur le plateau et lit",
-              "telephones": "rien",
-              "outil": "mur de commentaires (page chat du serveur figurants)",
+              "ecran": "mur : les commentaires restent affichés",
+              "plateau": "Franck entre sur scène et lit",
+              "telephones": "merci, regardez l’écran",
+              "outil": "aucun tap : on est en pause",
               "duree_reperes_min": 4
             }
           }
@@ -228,14 +192,14 @@
         }
       },
       {
-        "id": "b3_voix_junon",
+        "id": "b3_junon",
         "act": 2,
-        "name": "Voix off de la ministre Junon",
-        "entry": "b3_voix_junon_s",
+        "name": "Discours de la ministre Junon (audio)",
+        "entry": "b3_junon_s",
         "st": [
           {
-            "id": "b3_voix_junon_s",
-            "name": "Voix off de la ministre Junon",
+            "id": "b3_junon_s",
+            "name": "Discours de la ministre Junon (audio)",
             "ty": "k:scene",
             "c": 0,
             "r": 0,
@@ -247,16 +211,17 @@
               50
             ],
             "params": {
-              "ecran": "VOIX OFF DE LA MINISTRE JUNON",
-              "plateau": "s’assoit et clique sur son ordi",
-              "telephones": "rien",
-              "duree_reperes_min": 3
+              "ecran": "mur : commentaires pré-écrits calés sur le discours",
+              "plateau": "Franck écoute",
+              "telephones": "« Regardez la scène »",
+              "outil": "régie : tap 4 · JUNON",
+              "duree_reperes_min": 2
             }
           }
         ],
         "tr": [
           {
-            "a": "b3_voix_junon_s",
+            "a": "b3_junon_s",
             "b": "",
             "g": [],
             "mode": "all"
@@ -268,14 +233,14 @@
         }
       },
       {
-        "id": "b4_question",
+        "id": "b4_notif",
         "act": 3,
-        "name": "(1) Franck pose sa question à Écho",
-        "entry": "b4_question_s",
+        "name": "Notification « modérateur »",
+        "entry": "b4_notif_s",
         "st": [
           {
-            "id": "b4_question_s",
-            "name": "(1) Franck pose sa question à Écho",
+            "id": "b4_notif_s",
+            "name": "Notification « modérateur »",
             "ty": "k:scene",
             "c": 0,
             "r": 0,
@@ -287,17 +252,17 @@
               50
             ],
             "params": {
-              "ecran": "téléphone de la ministre : la question",
-              "plateau": "(1) Franck pose des questions à ÉCHO",
-              "telephones": "rien",
-              "outil": "page ministre · régie VOTE : choisir la question 1 à 5",
+              "ecran": "noir",
+              "plateau": "Franck lance l’appel à ÉCO sur son ordinateur",
+              "telephones": "notification : vous êtes désormais modérateur",
+              "outil": "régie : tap 5 · notification + écran noir · page eco de Franck",
               "duree_reperes_min": 1
             }
           }
         ],
         "tr": [
           {
-            "a": "b4_question_s",
+            "a": "b4_notif_s",
             "b": "",
             "g": [],
             "mode": "all"
@@ -309,137 +274,14 @@
         }
       },
       {
-        "id": "b4_reponses",
-        "act": 3,
-        "name": "(2) Le public répond",
-        "entry": "b4_reponses_s",
-        "st": [
-          {
-            "id": "b4_reponses_s",
-            "name": "(2) Le public répond",
-            "ty": "k:scene",
-            "c": 0,
-            "r": 0,
-            "dx": 0,
-            "dy": 0,
-            "k": [
-              0,
-              50,
-              50
-            ],
-            "params": {
-              "ecran": "téléphone de la ministre : les votes montent (sans les réponses)",
-              "plateau": "Franck attend",
-              "telephones": "(2) écrivent leur réponse · ce soir : 4 réponses proposées, un vote",
-              "outil": "régie VOTE : OUVRIR",
-              "duree_reperes_min": 1
-            }
-          }
-        ],
-        "tr": [
-          {
-            "a": "b4_reponses_s",
-            "b": "",
-            "g": [],
-            "mode": "all"
-          }
-        ],
-        "gate": {
-          "mode": "go",
-          "g": []
-        }
-      },
-      {
-        "id": "b4_synthese",
-        "act": 3,
-        "name": "(3) Synthèse d’Écho",
-        "entry": "b4_synthese_s",
-        "st": [
-          {
-            "id": "b4_synthese_s",
-            "name": "(3) Synthèse d’Écho",
-            "ty": "k:scene",
-            "c": 0,
-            "r": 0,
-            "dx": 0,
-            "dy": 0,
-            "k": [
-              0,
-              50,
-              50
-            ],
-            "params": {
-              "ecran": "(3) synthèse d’Écho : la phrase de résultat",
-              "plateau": "Franck lit",
-              "telephones": "résultat à l’écran",
-              "outil": "régie VOTE : RÉVÉLER",
-              "duree_reperes_min": 1
-            }
-          }
-        ],
-        "tr": [
-          {
-            "a": "b4_synthese_s",
-            "b": "",
-            "g": [],
-            "mode": "all"
-          }
-        ],
-        "gate": {
-          "mode": "go",
-          "g": []
-        }
-      },
-      {
-        "id": "b4_dialogue",
-        "act": 3,
-        "name": "Franck discute avec Écho",
-        "entry": "b4_dialogue_s",
-        "st": [
-          {
-            "id": "b4_dialogue_s",
-            "name": "Franck discute avec Écho",
-            "ty": "k:scene",
-            "c": 0,
-            "r": 0,
-            "dx": 0,
-            "dy": 0,
-            "k": [
-              0,
-              50,
-              50
-            ],
-            "params": {
-              "ecran": "résultat affiché",
-              "plateau": "Franck appelle Écho : « question numéro X », il se défend",
-              "telephones": "rien",
-              "outil": "appel ElevenLabs « ECO » sur l’ordinateur à part · puis régie VOTE : FERMER, question suivante (×5)",
-              "duree_reperes_min": 3
-            }
-          }
-        ],
-        "tr": [
-          {
-            "a": "b4_dialogue_s",
-            "b": "",
-            "g": [],
-            "mode": "all"
-          }
-        ],
-        "gate": {
-          "mode": "go",
-          "g": []
-        }
-      },
-      {
-        "id": "b5_meet",
+        "id": "b5_q1",
         "act": 4,
-        "name": "Google Meet Junon / Nora",
-        "entry": "b5_meet_s",
+        "name": "Q1 · réponses",
+        "entry": "b5_q1_s",
         "st": [
           {
-            "id": "b5_meet_s",
-            "name": "Google Meet Junon / Nora",
+            "id": "b5_q1_s",
+            "name": "Q1 · réponses",
             "ty": "k:scene",
             "c": 0,
             "r": 0,
@@ -451,16 +293,427 @@
               50
             ],
             "params": {
-              "ecran": "Google Meet de Junon",
-              "plateau": "Google Meet de Nora",
-              "telephones": "rien",
+              "ecran": "mur : la question et les 4 réponses en grand, « @x a voté »",
+              "plateau": "Franck pose la question 1 à ÉCO",
+              "telephones": "les 4 réponses, un vote",
+              "outil": "régie : tap Q1 · réponses",
+              "duree_reperes_min": 1
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q1_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q1_res",
+        "act": 4,
+        "name": "Q1 · résultat",
+        "entry": "b5_q1_res_s",
+        "st": [
+          {
+            "id": "b5_q1_res_s",
+            "name": "Q1 · résultat",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : les pourcentages forcés, la réponse gagnante en avant",
+              "plateau": "ÉCO argumente le résultat, Franck se défend",
+              "telephones": "résultat à l’écran",
+              "outil": "régie : tap Q1 · RÉSULTAT",
+              "duree_reperes_min": 2
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q1_res_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q2",
+        "act": 4,
+        "name": "Q2 · réponses",
+        "entry": "b5_q2_s",
+        "st": [
+          {
+            "id": "b5_q2_s",
+            "name": "Q2 · réponses",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : la question et les 4 réponses en grand, « @x a voté »",
+              "plateau": "Franck pose la question 2 à ÉCO",
+              "telephones": "les 4 réponses, un vote",
+              "outil": "régie : tap Q2 · réponses",
+              "duree_reperes_min": 1
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q2_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q2_res",
+        "act": 4,
+        "name": "Q2 · résultat",
+        "entry": "b5_q2_res_s",
+        "st": [
+          {
+            "id": "b5_q2_res_s",
+            "name": "Q2 · résultat",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : les pourcentages forcés, la réponse gagnante en avant",
+              "plateau": "ÉCO argumente le résultat, Franck se défend",
+              "telephones": "résultat à l’écran",
+              "outil": "régie : tap Q2 · RÉSULTAT",
+              "duree_reperes_min": 2
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q2_res_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q3",
+        "act": 4,
+        "name": "Q3 · réponses",
+        "entry": "b5_q3_s",
+        "st": [
+          {
+            "id": "b5_q3_s",
+            "name": "Q3 · réponses",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : la question et les 4 réponses en grand, « @x a voté »",
+              "plateau": "Franck pose la question 3 à ÉCO",
+              "telephones": "les 4 réponses, un vote",
+              "outil": "régie : tap Q3 · réponses",
+              "duree_reperes_min": 1
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q3_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q3_res",
+        "act": 4,
+        "name": "Q3 · résultat",
+        "entry": "b5_q3_res_s",
+        "st": [
+          {
+            "id": "b5_q3_res_s",
+            "name": "Q3 · résultat",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : les pourcentages forcés, la réponse gagnante en avant",
+              "plateau": "ÉCO argumente le résultat, Franck se défend",
+              "telephones": "résultat à l’écran",
+              "outil": "régie : tap Q3 · RÉSULTAT",
+              "duree_reperes_min": 2
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q3_res_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q4",
+        "act": 4,
+        "name": "Q4 · réponses",
+        "entry": "b5_q4_s",
+        "st": [
+          {
+            "id": "b5_q4_s",
+            "name": "Q4 · réponses",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : la question et les 4 réponses en grand, « @x a voté »",
+              "plateau": "Franck pose la question 4 à ÉCO",
+              "telephones": "les 4 réponses, un vote",
+              "outil": "régie : tap Q4 · réponses",
+              "duree_reperes_min": 1
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q4_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q4_res",
+        "act": 4,
+        "name": "Q4 · résultat",
+        "entry": "b5_q4_res_s",
+        "st": [
+          {
+            "id": "b5_q4_res_s",
+            "name": "Q4 · résultat",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : les pourcentages forcés, la réponse gagnante en avant",
+              "plateau": "ÉCO argumente le résultat, Franck se défend",
+              "telephones": "résultat à l’écran",
+              "outil": "régie : tap Q4 · RÉSULTAT",
+              "duree_reperes_min": 2
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q4_res_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q15",
+        "act": 4,
+        "name": "Q15 · réponses",
+        "entry": "b5_q15_s",
+        "st": [
+          {
+            "id": "b5_q15_s",
+            "name": "Q15 · réponses",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : la question et les 4 réponses en grand, « @x a voté »",
+              "plateau": "Franck pose la question 15 à ÉCO",
+              "telephones": "les 4 réponses, un vote",
+              "outil": "régie : tap Q15 · réponses",
+              "duree_reperes_min": 1
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q15_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b5_q15_res",
+        "act": 4,
+        "name": "Q15 · résultat",
+        "entry": "b5_q15_res_s",
+        "st": [
+          {
+            "id": "b5_q15_res_s",
+            "name": "Q15 · résultat",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "mur : les pourcentages forcés, la réponse gagnante en avant",
+              "plateau": "ÉCO argumente le résultat, Franck se défend",
+              "telephones": "résultat à l’écran",
+              "outil": "régie : tap Q15 · RÉSULTAT",
+              "duree_reperes_min": 2
+            }
+          }
+        ],
+        "tr": [
+          {
+            "a": "b5_q15_res_s",
+            "b": "",
+            "g": [],
+            "mode": "all"
+          }
+        ],
+        "gate": {
+          "mode": "go",
+          "g": []
+        }
+      },
+      {
+        "id": "b6_visio",
+        "act": 5,
+        "name": "Visio Franck ↔ ministre",
+        "entry": "b6_visio_s",
+        "st": [
+          {
+            "id": "b6_visio_s",
+            "name": "Visio Franck ↔ ministre",
+            "ty": "k:scene",
+            "c": 0,
+            "r": 0,
+            "dx": 0,
+            "dy": 0,
+            "k": [
+              0,
+              50,
+              50
+            ],
+            "params": {
+              "ecran": "les deux vidéos (page visio/scene), son de la ministre seul",
+              "plateau": "Franck sur son téléphone (page visio/franck)",
+              "telephones": "« Regardez la scène »",
+              "outil": "régie : tap « Fin des questions » · puis fenêtre visio/scene en plein écran",
               "duree_reperes_min": 4
             }
           }
         ],
         "tr": [
           {
-            "a": "b5_meet_s",
+            "a": "b6_visio_s",
             "b": "",
             "g": [],
             "mode": "all"
@@ -472,55 +725,14 @@
         }
       },
       {
-        "id": "b5_voix_echo",
-        "act": 4,
-        "name": "Voix d’Écho · question de Franck",
-        "entry": "b5_voix_echo_s",
-        "st": [
-          {
-            "id": "b5_voix_echo_s",
-            "name": "Voix d’Écho · question de Franck",
-            "ty": "k:scene",
-            "c": 0,
-            "r": 0,
-            "dx": 0,
-            "dy": 0,
-            "k": [
-              0,
-              50,
-              50
-            ],
-            "params": {
-              "ecran": "voix d’Écho",
-              "plateau": "question de Franck",
-              "telephones": "rien",
-              "outil": "appel ElevenLabs « ECO »",
-              "duree_reperes_min": 3
-            }
-          }
-        ],
-        "tr": [
-          {
-            "a": "b5_voix_echo_s",
-            "b": "",
-            "g": [],
-            "mode": "all"
-          }
-        ],
-        "gate": {
-          "mode": "go",
-          "g": []
-        }
-      },
-      {
-        "id": "b6_ellipse",
+        "id": "b6_pause",
         "act": 5,
-        "name": "Ellipse",
-        "entry": "b6_ellipse_s",
+        "name": "La ministre raccroche · pause",
+        "entry": "b6_pause_s",
         "st": [
           {
-            "id": "b6_ellipse_s",
-            "name": "Ellipse",
+            "id": "b6_pause_s",
+            "name": "La ministre raccroche · pause",
             "ty": "k:scene",
             "c": 0,
             "r": 0,
@@ -532,17 +744,17 @@
               50
             ],
             "params": {
-              "ecran": "ellipse",
-              "plateau": "ellipse",
-              "telephones": "ellipse",
-              "sortie": "noir",
+              "ecran": "noir",
+              "plateau": "",
+              "telephones": "« Regardez la scène »",
+              "outil": "aucun tap : pause",
               "duree_reperes_min": 1
             }
           }
         ],
         "tr": [
           {
-            "a": "b6_ellipse_s",
+            "a": "b6_pause_s",
             "b": "",
             "g": [],
             "mode": "all"
@@ -554,14 +766,14 @@
         }
       },
       {
-        "id": "b6_president",
-        "act": 5,
-        "name": "Le président Boilot · pitch",
-        "entry": "b6_president_s",
+        "id": "b7_president",
+        "act": 6,
+        "name": "Discours du président Jean Boilot",
+        "entry": "b7_president_s",
         "st": [
           {
-            "id": "b6_president_s",
-            "name": "Le président Boilot · pitch",
+            "id": "b7_president_s",
+            "name": "Discours du président Jean Boilot",
             "ty": "k:scene",
             "c": 0,
             "r": 0,
@@ -573,16 +785,17 @@
               50
             ],
             "params": {
-              "ecran": "président Boilot pitch",
+              "ecran": "mur (audio du discours)",
               "plateau": "",
-              "telephones": "",
-              "duree_reperes_min": 3
+              "telephones": "« Regardez la scène »",
+              "outil": "régie : tap PRÉSIDENT BOILOT",
+              "duree_reperes_min": 2
             }
           }
         ],
         "tr": [
           {
-            "a": "b6_president_s",
+            "a": "b7_president_s",
             "b": "",
             "g": [],
             "mode": "all"
