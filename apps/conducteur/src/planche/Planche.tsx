@@ -583,12 +583,15 @@ export function Planche() {
 
   const styleMonde = { transform: `translate(${cam.px}px, ${cam.py}px) scale(${cam.z})` } as CSSProperties;
   const styleBoite = { '--z': String(cam.z) } as CSSProperties;
+  // trame : points de taille écran fixe ; au dézoom le pas double puis quadruple (règle du canvas d'idéation de
+  // ShowRunner), sinon les points se collent et la planche vire au blanc
+  const pasTrame = 24 * cam.z * (cam.z < 0.3 ? 4 : cam.z < 0.6 ? 2 : 1);
 
   return (
     <div ref={refBoite} className={'planche' + (pan ? ' planche--pan' : '')} style={styleBoite} tabIndex={0}
       aria-label="Planche du moment" onPointerDown={surFond} onDoubleClick={surDoubleClic} onKeyDown={surTouche}
       onContextMenu={surMenu} onPointerMove={emettreCurseur.onPointerMove} onPointerLeave={emettreCurseur.onPointerLeave}>
-      <div className="planche-grille" style={{ backgroundSize: `${24 * cam.z}px ${24 * cam.z}px`, backgroundPosition: `${cam.px}px ${cam.py}px` }} />
+      <div className="planche-grille" style={{ backgroundSize: `${pasTrame}px ${pasTrame}px`, backgroundPosition: `${cam.px}px ${cam.py}px` }} />
 
       <div className="planche-monde" style={styleMonde}>
         {/* Passages entre moments */}
