@@ -116,7 +116,10 @@
                   "mode": "mur"
                 }
               ],
-              "sortie": "noir",
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/flux/"
+              },
               "duree_reperes_min": 1
             }
           }

@@ -67,7 +67,7 @@ const SERVEUR = 'https://highway-regions-temperatures-penn.trycloudflare.com';
 const MUR = { type: 'page', url: SERVEUR + '/prototypes/figurants/pages/chat/' };
 const VISIO = { type: 'page', url: SERVEUR + '/prototypes/figurants/pages/visio/scene.html' };
 const SORTIES: Record<string, string | Record<string, unknown>> = {
-  b1_entree: 'accueil-qr', b1_flux: 'noir', b1_choix: MUR, b2_lecture: MUR, b3_junon: MUR, b4_notif: 'noir',
+  b1_entree: 'accueil-qr', b1_flux: { type: 'page', url: SERVEUR + '/prototypes/figurants/pages/flux/' }, b1_choix: MUR, b2_lecture: MUR, b3_junon: MUR, b4_notif: 'noir',
   b6_visio: VISIO, b6_pause: 'noir', b7_president: MUR,
 };
 
