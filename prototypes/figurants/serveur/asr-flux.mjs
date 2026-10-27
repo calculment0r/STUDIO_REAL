@@ -9,10 +9,14 @@ const SR = 16000;
 const TRAME = 320;               // 20 ms
 const PRE_ROLL = 15;             // 300 ms gardés avant le début de la voix
 const DEBUT_TRAMES = 3;          // 60 ms de voix pour ouvrir une phrase
-const FIN_SILENCE_MS = 700;
-const PARTIEL_MS = 1000;
+const FIN_SILENCE_MS = 600;
+const PARTIEL_MS = 700;
 const MAX_PHRASE_S = 15;
-const MIN_PAROLE_S = 0.4;
+const MIN_PAROLE_S = 0.25;
+// Seuils de voix (RMS, pleine échelle = 1). Mesuré le 27/10 sur l'iPhone du comédien près d'une enceinte :
+// voix 0,003 en moyenne, 0,015 à 0,04 en pointe, bruit 0,001. Ouvrir une phrase demande plus que la poursuivre (hystérésis).
+const SEUIL_OUVRIR = { facteur: 2.5, min: 0.0025 };
+const SEUIL_CONTINUER = { facteur: 1.8, min: 0.0018 };
 // Phrases que Whisper invente sur du silence ou du bruit (connues, en français)
 const HALLUCINATIONS = [/sous-titr/i, /amara\.org/i, /^merci\.?$/i, /^merci d'avoir regardé/i, /^\.+$/, /^musique$/i, /abonnez-vous/i];
 
@@ -52,7 +56,15 @@ export class FluxAsr {
     let s = 0;
     for (let k = 0; k < t.length; k++) { const v = t[k] / 32768; s += v * v; }
     const rms = Math.sqrt(s / t.length);
-    const voix = rms > Math.max(this.plancher * 3, 0.008);
+    const seuil = this.phrase ? SEUIL_CONTINUER : SEUIL_OUVRIR;
+    const voix = rms > Math.max(this.plancher * seuil.facteur, seuil.min);
+    // relevé toutes les 2 s : niveau reçu, plancher de bruit, voix détectée (diagnostic du micro)
+    const st = (this.stats ||= { n: 0, max: 0, somme: 0, voix: 0, t: Date.now() });
+    st.n++; st.somme += rms; st.max = Math.max(st.max, rms); if (voix) st.voix++;
+    if (Date.now() - st.t >= 2000) {
+      this.journal({ e: 'audio_recu', trames: st.n, rms_moy: +(st.somme / st.n).toFixed(4), rms_max: +st.max.toFixed(4), plancher: +this.plancher.toFixed(4), trames_voix: st.voix, en_phrase: !!this.phrase });
+      this.stats = null;
+    }
     // le plancher suit le bruit de fond : descend vite, monte lentement (et pas pendant la voix)
     if (!voix) this.plancher = rms < this.plancher ? this.plancher * 0.9 + rms * 0.1 : this.plancher * 0.995 + rms * 0.005;
     const now = Date.now();
@@ -78,7 +90,8 @@ export class FluxAsr {
   _finir() {
     const p = this.phrase; this.phrase = null; this.voixConsecutives = 0;
     this.onEtat('silence');
-    if (p.parole < MIN_PAROLE_S) { this.journal({ e: 'asr_flux_ignore', raison: 'trop court', parole_s: +p.parole.toFixed(2) }); return; }
+    // une phrase dont Whisper a déjà rendu du texte (partiel) n'est jamais jetée, même courte
+    if (p.parole < MIN_PAROLE_S && !p.aTexte) { this.journal({ e: 'asr_flux_ignore', raison: 'trop court', parole_s: +p.parole.toFixed(2) }); return; }
     this._envoyer(p, 'final');
   }
 
@@ -96,6 +109,7 @@ export class FluxAsr {
       const texte = String(j.texte || '').trim();
       this.journal({ e: 'asr_flux', kind, id: p.id, duree_s: j.duree_s, ms_whisper: j.ms, ms_total: Date.now() - t0, texte: texte.slice(0, 200) });
       if (!texte || HALLUCINATIONS.some((h) => h.test(texte))) return;
+      if (kind === 'partial') p.aTexte = true;
       // un partiel qui arrive après le final de sa phrase est périmé
       if (kind === 'partial' && this.phrase?.id !== p.id) return;
       this.onAsr({ kind, texte, tc: Date.now(), tFinPhrase });

@@ -215,55 +215,116 @@ function majModeAsr() {
   else if (asrServeur) { bouton.disabled = false; alerter(null); }
 }
 
-async function demarrerFlux() {
-  try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) { /* rien */ }
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  const ctx = new Ctx();                       // créé dans le geste (clic) : obligatoire sur iPhone
-  etatMic('demarrage', 'démarrage du micro…');
-  let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
-  } catch (e) {
-    ctx.close();
-    etatMic('erreur', 'micro refusé');
-    alerter('Micro refusé', "Autorise le micro pour ce site, puis relance. (" + (e.name || e) + ')');
-    return false;
-  }
-  await ctx.resume();
+// Diagnostic à distance : chaque étape part au journal du serveur (on ne voit pas l'écran du téléphone).
+function diag(etape, detail = {}) { ws.envoyer({ t: 'diag', etape, detail }); }
+
+const Ctx = window.AudioContext || window.webkitAudioContext;
+let reveil = null;          // minuteur : pas de son au bout de 1,5 s → on demande un toucher pour relancer l'audio
+
+/** Branche le micro sur un AudioContext et envoie le PCM 16 kHz ; compte ce qui part. */
+function brancher(ctx, stream) {
   const source = ctx.createMediaStreamSource(stream);
   const proc = ctx.createScriptProcessor(4096, 1, 1);
   const ratio = ctx.sampleRate / 16000;
   let acc = new Int16Array(1600); let n = 0; let pos = 0;   // pos : position fractionnaire dans l'entrée
+  const compte = { trames: 0, niveau: 0 };
   proc.onaudioprocess = (ev) => {
     const ent = ev.inputBuffer.getChannelData(0);
+    let e = 0;
     // décimation par moyenne de la fenêtre (anti-repliement simple) vers 16 kHz
     for (; pos < ent.length; pos += ratio) {
       const a = Math.floor(pos); const b = Math.min(ent.length, Math.floor(pos + ratio)) || a + 1;
       let s = 0; for (let k = a; k < b; k++) s += ent[k];
       const v = Math.max(-1, Math.min(1, s / Math.max(1, b - a)));
+      e += v * v;
       acc[n++] = v * 32767;
-      if (n === acc.length) { ws.audio(acc.buffer); acc = new Int16Array(1600); n = 0; }
+      if (n === acc.length) {
+        ws.audio(acc.buffer); acc = new Int16Array(1600); n = 0; compte.trames++;
+        if (compte.trames === 1) diag('premiere_trame', { etat: ctx.state, sampleRate: ctx.sampleRate });
+        if (compte.trames % 5 === 0) {
+          const s = (compte.trames / 10).toFixed(1).replace('.', ',');
+          $('micTxt').textContent = `le micro écoute (Whisper) · ${s} s envoyées · niveau ${'▮'.repeat(Math.min(8, Math.round(compte.niveau * 80)))}`;
+        }
+      }
     }
     pos -= ent.length;
+    compte.niveau = Math.sqrt(e / Math.max(1, ent.length / ratio));
   };
   source.connect(proc);
   proc.connect(ctx.destination);                // nécessaire pour que le traitement tourne (sortie silencieuse)
-  flux = { ctx, source, proc, stream };
+  return { source, proc, compte };
+}
+
+async function demarrerFlux() {
+  let session = null;
+  try { if (navigator.audioSession) { navigator.audioSession.type = 'play-and-record'; session = navigator.audioSession.type; } } catch (e) { session = 'erreur ' + e.name; }
+  const ctx = new Ctx();                       // créé dans le geste (clic) : obligatoire sur iPhone
+  diag('debut', { audioSession: session, etatCtx: ctx.state, sampleRate: ctx.sampleRate, ua: navigator.userAgent.slice(0, 120) });
+  etatMic('demarrage', 'démarrage du micro…');
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    diag('micro_refuse', { nom: e.name, message: String(e.message).slice(0, 120) });
+    ctx.close();
+    etatMic('erreur', 'micro refusé');
+    alerter('Micro refusé', "Autorise le micro pour ce site, puis relance. (" + (e.name || e) + ')');
+    return false;
+  }
+  const piste = stream.getAudioTracks()[0];
+  diag('micro_ok', { piste: piste?.label, reglages: piste?.getSettings?.(), etatCtx: ctx.state });
+  try { await ctx.resume(); } catch (e) { diag('resume_erreur', { nom: e.name }); }
+  ctx.onstatechange = () => { diag('etat_ctx', { etat: ctx.state }); if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {}); };
+  flux = { ctx, stream, ...brancher(ctx, stream) };
   etatMic('ecoute', 'le micro écoute (Whisper)');
+  surveillerSon();
   return true;
 }
 
+/** Si aucun son ne part au bout de 1,5 s (moteur audio de Safari en pause), on demande un toucher pour le relancer. */
+function surveillerSon() {
+  clearTimeout(reveil);
+  reveil = setTimeout(() => {
+    if (!flux || flux.compte.trames > 0) return;
+    diag('pas_de_son', { etatCtx: flux.ctx.state });
+    etatMic('erreur', "le son ne part pas : touche le bouton");
+    bouton.textContent = 'Touche pour activer le son';
+    bouton.dataset.reveil = '1';
+  }, 1500);
+}
+
+/** Dans un geste : relance le moteur audio, et au besoin le recrée sur le même micro. */
+async function reveiller() {
+  delete bouton.dataset.reveil;
+  if (!flux) return;
+  try { await flux.ctx.resume(); } catch (e) { /* rien */ }
+  diag('reveil', { etatCtx: flux.ctx.state });
+  if (flux.ctx.state !== 'running' || flux.compte.trames === 0) {
+    try { flux.proc.disconnect(); flux.source.disconnect(); flux.ctx.close(); } catch (e) { /* rien */ }
+    const ctx = new Ctx();
+    try { await ctx.resume(); } catch (e) { /* rien */ }
+    flux = { ...flux, ctx, ...brancher(ctx, flux.stream) };
+    diag('reveil_nouveau_ctx', { etatCtx: ctx.state });
+  }
+  etatMic('ecoute', 'le micro écoute (Whisper)');
+  majBouton();
+  surveillerSon();
+}
+
 function arreterFlux() {
+  clearTimeout(reveil);
   if (!flux) return;
   try { flux.proc.disconnect(); flux.source.disconnect(); } catch (e) { /* rien */ }
   flux.stream.getTracks().forEach((t) => t.stop());
   flux.ctx.close();
+  diag('arret', { trames: flux.compte.trames });
   flux = null;
   etatMic('arrete', 'micro arrêté');
   $('micEtat').classList.remove('voix');
 }
 
 async function basculerFlux() {
+  if (bouton.dataset.reveil) { await reveiller(); return; }
   if (flux) { arreterFlux(); voulu = false; }
   else { voulu = await demarrerFlux(); }
   majBouton();

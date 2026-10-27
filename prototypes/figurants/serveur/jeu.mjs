@@ -144,6 +144,11 @@ export class Jeu {
       case 'msg': return this._msg(c, m);
       case 'fig.cmd': return this._cmd(c, m);
       case 'fig.valide': return this._valide(c, m);
+      case 'diag':                                          // diagnostic de la page comédien (micro, moteur audio)
+        if (c.role !== 'comedien') return;
+        this.journal.ecrire({ e: 'diag_client', etape: String(m.etape || '').slice(0, 40), detail: JSON.stringify(m.detail ?? null).slice(0, 400) });
+        this.journalRegie(`téléphone du comédien : ${String(m.etape || '').slice(0, 40)} ${JSON.stringify(m.detail ?? '').slice(0, 120)}`);
+        return;
       default: return;
     }
   }
