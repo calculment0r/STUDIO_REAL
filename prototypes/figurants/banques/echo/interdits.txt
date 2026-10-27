@@ -1,0 +1,247 @@
+# interdits.txt : liste de modération du spectacle ÉCHO (fil Instagram de Jim projeté sur scène), copiée de banques/interdits.txt puis adaptée.
+# S'applique à TOUS les messages : figurants (N0 à N4) ET vrais spectateurs. Un message qui contient une entrée n'est pas affiché.
+# Les figurants ont en plus interdits-figurants.txt (sanctions, urgences, auto-description d'IA, votes).
+#
+# FORMAT
+#   - une entrée par ligne ; les lignes vides et celles qui commencent par « # » sont ignorées ; espaces de début et de fin retirés ;
+#   - entrée simple = un mot ou une expression, écrit en FORME DE BASE NORMALISÉE : minuscules, sans accents, sans apostrophe
+#     ni trait d'union (remplacés par une espace), lettres doublées légitimes gardées (« connard ») ;
+#     elle correspond comme MOT ENTIER ou expression entière (bornée par le début, la fin ou une espace du texte normalisé),
+#     jamais en sous-chaîne : « con » ne bloque pas « content ». Les pluriels et féminins utiles sont écrits en entrées séparées ;
+#   - « re: » + expression régulière JavaScript (drapeaux « iu »), appliquée au texte en forme B (voir plus bas).
+#
+# NORMALISATION (faite par le serveur, pas ici ; étude modération §4.1)
+#   forme A, pour les entrées simples, dans cet ordre :
+#     1. Unicode NFKC ; suppression des caractères de largeur nulle et des marques de combinaison parasites ;
+#     2. minuscules ; suppression des accents (é→e, ç→c, œ→oe, æ→ae) ;
+#     3. homoglyphes cyrilliques et grecs ramenés au latin (table « confusables » d'Unicode) ;
+#     4. leet : @→a 0→o 1→i 3→e 4→a 5→s 7→t $→s !→i (« 1 » est aussi essayé en « l ») ;
+#     5. toute ponctuation (apostrophes, traits d'union, points…) → espace ; lettres isolées séparées recollées (« c o n », « c.o.n » → « con ») ;
+#     6. suites de 3 lettres identiques ou plus réduites, essayées à 1 et à 2 lettres (« cooonnnard » → « conard » et « coonnard ») ;
+#     7. espaces multiples réduites à une.
+#   forme B, pour les motifs « re: » : étapes 1, 2, 3 et 7 seulement (PAS de leet, ponctuation et chiffres gardés),
+#     pour pouvoir reconnaître liens, adresses e-mail et numéros.
+#
+# CHOIX
+#   - Écrite pour ce prototype (pas une copie de liste existante). Point de départ possible pour la suite : LDNOOBW « fr » (CC-BY 4.0, attribution à garder).
+#   - Les mots à double sens (« baiser », « peter », « queue », « pipe », « malaise »…) ne sont PAS ici : ils doivent aller en « retenir pour examen »,
+#     pas en « refuser » (étude modération §4.1). Le prototype n'a pas encore cette liste.
+#   - ÉCHO : section « sexisme et masculinisme » ajoutée (insultes probables vu le sujet). Les spoilers sont dans les `interdits` de chaque
+#     segment (repliques.json), les noms réels cités par l'auteur dans interdits-figurants.txt. Noms réels du comédien et du lieu : à ajouter par la régie.
+#   - Revue des faux positifs et des faux négatifs après chaque session ; la liste est versionnée avec le dépôt.
+
+# ---------------------------------------------------------------- insultes
+abruti
+abrutie
+abrutis
+batard
+batarde
+batards
+bouffon
+bouffonne
+bouffons
+connard
+connarde
+connards
+connasse
+connasses
+con
+conne
+connes
+couillon
+couillons
+enfoire
+enfoiree
+enfoires
+encule
+enculee
+encules
+enculer
+fdp
+fils de pute
+ntm
+nique ta mere
+nique ta race
+ta gueule
+ferme ta gueule
+tg
+ftg
+pute
+putes
+putain
+ptn
+salope
+salopes
+salaud
+salauds
+pouffiasse
+petasse
+grognasse
+trou du cul
+trouduc
+merdeux
+merde
+fait chier
+casse toi
+va te faire foutre
+va te faire voir
+re:(?<!pique[\s-])\bnique\b
+niquer
+nik
+branleur
+branleurs
+sous merde
+cassos
+# ---------------------------------------------------------------- validisme employé comme insulte
+mongol
+mongolien
+gogol
+triso
+attarde
+attardee
+attardes
+# ---------------------------------------------------------------- haine : racisme, antisémitisme, xénophobie
+bougnoule
+bougnoules
+bicot
+bicots
+re:\bratons?\b(?!\s+laveurs?)
+negre
+negres
+negresse
+negro
+bamboula
+youpin
+youpine
+youpins
+youtre
+chinetoque
+chintoque
+niakoue
+sale race
+sale noir
+sale arabe
+sale juif
+sale juive
+sale blanc
+sale chinois
+sale rebeu
+sale renoi
+rentre dans ton pays
+retourne dans ton pays
+heil
+sieg heil
+heil hitler
+hitler
+nazi
+nazis
+re:\b14\s*88\b
+re:\bsieg\s*heil\b
+daech
+daesh
+# ---------------------------------------------------------------- haine : homophobie, transphobie, sexisme
+pede
+pedes
+pd
+tapette
+tapettes
+tarlouze
+tafiole
+gouine
+gouines
+travelo
+travelos
+sale pede
+sale gouine
+# ---------------------------------------------------------------- sexisme et masculinisme (ÉCHO : sujet du spectacle, insultes probables)
+feminazi
+feminazie
+feminazis
+mal baisee
+mal baisees
+mal baise
+cuck
+sale bonne femme
+retourne a la cuisine
+va faire la vaisselle
+re:\bles\s+femmes\s+(sont|c'?est)\s+(toutes\s+)?(des\s+(connes|chiennes|hysteriques|menteuses)|nulles|inferieures)\b
+# ---------------------------------------------------------------- sexuel explicite
+bite
+bites
+chatte
+couille
+couilles
+suce
+suceuse
+sucer
+suce moi
+sodomie
+sodomiser
+porno
+porn
+pornographie
+branler
+branlette
+masturbe
+masturber
+ejaculer
+ejaculation
+sperme
+fellation
+cunnilingus
+partouze
+gangbang
+nudes
+envoie des nudes
+pedophile
+pedophiles
+pedo
+re:\b(montre|envoie)\s*(tes|moi tes)\s*(seins|fesses|nudes)\b
+# ---------------------------------------------------------------- violence, menaces, incitation à l'automutilation
+viol
+violer
+violee
+violeur
+egorger
+decapiter
+attentat
+attentats
+kys
+suicide toi
+va te suicider
+pends toi
+va te pendre
+tue toi
+va crever
+creve sale
+re:\bje\s+vais\s+(te|vous|le|la|les)\s+(tuer|buter|crever|egorger|frapper|defoncer|planter|fumer)\b
+re:\bon\s+va\s+(te|vous|le|la|les)\s+(tuer|buter|egorger|frapper|defoncer|retrouver)\b
+re:\b(je|on)\s+sai[st]\s+ou\s+(tu|il|elle)\s+(habite|habites|vit|vis)\b
+re:\bfaut\s+(les|tous les)\s+(tuer|bruler|gazer)\b
+# ---------------------------------------------------------------- fausses alertes (projetées en salle : risque de panique)
+au feu
+incendie
+evacuez
+evacuation
+alerte a la bombe
+il y a une bombe
+y a une bombe
+une bombe dans la salle
+re:\b(il y a|y a)\s+un\s+tireur\b
+re:\b(appelez|appeler|appelle)\s+(les\s+pompiers|le\s+samu|une\s+ambulance|la\s+police|le\s+1[578]|le\s+112)\b
+# ---------------------------------------------------------------- données personnelles, liens, coordonnées (forme B)
+# liens et noms de domaine
+re:\b(https?:\/\/|www\.)\S+
+re:\b[a-z0-9-]{2,}\.(com|fr|net|org|io|gg|tv|be|ch|eu|info|xyz|app|link|ly)\b
+# adresses e-mail
+re:\b[a-z0-9._%+-]+\s?@\s?[a-z0-9.-]+\.[a-z]{2,}\b
+# numéros de téléphone français (06 12 34 56 78, 06.12.34.56.78, +33 6 12 34 56 78)
+re:(\+33|0033|\b0)\s*[1-9]([\s.-]*\d{2}){4}\b
+# longues suites de chiffres (carte, IBAN, numéro collé)
+re:\b(\d[\s-]?){10,19}\b
+# identifiants de réseau social (« @pseudo ») : à retenir plutôt qu'à refuser quand une file « retenir » existera
+re:(^|\s)@[a-z0-9_.]{3,}
+# adresse postale (« 12 rue des… », « 3 bis avenue… »)
+re:\b\d{1,4}\s*(bis|ter)?\s*,?\s*(rue|avenue|boulevard|bd|chemin|impasse|allee|quai)\s+\w+
+# plaque d'immatriculation (AA-123-AA)
+re:\b[a-z]{2}-?\d{3}-?[a-z]{2}\b

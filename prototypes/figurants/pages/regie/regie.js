@@ -97,6 +97,7 @@ function recevoirWelcome(m) {
   if (e.marquage) majMarquage(e.marquage);
   if (e.fournisseur) $('fournisseur').value = e.fournisseur;
   if (e.segment != null && typeof e.segment !== 'object') $('segment').value = e.segment;
+  if (Array.isArray(e.segments)) $('segments').replaceChildren(...e.segments.map((id) => Object.assign(document.createElement('option'), { value: id })));   // séquences du spectacle à choisir
   if (typeof e.coupe === 'boolean') majCoupe(e.coupe);
   if (e.personas) chargerPersonas(e.personas);
   for (const c of m.historique || []) ligneChat(c, true);

@@ -1,0 +1,447 @@
+{
+  "version": 1,
+  "langue": "fr",
+  "note": "Banque N0 du spectacle ÉCHO : réflexes instantanés, sans IA, façon commentaires Instagram (pas d'emotes Twitch). Les motifs portent sur ce que dit Jim (transcription normalisée). Schéma : banques/README.md §2.",
+  "humeurs": {
+    "hype": {
+      "centre": { "valence": 0.8, "energie": 0.9 },
+      "stylisable": true,
+      "emotes": [],
+      "variantes": [
+        "trop fort", "le boss", "énorme", "incroyable", "c'est parti", "ça monte", "viral !!", "on est là",
+        "quel moment", "historique", "je hurle", "j'adore", "en feu", "magnifique", "j'y crois",
+        "le retour", "🔥🔥🔥", "🚀🚀", "💯", "ça explose", "les abonnés 👀", "trop bien", "respect",
+        "masterclass", "on en redemande", "oui oui oui"
+      ]
+    },
+    "calme": {
+      "centre": { "valence": 0.3, "energie": 0.2 },
+      "stylisable": true,
+      "emotes": [],
+      "variantes": [
+        "ok", "d'accord", "pas mal", "intéressant", "je regarde", "on suit", "ah ok", "pourquoi pas",
+        "j'écoute", "on t'écoute", "hmm", "doucement", "à voir", "je réfléchis", "noté", "on verra",
+        "😌", "🙂", "ça se tient", "pas faux", "tranquille", "je lis"
+      ]
+    },
+    "moqueuse": {
+      "centre": { "valence": 0.2, "energie": 0.7 },
+      "stylisable": true,
+      "emotes": [],
+      "variantes": [
+        "mdrrr", "ptdr", "le malaise", "il est perdu", "non mais regardez-le", "c'est gênant",
+        "je suis mort", "aïe aïe aïe", "il a cru", "oups", "le plan parfait lol", "on y croit (non)",
+        "jpp", "le flop", "il fait le malin", "je meurs", "on a vu", "il a glissé", "😂😂", "💀",
+        "🤡", "le cringe", "quelle surprise", "encore lui", "l'ego 👀", "sa tête 😂"
+      ]
+    },
+    "inquiete": {
+      "centre": { "valence": -0.5, "energie": 0.6 },
+      "stylisable": true,
+      "emotes": [],
+      "variantes": [
+        "oh non", "attends", "j'aime pas ça", "aïe", "non non non", "pas bon ça", "eh oh",
+        "réfléchis", "😬", "😰", "mauvaise idée", "hmm non", "c'est tendu", "j'ose pas regarder",
+        "noooon", "je comprends pas", "c'est lourd", "silence", "😶", "attendez"
+      ]
+    },
+    "tendre": {
+      "centre": { "valence": 0.9, "energie": 0.3 },
+      "stylisable": true,
+      "emotes": [],
+      "variantes": [
+        "💛", "🥺", "🫶", "c'est beau", "ce moment", "merci pour ça", "ça fait du bien", "❤️❤️",
+        "on est avec toi", "bravo", "trop touchant", "je suis émue", "il progresse", "fier de toi",
+        "✨", "tout doux", "gros cœur", "ça me touche", "il s'ouvre", "courage Jim"
+      ]
+    },
+    "mefiante": {
+      "centre": { "valence": -0.3, "energie": 0.4 },
+      "stylisable": true,
+      "emotes": [],
+      "variantes": [
+        "louche", "c'est louche", "hmm", "je le sens pas", "bizarre", "y a un truc", "pas net",
+        "attends", "trop facile", "suspect", "🤨", "👀", "🔍", "c'est de la com", "mouais",
+        "ça cache quelque chose", "pas clair", "je crois pas", "à voir", "trop beau pour être vrai"
+      ]
+    }
+  },
+  "declencheurs": [
+    {
+      "id": "bonjour",
+      "motifs": ["bonjour", "salut", "coucou", "bonsoir", "hello", "re:\\bsalut (tout le monde|les abonnes)\\b"],
+      "priorite": "normale",
+      "nb": [3, 7],
+      "delai_s": [0.8, 4.0],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "salut Jim", "coucou", "yo", "bonsoir", "hello", "salut tout le monde", "slt", "coucou 👋",
+        "bonsoir bonsoir", "le retour", "présent", "présente", "salut à tous", "hey", "👋👋",
+        "on est là", "j'arrive pile", "il est là"
+      ],
+      "par_humeur": {
+        "hype": ["ENFIN", "IL EST LÀ 🔥"],
+        "moqueuse": ["en retard comme d'hab", "il s'est réveillé"]
+      }
+    },
+    {
+      "id": "au_revoir",
+      "motifs": ["au revoir", "a plus", "a bientot", "ciao", "bye", "re:\\b(je vous laisse|a tres vite|a jeudi)\\b"],
+      "priorite": "normale",
+      "nb": [3, 7],
+      "delai_s": [0.8, 4.0],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "bye", "ciao", "à plus", "bonne soirée", "à la prochaine", "bisous", "a+", "bye bye",
+        "salut Jim", "à demain", "👋", "reviens vite", "ciao ciao", "déjà ??", "profite"
+      ],
+      "par_humeur": {
+        "tendre": ["prends soin de toi 💛", "on est fiers de toi"],
+        "moqueuse": ["il fuit", "enfin libres lol"]
+      }
+    },
+    {
+      "id": "question_chat",
+      "motifs": ["vous en pensez quoi", "dites moi", "en commentaire", "en commentaires", "les abonnes", "re:\\bvous (savez|trouvez|croyez)\\b", "re:\\bvous\\b[^.?!]*\\?$"],
+      "priorite": "haute",
+      "nb": [3, 7],
+      "delai_s": [1.0, 4.0],
+      "stylisable": true,
+      "segments_exclus": ["s02_choix", "s09_flash_info"],
+      "variantes": [
+        "oui", "non", "aucune idée", "jsp", "bonne question", "euh", "pourquoi pas", "ça dépend",
+        "évidemment", "bien sûr", "jamais", "carrément", "ah ça", "à toi de voir", "nan", "grave",
+        "qui sait", "je dirais oui", "je dirais non", "?", "??", "réfléchis un peu"
+      ],
+      "par_humeur": {
+        "moqueuse": ["tu nous demandes à nous ? lol", "demande à Écho"],
+        "mefiante": ["question piège", "réponds pas"]
+      }
+    },
+    {
+      "id": "avis",
+      "motifs": ["je fais quoi", "j'en fais quoi", "qu'est ce que je fais", "re:\\bje (dois|devrais)\\b.*\\?", "re:\\bt'as une solution\\b"],
+      "priorite": "haute",
+      "nb": [3, 7],
+      "delai_s": [1.2, 5.0],
+      "stylisable": true,
+      "segments_exclus": ["s02_choix", "s09_flash_info"],
+      "variantes": [
+        "écoute", "écoute d'abord", "réfléchis bien", "commence par lire", "pose des questions",
+        "change tes posts", "lis les commentaires", "fais une pause", "sois honnête", "demande-leur",
+        "arrête de te comparer", "moins parler, plus écouter", "pas sûr", "on verra", "essaie"
+      ],
+      "par_humeur": {
+        "moqueuse": ["supprime ton compte lol", "moins de selfies"],
+        "tendre": ["tu vas y arriver 💛", "pas à pas"]
+      }
+    },
+    {
+      "id": "rire",
+      "motifs": ["haha", "hahaha", "mdr", "je rigole", "c'est drole", "trop drole", "re:\\b(ha){2,}\\b"],
+      "priorite": "normale",
+      "nb": [3, 9],
+      "delai_s": [0.6, 3.0],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "mdr", "mdrrr", "ptdr", "😂", "😂😂", "🤣", "💀", "jpp", "je meurs", "hahaha", "MDRRR",
+        "il rit de lui-même", "trop drôle", "je pleure", "le fou rire", "lol", "c'est contagieux",
+        "pourquoi je rigole aussi"
+      ]
+    },
+    {
+      "id": "merci",
+      "motifs": ["merci", "re:\\bc'est gentil\\b", "re:\\bvous etes (trop )?(geniaux|adorables)\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.0],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "de rien", "💛", "avec plaisir", "merci à toi", "toujours là", "normal", "pas de quoi",
+        "❤️", "force à toi", "on est là pour ça", "t'inquiète", "🫶"
+      ],
+      "par_humeur": {
+        "moqueuse": ["il dit merci maintenant ?", "c'est nouveau ça"],
+        "mefiante": ["merci à qui exactement ?"]
+      }
+    },
+    {
+      "id": "abonnes",
+      "motifs": ["abonnes", "abonne", "followers", "follower", "viral", "likes", "re:\\bje (suis|redeviens) viral\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["s02_choix", "s09_flash_info"],
+      "variantes": [
+        "🚀", "ça monte", "le compteur 👀", "viral", "les abonnés !!", "ça explose", "📈",
+        "il compte ses likes", "le buzz", "tout le monde parle de lui", "les notifs 😂", "on y est"
+      ],
+      "par_humeur": {
+        "mefiante": ["le buzz, c'est pas l'approbation", "des abonnés, pas des amis"],
+        "hype": ["VIRAL 🔥", "LE BOSS"]
+      }
+    },
+    {
+      "id": "story",
+      "motifs": ["story", "stories", "je me filme", "re:\\b(une|ma) story\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.0],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "la story 🔥", "📱", "on regarde", "story !!", "il se filme", "capture d'écran",
+        "je like", "partagée", "👀", "allez la story", "il poste encore"
+      ]
+    },
+    {
+      "id": "echo",
+      "motifs": ["re:\\becho\\b", "acces gold", "re:\\b(synthese|analyse)\\b"],
+      "priorite": "basse",
+      "nb": [1, 3],
+      "delai_s": [1.0, 4.0],
+      "stylisable": true,
+      "segments_exclus": ["s01_profil", "s02_choix", "s09_flash_info"],
+      "variantes": [
+        "Écho 🤖", "l'IA a parlé", "on attend la réponse", "elle répond quoi ?", "👀",
+        "Écho, à toi", "l'IA réfléchit", "suspense", "écoute-la", "elle a raison"
+      ],
+      "par_humeur": {
+        "mefiante": ["une IA qui sait tout, hmm", "qui écrit ses réponses ?"],
+        "hype": ["Écho !! ✨", "le Gold 🥇"]
+      }
+    },
+    {
+      "id": "femmes",
+      "motifs": ["les femmes", "une femme", "re:\\bfeminis", "re:\\bles meufs\\b"],
+      "priorite": "normale",
+      "nb": [2, 5],
+      "delai_s": [1.0, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "note": "Réactions neutres à un sujet sensible : jamais d'avis sur un groupe, on réagit à Jim.",
+      "variantes": [
+        "aïe", "attention à la suite 👀", "il s'aventure", "hmm", "😬", "écoute-les",
+        "on t'écoute", "doucement", "il ose", "on y va prudemment", "la question", "👀👀"
+      ]
+    },
+    {
+      "id": "argent",
+      "motifs": ["argent", "dividendes", "honoraires", "paye", "payer", "partenariat", "code promo", "revaloriser"],
+      "priorite": "normale",
+      "nb": [2, 5],
+      "delai_s": [0.8, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "💸", "l'argent 👀", "tout s'explique", "💰", "ah, c'est payé", "on y est",
+        "le nerf de la guerre", "rémunéré, donc", "le code promo arrive", "c'est de la com"
+      ]
+    },
+    {
+      "id": "excuses",
+      "motifs": ["excuses", "pardon", "pardonner", "desole", "re:\\bje (m'excuse|regrette)\\b"],
+      "priorite": "normale",
+      "nb": [2, 5],
+      "delai_s": [1.0, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "enfin", "🙏", "on verra", "dans la durée", "c'est un début", "à voir", "sincère ?",
+        "respect", "ça se mérite", "on note", "📝"
+      ],
+      "par_humeur": {
+        "tendre": ["ça compte 💛", "bravo d'oser"],
+        "mefiante": ["pour les abonnés ?", "mouais"]
+      }
+    },
+    {
+      "id": "consentement",
+      "motifs": ["consentement", "consentir", "re:\\b(son|leur) accord\\b"],
+      "priorite": "normale",
+      "nb": [2, 4],
+      "delai_s": [1.0, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "note": "Ton sérieux et respectueux : aucune blague.",
+      "variantes": [
+        "enfin la question", "demander, toujours", "écouter, regarder", "ça se retire",
+        "pas que sexuel, oui", "👏", "important", "c'est la base", "on demande", "bonne question"
+      ]
+    },
+    {
+      "id": "stress",
+      "motifs": ["imposteur", "stress", "stresse", "intimide", "re:\\bj'ai (un peu )?peur\\b", "destresser"],
+      "priorite": "normale",
+      "nb": [2, 5],
+      "delai_s": [1.0, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "respire", "t'inquiète", "ça va aller", "🫶", "t'as ta place", "courage", "tu gères",
+        "on est avec toi", "souffle un coup", "ça va bien se passer", "sois toi-même"
+      ],
+      "par_humeur": {
+        "moqueuse": ["lui, stressé ? lol", "le boss a le trac"]
+      }
+    },
+    {
+      "id": "promesse",
+      "motifs": ["je vous jure", "promis", "je vous promets", "croyez moi", "re:\\bj'ai (un peu |vraiment )?change\\b"],
+      "priorite": "normale",
+      "nb": [2, 5],
+      "delai_s": [1.0, 3.5],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "on te croit 🙄", "c'est noté", "screen", "mouais", "promis juré ?", "on va voir",
+        "on retient", "📝", "à vérifier", "on t'a à l'œil", "dans la durée"
+      ]
+    },
+    {
+      "id": "surprise",
+      "motifs": ["c'est pas possible", "incroyable", "oh la la", "re:\\bnon mais\\b", "re:\\bc'est vrai\\s*\\?"],
+      "priorite": "normale",
+      "nb": [3, 7],
+      "delai_s": [0.6, 3.0],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "QUOI", "quoi ??", "😱", "nooon", "c'est pas vrai", "oh", "sérieux ??", "j'y crois pas",
+        "attends quoi", "?!", "hein", "omg", "wow", "je viens de lire quoi"
+      ]
+    },
+    {
+      "id": "depart",
+      "motifs": ["on y va", "c'est parti", "j'y vais", "re:\\bje (sors|pars)\\b"],
+      "priorite": "normale",
+      "nb": [2, 6],
+      "delai_s": [0.8, 3.0],
+      "stylisable": true,
+      "segments_exclus": ["s09_flash_info"],
+      "variantes": [
+        "vas-y", "bonne soirée", "profite", "go", "à plus Jim", "en route", "tu vas briller",
+        "on te suit", "c'est ton moment", "✨", "🥂"
+      ]
+    }
+  ],
+  "vagues": [
+    {
+      "id": "rire",
+      "cle": "😂",
+      "taille": [6, 14],
+      "etalement_s": [0.5, 4.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["😂😂😂", "😂", "😂😂", "🤣🤣", "mdrrrr", "😂😂😂😂", "💀💀", "ptdrrr", "😂🤣😂", "je meurs 😂"]
+    },
+    {
+      "id": "feu",
+      "cle": "🔥",
+      "taille": [6, 16],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["🔥", "🔥🔥", "🔥🔥🔥", "le boss 🔥", "🚀🔥", "🔥🔥🔥🔥", "💯🔥", "viral 🔥"]
+    },
+    {
+      "id": "larmes",
+      "cle": "😭",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 4.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["😭", "😭😭", "🥺", "🥺😭", "j'ai les larmes", "😭😭😭", "ce moment 😭", "🥹"]
+    },
+    {
+      "id": "applaudir",
+      "cle": "👏",
+      "taille": [6, 14],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["👏", "👏👏", "👏👏👏", "bravo 👏", "BRAVO", "👏🔥", "respect 👏", "👏👏👏👏"]
+    },
+    {
+      "id": "choc",
+      "cle": "😮",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["😮", "😮😮", "😱", "quoi ??", "😳", "😮 non", "attends 😮", "😱😱"]
+    },
+    {
+      "id": "coeurs",
+      "cle": "❤️",
+      "taille": [6, 14],
+      "etalement_s": [0.5, 4.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["❤️", "❤️❤️", "💛", "💖", "🫶", "❤️❤️❤️", "💕", "🥺❤️"]
+    },
+    {
+      "id": "mort_de_rire",
+      "cle": "💀",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["💀", "💀💀", "💀💀💀", "je suis mort 💀", "😭💀", "c'est fini 💀"]
+    },
+    {
+      "id": "clown",
+      "cle": "🤡",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["🤡", "🤡🤡", "🤡🤡🤡", "le clown 🤡", "🙄🤡", "quelle surprise 🤡"]
+    },
+    {
+      "id": "plus1",
+      "cle": "+1",
+      "taille": [5, 12],
+      "etalement_s": [0.5, 3.5],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "variantes": ["+1", "+1", "+1", "+ 1", "pareil", "+1 !", "même avis", "+1 obligé", "tellement"]
+    },
+    {
+      "id": "alerte",
+      "cle": "🚨",
+      "taille": [5, 10],
+      "etalement_s": [0.5, 3.0],
+      "stylisable": false,
+      "copie_exacte": false,
+      "ordonnee": false,
+      "note": "Effet de buzz (« alerte malaise »), jamais une vraie alerte.",
+      "variantes": ["🚨", "🚨🚨", "🚨 gênance 🚨", "🚨 cringe 🚨", "🚨🚨🚨", "alerte buzz 🚨"]
+    },
+    {
+      "id": "il_a_ose",
+      "cle": "IL A OSÉ",
+      "taille": [6, 12],
+      "etalement_s": [0.5, 3.0],
+      "stylisable": false,
+      "copie_exacte": true,
+      "ordonnee": false,
+      "note": "Copypasta voulue : le même texte en chœur (exception à l'anti-répétition).",
+      "variantes": ["IL A OSÉ"]
+    }
+  ]
+}
