@@ -1,0 +1,28 @@
+/* @studio-real/theme : ce qu'une PAGE statique (prototype, page publique) attend en plus du noyau du Conducteur.
+   Le Conducteur, qui pose ces remises à zéro composant par composant, n'en a pas besoin (il importe noyau.css). */
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { line-height: 1.45; }
+
+[hidden] { display: none !important; }
+
+/* contrôles nus : chaque composant pose son habit (comme le Conducteur : border none, fond transparent) */
+button, input, select, textarea {
+  font-family: var(--f-ui);
+  font-size: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+}
+button { cursor: pointer; }
+button:disabled { cursor: default; }
+select option { background: var(--tile); color: var(--ink); }
+
+::selection { background: var(--ort); color: var(--on-ort); }
+
+/* Firefox : la barre de défilement fine du Conducteur */
+* { scrollbar-width: thin; scrollbar-color: var(--filet-28) transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+}

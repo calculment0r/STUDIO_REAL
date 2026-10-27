@@ -259,3 +259,10 @@
 }
 .cd-outils button[data-on] { background: var(--gdeep); color: var(--gink); }
 .cd[data-outil="couper"] .cd-moment, .cd[data-outil="couper"] .cd-clip { cursor: crosshair; }
+
+/* Collaboration (chantier INTÉGRATION) : commentaires ouverts épinglés sur un instant ou un moment (rangée TEMPS). */
+.cd-com {
+  position: absolute; top: 3px; transform: translateX(-50%); z-index: 6; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px 8px 8px 0;
+  border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: var(--ort); color: var(--on-ort);
+  font-family: var(--f-chiffre); font-weight: 700; font-size: 8px; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--bg);
+}

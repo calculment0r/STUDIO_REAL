@@ -7,6 +7,8 @@
 // Ajouts (tous facultatifs pour les autres chantiers) : sélection étendue (sortie, passage, acte, piste, clip, note),
 // annuler / rétablir, vitesse de lecture, salle simulée, verrou « scène », versions locales, export / import JSON,
 // messages à la régie. La lecture passe par src/etat/moteur.ts (moteur du chantier MODÈLE, ou provisoire).
+// Pupitre de la régie (chantier INTÉGRATION) : `poserMemoire`, `envoyerSignal`, `reprendreAuPoint` (entrées extérieures
+// du moteur) et `journalRegie` (commandes émises par les blocs, entrées reçues, alertes ; voir src/etat/regie.ts).
 import { create } from 'zustand';
 import {
   exempleDemo,
@@ -14,6 +16,7 @@ import {
 } from '@studio-real/modele';
 import { creerLecteur, signauxSalle } from './moteur';
 import { ASSETS_DEMO } from './assets';
+import { ligneAlerte, ligneCommande, ligneEvenement, type LigneRegie, type ValeurMemoire } from './regie';
 import {
   ecrireCourant, ecrireVersions, emballer, lireCourant, lireFichier, lireVersions, oublierCourant, telecharger,
   type VersionLocale,
@@ -102,6 +105,17 @@ export interface Magasin {
   revenirDemo: () => void;
   /** Projet venu de la salle collaborative (sans annulation possible, verrou ignoré). */
   remplacerProjetDistant: (p: Projet, o?: { premier?: boolean }) => void;
+
+  // ── pupitre de la régie : entrées extérieures du moteur (Lecteur.poser / signal / reprendre) ──
+  /** Pose une mémoire de spectacle (bouton « Reçu », jauge, validation des superviseurs…), lue par 'mem:<nom>'. */
+  poserMemoire: (nom: string, valeur: ValeurMemoire) => void;
+  /** Signal extérieur reçu (OSC, MIDI, clavier, accusé 'accuse:<étape>', lecture 'lu:<étape>', transcription…). */
+  envoyerSignal: (nom: string, donnees?: unknown) => void;
+  /** Reprend au point de reprise `nom` (ou au dernier passé), avec l'état mémorisé. */
+  reprendreAuPoint: (nom?: string) => void;
+  /** Journal de régie de la représentation en cours : commandes émises par les blocs (machine, message, chrono,
+   *  figurants), entrées reçues (signaux, mémoires, reprises) et alertes ; le plus récent en dernier (300 au plus). */
+  journalRegie: LigneRegie[];
 }
 
 // ─── hors React : le lecteur, sa révision, l'exécution en cours ───────────────────────────────────────
@@ -111,6 +125,9 @@ let revisionLecteur = -1;
 let decalT = 0, decalRetard = 0;   // continuité de l'horloge quand le lecteur est recréé après une modification
 let execution: Execution | null = null;
 let minuteurMessage: ReturnType<typeof setTimeout> | undefined;
+/** Ce que le journal de régie a déjà relevé dans l'état du lecteur courant (commandes, journal, alertes). */
+let vus = { c: 0, j: 0, a: 0 };
+let numeroRegie = 0;
 /** Fait avancer la lecture de dt secondes de spectacle (posé par le magasin, appelé par la boucle). */
 let avancerLecture: (dt: number) => void = () => {};
 
@@ -145,11 +162,36 @@ export const useMagasin = create<Magasin>((set, get) => {
       const etape = avant.etape && m.st.some(x => x.id === avant.etape) ? avant.etape : undefined;
       const e = lecteur.allerA(m.id, etape);
       decalT = avant.t - e.t; decalRetard = avant.retard - e.retard;
+      // les mémoires de la soirée (blocs Mémoire, entrées de la régie) survivent à une modification du projet
+      for (const [k, v] of Object.entries(avant.memoires ?? {})) if (e.memoires[k] !== v) lecteur.poser(k, v);
     }
+    // ce que le nouveau lecteur a émis en se replaçant n'est pas nouveau pour la régie
+    const e0 = lecteur.etat();
+    vus = { c: e0.commandes?.length ?? 0, j: e0.journal?.length ?? 0, a: e0.alertes?.length ?? 0 };
     return lecteur;
   };
 
-  const publier = (e: EtatLecture) => set({ lecture: { ...e, t: e.t + decalT, retard: e.retard + decalRetard } });
+  /** Relève les commandes, entrées et alertes nouvelles du lecteur pour le journal de régie (temps décalés). */
+  const releverRegie = (e: EtatLecture): LigneRegie[] | null => {
+    const c = e.commandes ?? [], j = e.journal ?? [], a = e.alertes ?? [];
+    if (c.length < vus.c || j.length < vus.j || a.length < vus.a) vus = { c: 0, j: 0, a: 0 };
+    if (c.length === vus.c && j.length === vus.j && a.length === vus.a) return null;
+    const recu = Date.now(), lignes: LigneRegie[] = [];
+    for (const x of c.slice(vus.c)) lignes.push(ligneCommande(x, ++numeroRegie, recu));
+    for (const x of j.slice(vus.j)) { const l = ligneEvenement(x, numeroRegie + 1, recu); if (l) { numeroRegie++; lignes.push(l); } }
+    for (const x of a.slice(vus.a)) lignes.push(ligneAlerte(x, ++numeroRegie, recu));
+    vus = { c: c.length, j: j.length, a: a.length };
+    for (const l of lignes) l.t += decalT;
+    lignes.sort((p, q) => p.t - q.t || p.n - q.n);
+    return [...get().journalRegie, ...lignes].slice(-300);
+  };
+  const publier = (e: EtatLecture) => {
+    const lecture = { ...e, t: e.t + decalT, retard: e.retard + decalRetard };
+    const journalRegie = releverRegie(e);
+    set(journalRegie ? { lecture, journalRegie } : { lecture });
+  };
+  /** Nouvelle représentation : le journal de régie repart de zéro. */
+  const viderRegie = () => { vus = { c: 0, j: 0, a: 0 }; set({ journalRegie: [] }); };
 
   const journal = (type: string, extra: Record<string, unknown> = {}) => {
     if (!execution) return;
@@ -228,7 +270,7 @@ export const useMagasin = create<Magasin>((set, get) => {
     lancer: () => {
       const l = assurerLecteur();
       const e = get().lecture;
-      if (!e || e.termine) { decalT = 0; decalRetard = 0; publier(l.reinitialiser()); }
+      if (!e || e.termine) { decalT = 0; decalRetard = 0; viderRegie(); publier(l.reinitialiser()); }
       ouvrirExecution();
       set({ enLecture: true });
     },
@@ -277,6 +319,7 @@ export const useMagasin = create<Magasin>((set, get) => {
       fermerExecution();
       const l = assurerLecteur();
       decalT = 0; decalRetard = 0;
+      viderRegie();
       publier(l.reinitialiser());
       set({ enLecture: false, topArme: null });
     },
@@ -371,6 +414,25 @@ export const useMagasin = create<Magasin>((set, get) => {
       if (o?.premier) set({ passe: [], futur: [] });
       remplacerProjet(p);
     },
+
+    // Pupitre de la régie : entrées extérieures, permises en mode scène (le verrou fige la conduite, pas la soirée).
+    poserMemoire: (nom, valeur) => {
+      const n = nom.trim();
+      if (!n) return;
+      publier(assurerLecteur().poser(n, valeur));
+      journal('memoire', { nom: n, valeur });
+    },
+    envoyerSignal: (nom, donnees) => {
+      const n = nom.trim();
+      if (!n) return;
+      publier(assurerLecteur().signal(n, donnees));
+      journal('signal', { nom: n });
+    },
+    reprendreAuPoint: (nom) => {
+      publier(assurerLecteur().reprendre(nom));
+      journal('reprise', { nom: nom ?? '' });
+    },
+    journalRegie: [],
   };
 });
 

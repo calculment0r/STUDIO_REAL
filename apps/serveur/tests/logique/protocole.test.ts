@@ -21,6 +21,25 @@ describe('protocole : lecture des messages client', () => {
     expect(code(() => lire({ t: 'modif', cseq: 1, base: 1, ops: [{ op: 'poser', chemin: ['constructor'], valeur: 1 }] }))).toBe('chemin-invalide');
   });
 
+  it('scene : message opaque de la sortie écran scène, objet borné', () => {
+    expect(lire({ t: 'scene', message: { t: 'scene', v: 1, heure: 1, n: 1, fondu: 600, scene: { type: 'noir' } } }))
+      .toEqual({ t: 'scene', message: { t: 'scene', v: 1, heure: 1, n: 1, fondu: 600, scene: { type: 'noir' } } });
+    expect(code(() => lire({ t: 'scene', message: 'noir' }))).toBe('champ-invalide');
+    expect(code(() => lire({ t: 'scene', message: [1, 2] }))).toBe('champ-invalide');
+    expect(code(() => lire({ t: 'scene', message: { texte: 'x'.repeat(40 * 1024) } }))).toBe('trop-gros');
+  });
+
+  it('rtc : signal WebRTC opaque, destinataire = session ou *, objet borné, `de` jamais repris du client', () => {
+    const offre = { type: 'offre', n: 1, sdp: 'v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\n' };
+    expect(lire({ t: 'rtc', vers: 'sess_sortie1', signal: offre })).toEqual({ t: 'rtc', vers: 'sess_sortie1', signal: offre });
+    expect(lire({ t: 'rtc', vers: '*', signal: { type: 'annonce' } })).toEqual({ t: 'rtc', vers: '*', signal: { type: 'annonce' } });
+    expect(lire({ t: 'rtc', vers: '*', de: 'usurpe_123', signal: { type: 'annonce' } })).not.toHaveProperty('de');
+    expect(code(() => lire({ t: 'rtc', signal: offre }))).toBe('champ-invalide');
+    expect(code(() => lire({ t: 'rtc', vers: 'a b', signal: offre }))).toBe('champ-invalide');
+    expect(code(() => lire({ t: 'rtc', vers: '*', signal: 'offre' }))).toBe('champ-invalide');
+    expect(code(() => lire({ t: 'rtc', vers: '*', signal: { sdp: 'x'.repeat(70 * 1024) } }))).toBe('trop-gros');
+  });
+
   it('commentaires ancrés sur une étape ou un instant', () => {
     expect(lire({ t: 'commentaire', cseq: 1, action: 'ajouter', ancre: { type: 'etape', moment: 'e1', etape: 'portes' }, texte: 'Trop long' }))
       .toMatchObject({ ancre: { type: 'etape', moment: 'e1', etape: 'portes' } });

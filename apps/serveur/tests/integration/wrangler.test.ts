@@ -230,6 +230,67 @@ describe('serveur local (wrangler dev)', () => {
     B2.fermer();
   });
 
+  it('salle : relais des messages de la sortie écran scène (scene), sans écho ni mémoire', async () => {
+    const url = `${base.replace('http', 'ws')}/api/projets/${id}/salle?jeton=${jeton}`;
+    const R = new Client(url);
+    const S = new Client(url);
+    await Promise.all([R.ouvert, S.ouvert]);
+    R.envoyer({ t: 'hello', v: 1, personne: 'pers_regie', session: 'sess_relais1', nom: 'Relais sortie', role: 'regie' });
+    S.envoyer({ t: 'hello', v: 1, personne: 'sortie_proj', session: 'sess_sortie1', nom: 'Sortie scène', role: 'poste' });
+    await Promise.all([R.attendre((m) => m.t === 'bienvenue'), S.attendre((m) => m.t === 'bienvenue')]);
+    S.envoyer({ t: 'scene', message: { t: 'bonjour', v: 1, id: 'sortie_proj', heure: 1 } });
+    const b = await R.attendre((m) => m.t === 'scene');
+    expect(b).toMatchObject({ t: 'scene', par: 'sortie_proj', session: 'sess_sortie1', message: { t: 'bonjour', id: 'sortie_proj' } });
+    R.envoyer({ t: 'scene', message: { t: 'scene', v: 1, heure: 2, n: 1, fondu: 600, scene: { type: 'noir' } } });
+    expect((await S.attendre((m) => m.t === 'scene')).message.scene.type).toBe('noir');
+    R.envoyer({ t: 'ping', id: 9 });
+    await R.attendre((m) => m.t === 'pong');
+    expect(R.messages.filter((m) => m.t === 'scene')).toHaveLength(1);   // pas d'écho à l'émetteur
+    R.envoyer({ t: 'scene', message: 'noir' });
+    expect((await R.attendre((m) => m.t === 'erreur')).code).toBe('champ-invalide');
+    R.fermer();
+    S.fermer();
+  });
+
+  it('salle : relais de signalisation WebRTC (rtc) ciblé par session ou diffusé, `de` posé par le serveur', async () => {
+    const url = `${base.replace('http', 'ws')}/api/projets/${id}/salle?jeton=${jeton}`;
+    const T = new Client(url);   // téléphone du streamer
+    const S = new Client(url);   // sortie écran scène
+    const X = new Client(url);   // un tiers (ne doit pas recevoir les messages ciblés)
+    await Promise.all([T.ouvert, S.ouvert, X.ouvert]);
+    T.envoyer({ t: 'hello', v: 1, personne: 'pers_stream', session: 'sess_tel001', nom: 'Streamer', role: 'poste' });
+    S.envoyer({ t: 'hello', v: 1, personne: 'pers_sortie', session: 'sess_sor001', nom: 'Sortie', role: 'poste' });
+    X.envoyer({ t: 'hello', v: 1, personne: 'pers_tiers', session: 'sess_tie001', nom: 'Tiers' });
+    await Promise.all([T, S, X].map((c) => c.attendre((m) => m.t === 'bienvenue')));
+
+    // Diffusion '*' : tous les autres, pas l'émetteur ; `de` usurpé par le client ignoré.
+    S.envoyer({ t: 'rtc', vers: '*', de: 'sess_pirate', signal: { type: 'recherche', canal: 'streamer' } });
+    const r1 = await T.attendre((m) => m.t === 'rtc');
+    expect(r1).toMatchObject({ t: 'rtc', de: 'sess_sor001', par: 'pers_sortie', vers: '*', signal: { type: 'recherche', canal: 'streamer' } });
+    expect(typeof r1.ts).toBe('number');
+    await X.attendre((m) => m.t === 'rtc');
+
+    // Ciblé : seule la session visée reçoit l'offre SDP, à l'identique.
+    const sdp = 'v=0\r\no=- 46117317 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\nm=video 9 UDP/TLS/RTP/SAVPF 96\r\n';
+    T.envoyer({ t: 'rtc', vers: 'sess_sor001', signal: { type: 'offre', n: 1, sdp } });
+    expect((await S.attendre((m) => m.t === 'rtc' && m.signal.type === 'offre')).signal).toEqual({ type: 'offre', n: 1, sdp });
+    S.envoyer({ t: 'rtc', vers: 'sess_tel001', signal: { type: 'candidat', n: 1, candidat: { candidate: 'candidate:1 1 udp 2122260223 192.168.1.2 50000 typ host', sdpMid: '0', sdpMLineIndex: 0 } } });
+    expect((await T.attendre((m) => m.t === 'rtc' && m.signal.type === 'candidat')).de).toBe('sess_sor001');
+    T.envoyer({ t: 'ping', id: 3 });
+    X.envoyer({ t: 'ping', id: 4 });
+    await Promise.all([T.attendre((m) => m.t === 'pong'), X.attendre((m) => m.t === 'pong')]);
+    expect(X.messages.filter((m) => m.t === 'rtc')).toHaveLength(1);   // le ciblé n'a pas fuité
+    expect(S.messages.filter((m) => m.t === 'rtc')).toHaveLength(1);   // pas d'écho de sa propre diffusion
+
+    // Destinataire absent, signal invalide.
+    T.envoyer({ t: 'rtc', vers: 'sess_absente', signal: { type: 'offre' } });
+    expect((await T.attendre((m) => m.t === 'erreur')).code).toBe('rtc-absent');
+    T.vider();
+    T.envoyer({ t: 'rtc', vers: '*', signal: 'offre' });
+    expect((await T.attendre((m) => m.t === 'erreur')).code).toBe('champ-invalide');
+    T.fermer(); S.fermer(); X.fermer();
+  });
+
   it('refuse le WebSocket sans jeton ou depuis une origine non autorisée', async () => {
     const sansJeton = new Client(`${base.replace('http', 'ws')}/api/projets/${id}/salle`);
     await expect(sansJeton.ouvert).rejects.toThrow(/ouverture impossible/);

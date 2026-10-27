@@ -1,19 +1,10 @@
 /* ============================================================
-   P0.2 - le clavier qui ne mange pas l'ecran
-   Aucune couleur en dur : tout passe par les variables de ../../design/tokens.css.
+   P0.2 - le clavier qui ne mange pas l'ecran, sur le theme STUDIO REAL (packages/theme/theme.css).
+   Aucune couleur en dur : jetons seulement. Sombre (en salle), une main, gros boutons, 16 px dans le champ.
    Mise en page : 3 zones dans une boite posee SUR le viewport visible
    (hauteur et decalage poses par clavier.js depuis visualViewport) ;
    repli CSS pur = 100dvh (Chrome Android avec interactive-widget=resizes-content).
    ============================================================ */
-
-/* Chakra Petch n'est pas declaree par base.css : on la declare ici, depuis le depot. */
-@font-face {
-  font-family: 'Chakra Petch';
-  src: url('../../design/fonts/chakra-petch-light.ttf') format('truetype');
-  font-weight: 300 600;
-  font-style: normal;
-  font-display: swap;
-}
 
 html, body {
   height: 100%;
@@ -61,64 +52,64 @@ body { font-size: 14px; }
 }
 .k-consigne {
   flex: 0 0 auto;
-  padding: var(--s3) var(--s4) var(--s2);
+  padding: 12px 16px 8px;
   display: flex;
   flex-direction: column;
-  gap: var(--s1);
+  gap: 6px;
 }
 .k-tag {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; gap: 7px;
   align-self: flex-start;
   flex: 0 0 auto;
   font-family: var(--f-mono);
-  font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--or);
+  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--ort);
 }
 .k-dot {
   width: 7px; height: 7px; border-radius: 50%;
-  background: var(--or);
+  background: var(--ort);
   animation: k-blink 1.4s ease-in-out infinite;
 }
 .k-consigne-t {
   margin: 0;
-  font-size: 19px; line-height: 1.22; font-weight: 500;
+  font-size: 19px; line-height: 1.22; font-weight: 600;
   color: var(--ink);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
   overflow: hidden;
   transition: font-size .2s ease;
 }
 /* clavier ouvert : la consigne se COMPACTE en une ligne (elle ne disparait pas) */
-.kbd .k-consigne { flex-direction: row; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4); }
+.kbd .k-consigne { flex-direction: row; align-items: center; gap: var(--s3); padding: 6px 16px; }
 .kbd .k-consigne-t { font-size: 13px; line-height: 1.3; -webkit-line-clamp: 1; flex: 1 1 auto; min-width: 0; color: var(--ink2); }
 
 .k-stage {
   flex: 1 1 0;
   min-height: 0;
-  margin: 0 var(--s3) var(--s2);
+  margin: 0 10px 6px;
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--rl);
-  background-color: var(--panel);
-  background-image: radial-gradient(var(--dot) 1px, transparent 1.4px);
+  box-shadow: inset 0 0 0 1px var(--filet-14);
+  border-radius: var(--nl-12);
+  background-color: var(--tile);
+  background-image: radial-gradient(var(--filet-10) 1px, transparent 1.4px);
   background-size: 14px 14px;
   isolation: isolate;
 }
 .k-stage::after {                   /* l'eclair d'une reaction forte */
   content: ""; position: absolute; inset: 0; z-index: 0;
-  background: var(--hl-or);
+  background: var(--ort-20);
   opacity: 0; pointer-events: none;
 }
 .k-stage.flash::after { animation: k-flash .5s ease-out; }
 .k-stage-lbl {
-  position: absolute; left: 8px; top: 6px; z-index: 3;
-  font-family: var(--f-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  position: absolute; left: 10px; top: 8px; z-index: 3;
+  font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .16em; text-transform: uppercase;
   color: var(--ink3);
 }
 .k-stage-empty {
   position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); z-index: 1;
   padding: 0 var(--s5);
-  text-align: center; font-size: 12px; color: var(--ink3);
+  text-align: center; font-size: 13px; color: var(--ink3);
   transition: opacity .3s ease;
 }
 .k-stage.used .k-stage-empty { opacity: 0; }
@@ -127,25 +118,24 @@ body { font-size: 14px; }
   position: absolute; z-index: 2;
   max-width: calc(100% - 16px);
   transform: translate(-50%, -50%) rotate(var(--r, 0deg));
-  padding: 6px 12px 7px;
-  border: 1px solid var(--line-cy);
-  border-radius: var(--rxl);
-  background: var(--panel3);
-  box-shadow: 0 6px 18px var(--drop);
+  padding: 7px 12px 8px;
+  border-radius: var(--nl-12);
+  background: var(--tile2);
+  box-shadow: inset 0 0 0 1px var(--cy-45), 0 6px 18px var(--ombre-2);
   font-size: 17px; line-height: 1.2; font-weight: 500; color: var(--ink);
   overflow-wrap: anywhere;
   animation: k-pop .46s cubic-bezier(.2, 1.7, .4, 1) both;
 }
 .k-pop b {
-  display: block;
-  font-family: var(--f-mono); font-size: 9px; font-weight: 500;
-  letter-spacing: .1em; text-transform: uppercase; color: var(--cy);
+  display: block; margin-bottom: 2px;
+  font-family: var(--f-mono); font-size: 8.5px; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--cy);
 }
 .k-pop.out { animation: k-out .5s ease-in forwards; }
 .k-float {
   position: absolute; z-index: 2; bottom: 0; line-height: 1;
   pointer-events: none; will-change: transform, opacity;
-  filter: drop-shadow(0 2px 6px var(--drop));
+  filter: drop-shadow(0 2px 6px var(--ombre-2));
 }
 
 /* ---------- ZONE MILIEU : les 8 emojis ---------- */
@@ -153,41 +143,41 @@ body { font-size: 14px; }
   flex: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 3px;
-  padding: var(--s2) var(--s3);
+  gap: 4px;
+  padding: 6px 10px;
 }
 .k-e {
   position: relative;
-  height: 48px; min-width: 0; padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--r3);
-  background: var(--panel);
+  height: 50px; min-width: 0; padding: 0;
+  box-shadow: inset 0 0 0 1px var(--filet-14);
+  border-radius: var(--nl-10);
+  background: var(--tile);
   font-size: 25px; line-height: 1;
   touch-action: none;               /* l'appui long ne declenche ni defilement ni menu */
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none;
-  transition: transform .42s ease-out, background-color .2s ease, border-color .2s ease;
+  transition: transform .42s ease-out, background-color .2s ease, box-shadow .2s ease;
 }
 .k-e.holding {                      /* la montee d'une reaction forte */
   transform: scale(1.28);
-  background: var(--or-bg);
-  border-color: var(--line-or);
+  background: var(--ort-14);
+  box-shadow: inset 0 0 0 1px var(--ort-70);
   z-index: 1;
 }
 
 /* ---------- ZONE BASSE : collee au clavier ---------- */
 .k-bottom {
   flex: 0 0 auto;
-  padding: var(--s3) var(--s3) calc(var(--s2) + env(safe-area-inset-bottom));
-  background: var(--panel);
-  border-top: 1px solid var(--line);
+  padding: 10px 10px calc(6px + env(safe-area-inset-bottom));
+  background: var(--tile);
+  box-shadow: inset 0 1px 0 var(--filet-12);
 }
-.kbd .k-bottom { padding-bottom: var(--s2); }      /* le clavier recouvre deja la zone de securite */
+.kbd .k-bottom { padding-bottom: 6px; }      /* le clavier recouvre deja la zone de securite */
 
 .k-chips {
-  display: flex; gap: var(--s2);
-  margin: 0 calc(var(--s3) * -1) var(--s3);
-  padding: 0 var(--s3);
+  display: flex; gap: 6px;
+  margin: 0 -10px 10px;
+  padding: 0 10px;
   overflow-x: auto; overflow-y: hidden;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -196,47 +186,48 @@ body { font-size: 14px; }
 .k-chips::-webkit-scrollbar { display: none; }
 .k-chip {
   flex: 0 0 auto;
-  height: 34px; padding: 0 14px;
-  border: 1px solid var(--line-cy);
-  border-radius: 999px;
-  background: var(--cy-bg);
+  height: 36px; padding: 0 14px;
+  box-shadow: inset 0 0 0 1px var(--cy-45);
+  border-radius: var(--nl-rond);
+  background: var(--cy-10);
   color: var(--cy);
   font-size: 14px; white-space: nowrap;
   transition: background-color .15s ease;
 }
-.k-chip:active { background: var(--hl-cy); }
+.k-chip:active { background: var(--filet-20); }
 
-.k-form { display: flex; gap: var(--s2); align-items: stretch; }
+.k-form { display: flex; gap: 8px; align-items: stretch; }
 .k-field { position: relative; flex: 1 1 auto; min-width: 0; }
 .k-field input {
-  display: block; width: 100%; height: 48px;
-  padding: 0 52px 0 var(--s4);
-  border: 1px solid var(--line-cy);
-  border-radius: var(--rxl);
-  background: var(--panel2);
+  display: block; width: 100%; height: 50px;
+  padding: 0 56px 0 16px;
+  box-shadow: inset 0 0 0 1px var(--filet-20);
+  border-radius: var(--nl-16);
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--f-ui);
   font-size: 16px;                  /* >= 16px : Safari iOS ne zoome pas au focus */
   -webkit-user-select: text; user-select: text;
   -webkit-appearance: none; appearance: none;
-  transition: border-color .15s ease;
+  transition: box-shadow .15s ease;
 }
 .k-field input::placeholder { color: var(--ink3); }
-.k-field input:focus, .k-field input:focus-visible { outline: none; border-color: var(--or); }
+.k-field input:focus, .k-field input:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--cy); }
 .k-count {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  font-family: var(--f-mono); font-size: 10px; color: var(--ink3);
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  font-family: var(--f-chiffre); font-weight: 700; font-size: 9px; letter-spacing: .02em; color: var(--ink3);
+  font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1;
   pointer-events: none;
 }
-.k-count.warn { color: var(--amb); }
-.k-count.max  { color: var(--or); }
+.k-count.warn { color: var(--rampe-1); }
+.k-count.max  { color: var(--ort); }
 
 .k-send {
   position: relative; overflow: hidden;
-  flex: 0 0 auto; min-width: 96px; height: 48px; padding: 0 var(--s5);
-  border: 0; border-radius: var(--rxl);
-  background: var(--or); color: var(--on-or);
-  font-size: 16px; font-weight: 600;
+  flex: 0 0 auto; min-width: 96px; height: 50px; padding: 0 18px;
+  border: 0; border-radius: var(--nl-16);
+  background: var(--ort); color: var(--on-ort);
+  font-family: var(--f-mono); font-size: 12px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase;
   transition: transform .12s ease;
 }
 .k-send span { position: relative; z-index: 1; }
@@ -252,13 +243,13 @@ body { font-size: 14px; }
 .k-field.shake { animation: k-shake .32s ease-out; }
 
 .k-hint {
-  height: 16px; margin: var(--s1) 2px 0;
-  font-family: var(--f-mono); font-size: 10px; line-height: 16px; letter-spacing: .02em;
+  height: 16px; margin: 4px 2px 0;
+  font-family: var(--f-mono); font-size: 9.5px; line-height: 16px; letter-spacing: .06em;
   color: var(--ink3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.k-hint.ok  { color: var(--grn2); }
-.k-hint.err { color: var(--amb); }
+.k-hint.ok  { color: var(--gt); }
+.k-hint.err { color: var(--rampe-1); }
 
 /* petits ecrans visibles (clavier + paysage) : on rend de la place au champ */
 .tiny .k-chips { display: none; }
@@ -270,19 +261,19 @@ body { font-size: 14px; }
 /* ---------- panneau de debogage ---------- */
 .k-dbg-btn {
   position: absolute; z-index: 20;
-  right: calc(var(--s2) + env(safe-area-inset-right)); top: calc(var(--s2) + env(safe-area-inset-top));
-  height: 24px; padding: 0 8px;
-  border: 1px solid var(--line-amb); border-radius: var(--r3);
-  background: var(--veil); color: var(--amb);
-  font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em;
+  right: calc(8px + env(safe-area-inset-right)); top: calc(8px + env(safe-area-inset-top));
+  height: 26px; padding: 0 9px;
+  box-shadow: inset 0 0 0 1px var(--filet-28); border-radius: var(--nl-7);
+  background: var(--veil); color: var(--ink3);
+  font-family: var(--f-mono); font-size: 9px; letter-spacing: .14em;
 }
 .k-dbg {
   position: absolute; z-index: 19;
-  left: var(--s2); right: var(--s2);
-  top: calc(32px + env(safe-area-inset-top));
-  max-height: calc(100% - 44px - env(safe-area-inset-top));
+  left: 8px; right: 8px;
+  top: calc(36px + env(safe-area-inset-top));
+  max-height: calc(100% - 48px - env(safe-area-inset-top));
   display: flex; flex-direction: column;
-  border: 1px solid var(--line-amb); border-radius: var(--rl);
+  box-shadow: inset 0 0 0 1px var(--filet-20), 0 14px 40px var(--ombre-2); border-radius: var(--nl-10);
   background: var(--veil);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   font-family: var(--f-mono); font-size: 11px;
@@ -291,21 +282,21 @@ body { font-size: 14px; }
 .k-dbg[hidden] { display: none; }
 .k-dbg-head {
   flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 10px; border-bottom: 1px solid var(--line);
-  color: var(--amb); text-transform: uppercase; letter-spacing: .08em; font-size: 10px;
+  padding: 7px 10px; box-shadow: inset 0 -1px 0 var(--filet-12);
+  color: var(--ort); text-transform: uppercase; letter-spacing: .16em; font-size: 9px;
 }
 .k-dbg-head button {
-  height: 22px; padding: 0 8px;
-  border: 1px solid var(--line-cy); border-radius: var(--r1);
-  color: var(--cy); font-family: var(--f-mono); font-size: 10px;
+  height: 24px; padding: 0 9px;
+  box-shadow: inset 0 0 0 1px var(--cy-45); border-radius: var(--nl-6);
+  color: var(--cy); font-family: var(--f-mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
 }
 .k-dbg dl {
   margin: 0; padding: 4px 10px 8px; overflow-y: auto; overscroll-behavior: contain;
   display: grid; grid-template-columns: auto 1fr; column-gap: var(--s3);
 }
 .k-dbg dt { color: var(--ink3); padding: 1px 0; }
-.k-dbg dd { margin: 0; padding: 1px 0; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
-.k-dbg dd.hot { color: var(--or); }
+.k-dbg dd { margin: 0; padding: 1px 0; color: var(--cy); text-align: right; font-variant-numeric: tabular-nums; }
+.k-dbg dd.hot { color: var(--ort); }
 
 /* ---------- animations ---------- */
 @keyframes k-pop   { from { transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(.2); opacity: 0; }
@@ -313,7 +304,7 @@ body { font-size: 14px; }
 @keyframes k-out   { to   { transform: translate(-50%, -80%) rotate(var(--r, 0deg)) scale(.9); opacity: 0; } }
 @keyframes k-flash { from { opacity: 1; } to { opacity: 0; } }
 @keyframes k-cd    { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-@keyframes k-sent  { 0% { box-shadow: 0 0 0 0 var(--or-bg2); } 100% { box-shadow: 0 0 0 14px transparent; } }
+@keyframes k-sent  { 0% { box-shadow: 0 0 0 0 var(--ort-55); } 100% { box-shadow: 0 0 0 14px transparent; } }
 @keyframes k-shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); }
                      60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
 @keyframes k-blink { 50% { opacity: .3; } }

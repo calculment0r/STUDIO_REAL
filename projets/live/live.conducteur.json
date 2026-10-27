@@ -658,7 +658,15 @@
             "params": {
               "delai": 30,
               "echeance": "continuer",
-              "condition": "mem:recu_lance = oui (bouton « Reçu » de la vue privée)"
+              "condition": "mem:recu_lance = oui, ou signal « recu » reçu pendant l’attente (bouton « Reçu » de la vue privée)",
+              "entree": {
+                "memoire": "recu_lance",
+                "valeurs": [
+                  "oui",
+                  "non"
+                ],
+                "par": "bouton « Reçu » de la vue privée du chef (ou signal recu)"
+              }
             }
           },
           {
@@ -677,7 +685,15 @@
             "asset": "Consigne · lance le live",
             "params": {
               "canal": "oreillette + vibration de la vue privée (/streamer/vibrer)",
-              "terrain": "le régisseur terrain vérifie le téléphone du chef"
+              "terrain": "le régisseur terrain vérifie le téléphone du chef",
+              "entree": {
+                "memoire": "flux_perdu",
+                "valeurs": [
+                  "oui",
+                  "non"
+                ],
+                "par": "état du serveur vidéo"
+              }
             }
           },
           {
@@ -720,7 +736,15 @@
               "delai": 180,
               "echeance": "top",
               "condition": "mem:flux_perdu = non (état du serveur vidéo)",
-              "echeance_note": "à l’échéance la régie décide (top)"
+              "echeance_note": "à l’échéance la régie décide (top)",
+              "entree": {
+                "memoire": "flux_perdu",
+                "valeurs": [
+                  "oui",
+                  "non"
+                ],
+                "par": "état du serveur vidéo"
+              }
             }
           },
           {
@@ -794,9 +818,14 @@
                 "k": "mem:recu_lance",
                 "op": "=",
                 "v": "oui"
+              },
+              {
+                "k": "sig:recu",
+                "op": "≥",
+                "v": 1
               }
             ],
-            "mode": "all",
+            "mode": "any",
             "nom": "condition remplie"
           },
           {
@@ -1137,7 +1166,8 @@
             "params": {
               "mode": "graine fixe en répétition, aléa vrai en scène",
               "son": "roue_tirage.wav",
-              "note": "à affiner : ne tirer qu’entre les options ex æquo"
+              "note": "ne tire qu’entre les issues ex æquo du dernier vote (écart ≤ 4 points)",
+              "exaequo": true
             }
           },
           {
@@ -1604,7 +1634,14 @@
               "echeance": "continuer",
               "condition": "mem:jauge ≥ 600 sur 1000",
               "source": "énergie des secousses (b5) agrégée par la variable JAUGE_SALLE (d2) qui écrit mem:jauge",
-              "ecran_scene": "JAUGE-COMBO, une moitié par camp"
+              "ecran_scene": "JAUGE-COMBO, une moitié par camp",
+              "entree": {
+                "memoire": "jauge",
+                "pas": 100,
+                "min": 0,
+                "max": 1000,
+                "par": "variable JAUGE_SALLE (secousses agrégées)"
+              }
             }
           },
           {
@@ -1699,8 +1736,16 @@
                 "Chocolatines",
                 "Pains au chocolat"
               ],
-              "ecrit": "mem:camp_gagnant",
-              "ecran_scene": "le camp qui a le plus secoué"
+              "ecrit": "mem:camp_gagnant (posée de l’extérieur : classement, ou la régie au pupitre)",
+              "ecran_scene": "le camp qui a le plus secoué",
+              "entree": {
+                "memoire": "camp_gagnant",
+                "valeurs": [
+                  "Chocolatines",
+                  "Pains au chocolat"
+                ],
+                "par": "classement des équipes, ou la régie"
+              }
             }
           },
           {
@@ -2010,6 +2055,13 @@
                   "bougie"
                 ],
                 "note": "ne jamais souffler les mots secrets"
+              },
+              "entree": {
+                "memoire": "missions",
+                "pas": 1,
+                "min": 0,
+                "max": 3,
+                "par": "superviseurs : + 1 par mot secret validé"
               }
             }
           },
@@ -2029,7 +2081,14 @@
             "params": {
               "delai": 90,
               "echeance": "continuer",
-              "condition": "mem:missions ≥ 3"
+              "condition": "mem:missions ≥ 3",
+              "entree": {
+                "memoire": "missions",
+                "pas": 1,
+                "min": 0,
+                "max": 3,
+                "par": "superviseurs : + 1 par mot secret validé"
+              }
             }
           },
           {

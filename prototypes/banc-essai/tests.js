@@ -3,7 +3,7 @@
    Chaque test : { id, groupe, titre, aide, subjectif?, passif?, support(), lancer(c), arreter?() }
    - lancer(c) renvoie { auto: 'ok'|'ko'|'partiel'|'attente', detail, donnees } ;
      un test « en direct » appelle c.actif(true) et c.maj({...}) pour mettre à jour la carte.
-   - Aucune couleur en dur : les couleurs d'écran sont des var(--jeton) de design/tokens.css.
+   - Aucune couleur en dur : les couleurs d'écran sont des var(--jeton) du thème (packages/theme/).
    ============================================================ */
 
 export function creerTests(B) {

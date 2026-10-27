@@ -1,6 +1,10 @@
 // La coquille du conducteur : en-tête, planche (haut) et panneau de droite, conduite (bas, pleine largeur),
 // tiroir des assets, superpositions. Assemble <Planche/> (chantier PLANCHE) et <Conduite/> (chantier CONDUITE).
+// Au démarrage : `?projet=live` ouvre le spectacle LIVE ; sinon la dernière salle collaborative est rouverte si son jeton
+// est connu (sans serveur : statut « hors ligne », tout reste local, aucun message bloquant).
 import { useEffect, useRef, type DragEvent } from 'react';
+import { reprendreDerniereSalle } from '../collab';
+import { chargerLive, projetDemandeParAdresse } from './projet-live';
 import { useMagasin, demarrerBoucle } from '../etat/magasin';
 import { ETAPE_DE_ASSET, PISTE_DE_ASSET, TYPES_PISTE } from '../etat/assets';
 import { nouvelId } from '../etat/ids';
@@ -11,8 +15,9 @@ import { EnTete } from './EnTete';
 import { Recherche } from './Recherche';
 import { Panneau } from './Panneau';
 import { TiroirAssets, TYPE_ASSET, type AssetGlisse } from './TiroirAssets';
-import { AlerteSecurite, Aide, CadreEnLecture, Pupitre } from './Superpositions';
+import { AlerteSecurite, Aide, CadreEnLecture, Projets, Pupitre } from './Superpositions';
 import { useRaccourcis } from './raccourcis';
+import { useRelaisSortie } from '../sortie';
 import './coquille.css';
 
 /** Moment visé par un dépôt : la sélection, sinon le moment en cours, sinon le premier. */
@@ -97,6 +102,14 @@ export function App() {
 
   useRaccourcis();
   useEffect(() => demarrerBoucle(), []);
+  useRelaisSortie();   // traduit la lecture en scènes pour la sortie Écran scène (une seule fois pour toute l'app)
+  const demarre = useRef(false);
+  useEffect(() => {
+    if (demarre.current) return;   // StrictMode monte deux fois en développement
+    demarre.current = true;
+    if (projetDemandeParAdresse() === 'live') void chargerLive();
+    else reprendreDerniereSalle();
+  }, []);
 
   return (
     <div className="coquille">
@@ -126,6 +139,7 @@ export function App() {
       <Recherche />
       <AlerteSecurite />
       <Pupitre />
+      <Projets />
       <Aide />
     </div>
   );

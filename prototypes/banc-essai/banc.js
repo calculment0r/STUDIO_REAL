@@ -157,8 +157,8 @@ function poserIcone() {
     c.width = c.height = 180;
     const g = c.getContext('2d');
     g.fillStyle = cs.getPropertyValue('--bg').trim(); g.fillRect(0, 0, 180, 180);
-    g.fillStyle = cs.getPropertyValue('--or').trim(); g.fillRect(45, 45, 90, 90);
-    g.fillStyle = cs.getPropertyValue('--on-or').trim(); g.fillRect(78, 78, 24, 24);
+    g.fillStyle = cs.getPropertyValue('--ort').trim(); g.fillRect(45, 45, 90, 90);
+    g.fillStyle = cs.getPropertyValue('--on-ort').trim(); g.fillRect(78, 78, 24, 24);
     const l = h('link', { rel: 'apple-touch-icon', href: c.toDataURL('image/png') });
     document.head.append(l);
   } catch (_) { /* ignore */ }

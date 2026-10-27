@@ -99,6 +99,8 @@ pas d'`ack`, même en refus).
 | `mode` | `cseq`, `mode:'ecrire'\|'repeter'\|'jouer'` | `ack` + `mode` à tous (+ `verrou` si passage en Scène) |
 | `lecture` | `etat`, `cseq?` | `lecture` aux autres (+ `ack` si `cseq`) |
 | `enregistrer` | `cseq`, `message?` (≤ 200) | `ack` (`res:{version}` ou `{version, inchange:true}`, `statut:'conflit'`) + `version` à tous |
+| `scene` | `message` (objet, ≤ 32 Ko) : message de la sortie écran scène (régie ↔ sortie, voir apps/conducteur/src/sortie/protocole.ts) | `scene` aux autres ; rien n'est gardé |
+| `rtc` | `vers` (session cible, ou `'*'` = tous les autres), `signal` (objet opaque, ≤ 64 Ko) : signalisation WebRTC du flux du streamer (annonce, offre/réponse SDP, candidats ICE, consignes ; voir apps/conducteur/src/flux/protocole.ts) | `rtc` à la session visée (tous ses sockets) ou aux autres ; `erreur{code:'rtc-absent'}` si la session visée n'est pas là ; rien n'est gardé |
 | `resync` | — | `instantane{raison:'resync'}` |
 | `ping` | `id?` | `pong` |
 | `bye` | — | les autres reçoivent `depart` ; fermeture 1000 |
@@ -121,6 +123,8 @@ Ancres de commentaire : `{type:'etape', moment, etape}` · `{type:'moment', mome
 | `verrou` | `cible`, `personne` (`null` = libéré), `nom?` |
 | `mode` | `mode`, `par` |
 | `lecture` | `etat`, `par`, `ts` |
+| `scene` | `message`, `par`, `session`, `ts` (relais de la sortie écran scène) |
+| `rtc` | `de` (session émettrice, posée par le serveur), `par` (sa personne), `vers`, `signal` (tel qu'envoyé), `ts` |
 | `version` | `version`, `par`, `seq`, `message?` |
 | `pong` | `id?`, `ts` |
 | `erreur` | `code`, `message` (`hello-requis`, `type-inconnu`, `json-invalide`, `trop-gros`, `conflit-enregistrement`, `interne`…) |

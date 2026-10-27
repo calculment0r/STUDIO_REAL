@@ -151,3 +151,11 @@
   font-family: var(--f-ui); font-size: 12px; box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); user-select: text; }
 .planche-biblio__liste { max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(var(--lr), .28) transparent; }
 .planche-biblio__fam { display: block; padding: 8px 8px 3px; font-family: var(--f-mono); font-size: 7px; letter-spacing: .18em; }
+
+/* Collaboration (chantier INTÉGRATION) : pastille de commentaires ouverts sur une étape ou un moment. */
+.sr-pastille-com {
+  position: absolute; left: -9px; top: -9px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; background: var(--ort); color: var(--on-ort); font-size: 9px; line-height: 1;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+.sr-pastille-com:hover { filter: brightness(1.08); }

@@ -35,7 +35,7 @@ espaces réduites. Pas de leet. La ponctuation n'est pas garantie (la Web Speech
 - On teste les **partiels stables** et le texte **final** ; un même déclencheur ne repart pas avant 8 s (conseil, à régler).
 
 ### 0.3 Couleurs
-`couleur` est le **nom d'un jeton CSS** de `design/tokens.css` (`--coral-2`), jamais une valeur. La page l'utilise en `color: var(--coral-2)`.
+`couleur` est le **nom d'un jeton CSS** du thème `packages/theme/` (`--coral-2`, défini dans `jetons-portail.css`), jamais une valeur. La page l'utilise en `color: var(--coral-2)`.
 Jetons choisis, lisibles sur les fonds sombres (`--bg`, `--panel`) et redéfinis dans le thème clair : `--coral-3`, `--coral-2`, `--cy`, `--amb`,
 `--grn2`, `--or`, `--ink`, `--ink2`, `--nd-ryt`, `--nd-har`, `--nd-tim`, `--nd-nrj`, `--nd-ten`. Plusieurs personas partagent une couleur (comme sur Twitch) ;
 les 4 récurrents ont chacun la leur.

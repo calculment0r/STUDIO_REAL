@@ -14,6 +14,10 @@ export const LIMITES_WS = {
   nom: 60,
   /** historique de chat renvoyé à l'arrivée */
   historiqueChat: 100,
+  /** message de la sortie écran scène (régie ↔ sortie), JSON sérialisé */
+  scene: 32 * 1024,
+  /** signal WebRTC relayé (offre/réponse SDP, candidat ICE, consigne au streamer), JSON sérialisé */
+  rtc: 64 * 1024,
 } as const;
 
 export type Role = 'auteur' | 'regie' | 'poste';
@@ -49,6 +53,10 @@ export type MessageClient =
   | { t: 'mode'; cseq: number; mode: ModeSalle }
   | { t: 'lecture'; cseq?: number; etat: EtatLecture | Record<string, unknown> }
   | { t: 'enregistrer'; cseq: number; message?: string }
+  /** sortie écran scène : message opaque relayé aux autres (régie → sortie, sortie → régie), jamais gardé */
+  | { t: 'scene'; message: Record<string, unknown> }
+  /** signalisation WebRTC (flux du streamer) : `signal` opaque relayé tel quel à la session `vers` ('*' = tous les autres) */
+  | { t: 'rtc'; vers: string; signal: Record<string, unknown> }
   | { t: 'resync' }
   | { t: 'ping'; id?: number }
   | { t: 'bye' };
@@ -73,6 +81,9 @@ export type MessageServeur =
   | { t: 'verrou'; cible: string; personne: string | null; nom?: string }
   | { t: 'mode'; mode: ModeSalle; par: string }
   | { t: 'lecture'; etat: unknown; par: string; ts: number }
+  | { t: 'scene'; message: unknown; par: string; session: string; ts: number }
+  /** `de` = session émettrice (posée par le serveur, jamais par le client), `par` = sa personne */
+  | { t: 'rtc'; de: string; par: string; vers: string; signal: unknown; ts: number }
   | { t: 'version'; version: number; par: string; message?: string; seq: number }
   | { t: 'pong'; id?: number; ts: number }
   | { t: 'erreur'; code: string; message: string };
@@ -186,6 +197,17 @@ export function lireMessageClient(brut: string | ArrayBuffer): MessageClient {
     case 'enregistrer': {
       const c = cseq(m);
       return m.message === undefined ? { t: 'enregistrer', cseq: c } : { t: 'enregistrer', cseq: c, message: texte(m.message, 200, 'message') };
+    }
+    case 'scene': {
+      if (!estObjet(m.message)) throw new ErreurProtocole('champ-invalide', 'message : objet attendu');
+      if (JSON.stringify(m.message).length > LIMITES_WS.scene) throw new ErreurProtocole('trop-gros', `message de scène > ${LIMITES_WS.scene} octets`);
+      return { t: 'scene', message: m.message };
+    }
+    case 'rtc': {
+      if (m.vers !== '*' && (typeof m.vers !== 'string' || !RE_ID.test(m.vers))) throw new ErreurProtocole('champ-invalide', 'vers : session [A-Za-z0-9_-]{6,64} ou *');
+      if (!estObjet(m.signal)) throw new ErreurProtocole('champ-invalide', 'signal : objet attendu');
+      if (JSON.stringify(m.signal).length > LIMITES_WS.rtc) throw new ErreurProtocole('trop-gros', `signal WebRTC > ${LIMITES_WS.rtc} octets`);
+      return { t: 'rtc', vers: m.vers, signal: m.signal };
     }
     case 'resync': return { t: 'resync' };
     case 'ping': return entier(m.id) ? { t: 'ping', id: m.id } : { t: 'ping' };

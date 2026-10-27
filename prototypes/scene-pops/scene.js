@@ -13,7 +13,7 @@ const LOGICAL_H = 1080;
 async function main() {
   const theme = readTheme();
   const status = $('#status');
-  if (!theme.fromTokens) status.textContent = 'tokens.css introuvable : couleurs de repli';
+  if (!theme.fromTokens) status.textContent = 'thème introuvable (packages/theme) : couleurs neutres';
 
   /* ---------- Pixi ---------- */
   const host = $('#pixi');
@@ -77,7 +77,7 @@ async function main() {
     ctx.zone = { x: raw.x - m, y: raw.y - m, w: raw.w + 2 * m, h: raw.h + 2 * m };
     pBack.zone = pFront.zone = ctx.zone;
     danmaku.layout();
-    flashG.clear().rect(-50, -50, ctx.W + 100, ctx.H + 100).fill(0xffffff).rect(ctx.zone.x, ctx.zone.y, ctx.zone.w, ctx.zone.h).cut();
+    flashG.clear().rect(-50, -50, ctx.W + 100, ctx.H + 100).fill(theme.masque).rect(ctx.zone.x, ctx.zone.y, ctx.zone.w, ctx.zone.h).cut();
   }
   layout();
   window.addEventListener('resize', layout);
@@ -106,7 +106,7 @@ async function main() {
   /* ---------- vidéo de remplacement : dégradé animé + silhouette dans la zone ---------- */
   const bd = $('#backdrop'), bg = bd.getContext('2d');
   bd.width = 384; bd.height = 216;
-  const css = (n, a = 1) => { const c = n; return `rgba(${c >> 16},${(c >> 8) & 255},${c & 255},${a})`; };
+  const css = (n, a = 1) => hexToCss(n, a);
   function drawBackdrop(t) {
     const w = bd.width, h = bd.height;
     bg.fillStyle = hexToCss(mix(theme.bg, theme.panel3, 0.6)); bg.fillRect(0, 0, w, h);

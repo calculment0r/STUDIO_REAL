@@ -1,83 +1,76 @@
 /* ============================================================
-   P0.5 figurants : feuille commune aux 4 pages.
-   Aucune couleur en dur : uniquement les variables de design/tokens.css.
-   Filets en box-shadow inset ; Chakra Petch pour l'UI, Azeret Mono pour
-   les étiquettes en petites capitales espacées.
+   P0.5 figurants : feuille commune aux 4 pages, sur le thème STUDIO REAL (packages/theme/theme.css).
+   Aucune couleur en dur : jetons du thème seulement. Filets en box-shadow inset, rayons NL-16 ;
+   Chakra Petch pour le texte, Azeret Mono capitales espacées pour les micro-étiquettes,
+   Venus Rising (repli Chakra Petch 700) pour les titres et les chiffres.
    ============================================================ */
-
-@font-face {
-  font-family: 'Chakra Petch';
-  src: url('../../../../design/fonts/chakra-petch-light.ttf') format('truetype');
-  font-weight: 300 600;
-  font-style: normal;
-  font-display: swap;
-}
 
 html, body { height: 100%; min-height: 0; margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); }
-[hidden] { display: none !important; }
 
-/* ---------- étiquettes ---------- */
+/* ---------- micro-étiquettes ---------- */
 .et {
   font-family: var(--f-mono);
-  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  font-size: 8.5px; letter-spacing: .16em; text-transform: uppercase;
   color: var(--ink3);
   font-weight: 400;
 }
 .et b { color: var(--ink2); font-weight: 500; }
 
-/* ---------- état de la connexion ---------- */
+/* ---------- état de la connexion (le voyant du Conducteur) ---------- */
 .ws-pill {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-family: var(--f-mono); font-size: 10px; letter-spacing: .18em;
-  text-transform: uppercase; color: var(--ink3);
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink3); white-space: nowrap;
 }
 .ws-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink3); flex: none; }
-.ws-pill[data-etat="ouvert"] { color: var(--grn2); }
-.ws-pill[data-etat="ouvert"] i { background: var(--grn2); }
+.ws-pill[data-etat="ouvert"] { color: var(--gt); }
+.ws-pill[data-etat="ouvert"] i { background: var(--gt); }
 .ws-pill[data-etat="connexion"] i,
-.ws-pill[data-etat="attente"] i { background: var(--amb); animation: sPulse 1.1s ease-in-out infinite; }
-.ws-pill[data-etat="attente"], .ws-pill[data-etat="connexion"] { color: var(--amb); }
-.ws-pill[data-etat="indisponible"] { color: var(--or); }
-.ws-pill[data-etat="indisponible"] i { background: var(--or); }
+.ws-pill[data-etat="attente"] i { background: var(--ort); animation: srp 1.2s infinite; }
+.ws-pill[data-etat="attente"], .ws-pill[data-etat="connexion"] { color: var(--ort); }
+.ws-pill[data-etat="indisponible"] { color: var(--rec); }
+.ws-pill[data-etat="indisponible"] i { background: var(--rec); }
 
 .hors-ligne {
   display: flex; align-items: center; justify-content: center; text-align: center;
   padding: var(--s4) var(--s5);
-  font-family: var(--f-mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
-  color: var(--amb); background: var(--amb-bg);
-  box-shadow: inset 0 0 0 1px var(--line-amb);
-  border-radius: var(--r2);
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ort); background: var(--tile);
+  box-shadow: inset 0 0 0 1px var(--ort-55);
+  border-radius: var(--nl-10);
 }
 
-/* ---------- boutons ---------- */
+/* ---------- boutons (le bouton de panneau du Conducteur) ---------- */
 .bt {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 32px; padding: 0 var(--s4);
-  font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--ink2); background: var(--panel2);
-  box-shadow: inset 0 0 0 1px var(--line);
-  border-radius: var(--r1);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 32px; padding: 0 12px;
+  font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink); background: transparent;
+  box-shadow: inset 0 0 0 1px var(--filet-20);
+  border-radius: var(--nl-7);
   transition: filter .12s, background .12s, color .12s;
   white-space: nowrap;
 }
-.bt:hover:not(:disabled) { filter: brightness(1.25); color: var(--ink); }
-.bt:disabled { opacity: .35; cursor: default; }
-.bt.go { background: var(--or); color: var(--on-or); box-shadow: none; }
-.bt.on { background: var(--grn); color: var(--on-grn); box-shadow: none; }
-.bt.cy { background: var(--cy-bg); color: var(--cy); box-shadow: inset 0 0 0 1px var(--line-cy); }
+.bt:hover:not(:disabled) { background: var(--tile2); }
+.bt:disabled { opacity: .4; cursor: default; }
+.bt.go { background: var(--ort); color: var(--on-ort); box-shadow: none; }
+.bt.go:hover:not(:disabled) { background: var(--ort); filter: brightness(1.08); }
+.bt.on { background: var(--gdeep); color: var(--gink); box-shadow: none; }
+.bt.cy { color: var(--cy); box-shadow: inset 0 0 0 1px var(--cy-45); }
 
+/* ---------- champs ---------- */
 .champ {
-  min-height: 32px; padding: 0 var(--s3);
-  background: var(--panel); color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--line);
-  border-radius: var(--r1);
-  font-size: 14px; min-width: 0;
+  min-height: 34px; padding: 0 10px;
+  background: var(--bg); color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--filet-20);
+  border-radius: var(--nl-7);
+  font-size: 13px; min-width: 0; outline: none;
 }
 .champ::placeholder { color: var(--ink3); }
-.champ:focus { box-shadow: inset 0 0 0 1px var(--line-or); }
-select.champ { appearance: none; padding-right: var(--s3); }
-select.champ option { background: var(--panel2); color: var(--ink); }
+.champ:focus { box-shadow: inset 0 0 0 1px var(--cy); }
+select.champ { appearance: none; -webkit-appearance: none; padding-right: 10px; cursor: pointer; }
+select.champ option { background: var(--tile); color: var(--ink); }
 
 /* ---------- une ligne de chat « public » ---------- */
 .lg {
@@ -113,8 +106,8 @@ select.champ option { background: var(--panel2); color: var(--ink); }
   position: absolute; bottom: -4em; left: 0;
   max-width: min(46ch, 70%);
   padding: .5em .9em .55em;
-  background: var(--panel2);
-  box-shadow: inset 0 0 0 1px var(--line), 0 .4em 1.2em var(--drop);
+  background: var(--tile2);
+  box-shadow: inset 0 0 0 1px var(--filet-14), 0 .4em 1.2em var(--ombre-2);
   border-radius: 1.1em 1.1em 1.1em .3em;
   animation: popMonte 8s linear both;
   will-change: transform, opacity;

@@ -1,0 +1,10 @@
+/* @studio-real/theme : le point d'entrée des PAGES (prototypes, pages publiques), sans build :
+     <link rel="stylesheet" href="<chemin relatif>/packages/theme/theme.css">
+   = le noyau (le thème du Conducteur) + les remises à zéro d'une page (pages.css). */
+@import './polices.css';
+@import './jetons-portail.css';
+@import './jetons.css';
+@import './jetons-derives.css';
+@import './base.css';
+@import './composants.css';
+@import './pages.css';

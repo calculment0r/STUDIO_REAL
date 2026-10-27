@@ -176,7 +176,7 @@ export class Featured {
     const wrap = Math.min(1180, W - 260);
     const tag = kit.text('★ EN VEDETTE', { font: 'sr-mono', size: 28, tint: theme.amb });
     const nameT = kit.text(msg.user.name, { font: 'sr-mono', size: 44, tint: color });
-    const body = kit.text(msg.text, { font: 'sr-ui', size: 74, tint: 0xffffff, wrap });
+    const body = kit.text(msg.text, { font: 'sr-ui', size: 74, tint: theme.ink, wrap });
     const padX = 44, padY = 28;
     const w = Math.max(body.width, nameT.width + tag.width + 40) + padX * 2;
     const h = nameT.height + body.height + padY * 2 + 6;
@@ -428,7 +428,7 @@ export class VoteReveal {
     const c = this.c = new Container(); c.position.set(px, py);
     this.ctx.layers.hud.addChild(c);
     c.addChild(kit.nine('fill', pw, ph, theme.bubbleFill, 0.93), kit.nine('ring', pw, ph, theme.cy, 0.9));
-    this.title = kit.text('OÙ DOIT-IL ALLER ?', { font: 'sr-ui', size: 38, tint: 0xffffff, wrap: pw - 60 });
+    this.title = kit.text('OÙ DOIT-IL ALLER ?', { font: 'sr-ui', size: 38, tint: theme.ink, wrap: pw - 60 });
     this.title.position.set(30, 26); c.addChild(this.title);
     this.status = kit.text('VOTEZ !', { font: 'sr-mono', size: 28, tint: theme.amb });
     this.status.position.set(30, 26 + this.title.height + 6); c.addChild(this.status);
@@ -436,7 +436,7 @@ export class VoteReveal {
     this.bars = options.map((o, i) => {
       const x = 20 + slot * i + 13;
       const bar = new Sprite(kit.tex.white); bar.anchor.set(0, 1); bar.width = bw; bar.height = 4; bar.position.set(x, ph - 150); bar.tint = o.color;
-      const pct = kit.text('0%', { font: 'sr-mono', size: 40, tint: 0xffffff }); pct.position.set(x, ph - 150 - 60);
+      const pct = kit.text('0%', { font: 'sr-mono', size: 40, tint: theme.ink }); pct.position.set(x, ph - 150 - 60);
       const lab = kit.text(o.label, { font: 'sr-ui', size: 28, tint: o.color, wrap: slot - 4 }); lab.position.set(x - 2, ph - 134);
       c.addChild(bar, pct, lab);
       return { bar, pct, lab, x, bw };
@@ -486,7 +486,7 @@ export class VoteReveal {
       if (time - this.tDrum > 1.9) this._reveal();
     } else if (this.state === 'reveal') {
       const k = time - this.tReveal, w = bars[this.winner];
-      w.pct.scale.set(1 + 0.18 * Math.sin(k * 8) * Math.exp(-k)); w.bar.tint = mix(this.options[this.winner].color, 0xffffff, 0.25 + 0.2 * Math.sin(k * 10));
+      w.pct.scale.set(1 + 0.18 * Math.sin(k * 8) * Math.exp(-k)); w.bar.tint = mix(this.options[this.winner].color, this.ctx.theme.masque, 0.25 + 0.2 * Math.sin(k * 10));
       if (this.status.scale.x < 1.2) this.status.scale.set(1 + 0.3 * easeOut(k * 4));
       if (k > 5.5) { this.state = 'out'; this.tOut = time; }
     } else if (this.state === 'out') {
@@ -508,7 +508,7 @@ export class VoteReveal {
       const a = Math.random() * Math.PI * 2, sp = 240 + Math.random() * 760;
       pFront.spawn(i % 3 ? kit.tex.dot : kit.tex.star, cx, cy, {
         vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, ay: 520, drag: 1.4, life: 1.2 + Math.random() * 1.2, s0: 0.5 + Math.random() * 0.5, s1: 0.2,
-        tint: [o.color, theme.amb, theme.coral3, 0xffffff, theme.cy][i % 5], add: i % 3 === 0, rot: a, vr: 6,
+        tint: [o.color, theme.amb, theme.coral3, theme.masque, theme.cy][i % 5], add: i % 3 === 0, rot: a, vr: 6,
       });
     }
     for (let i = 0; i < 26; i++) {

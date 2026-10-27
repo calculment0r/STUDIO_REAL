@@ -2,7 +2,7 @@
 // (bulle 9-tranches, cœur, étincelle, emojis) et système de particules à sprites recyclés.
 import * as PIXI from 'pixi.js';
 import { EMOJIS } from './crowd.js';
-import { hexToCss } from './theme.js';
+import { hexToCss, SANS_TEINTE } from './theme.js';
 
 const { Texture, Sprite, NineSliceSprite, BitmapText, BitmapFontManager } = PIXI;
 
@@ -38,12 +38,12 @@ export class Kit {
     const stroke = (w) => ({ color: theme.outline, width: w, join: 'round' });
     BitmapFontManager.install({
       name: 'sr-ui',
-      style: { fontFamily: theme.fontUi, fontSize: 44, fontWeight: '700', fill: 0xffffff, stroke: stroke(10) },
+      style: { fontFamily: theme.fontUi, fontSize: 44, fontWeight: '700', fill: theme.masque, stroke: stroke(10) },
       chars: CHARS, resolution: 2, padding: 6,
     });
     BitmapFontManager.install({
       name: 'sr-mono',
-      style: { fontFamily: theme.fontMono, fontSize: 40, fontWeight: '800', fill: 0xffffff, stroke: stroke(9) },
+      style: { fontFamily: theme.fontMono, fontSize: 40, fontWeight: '800', fill: theme.masque, stroke: stroke(9) },
       chars: CHARS, resolution: 2, padding: 6,
     });
 
@@ -52,17 +52,19 @@ export class Kit {
 
   _makeTextures() {
     const T = this.tex;
+    // textures BLANCHES (le masque du thème) que Pixi teinte ensuite ; ombres et contours : le contour du thème
+    const blanc = (a = 1) => hexToCss(this.theme.masque, a), sombre = (a) => hexToCss(this.theme.outline, a);
     const mk = (w, h, draw) => { const [c, g] = canvas(w, h); draw(g, w, h); return Texture.from(c); };
 
     T.white = Texture.WHITE;
-    T.dot = mk(48, 48, (g) => { g.fillStyle = '#fff'; g.beginPath(); g.arc(24, 24, 22, 0, 7); g.fill(); });
+    T.dot = mk(48, 48, (g) => { g.fillStyle = blanc(); g.beginPath(); g.arc(24, 24, 22, 0, 7); g.fill(); });
     T.glow = mk(128, 128, (g) => {
       const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-      r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.35, 'rgba(255,255,255,.45)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+      r.addColorStop(0, blanc()); r.addColorStop(0.35, blanc(.45)); r.addColorStop(1, blanc(0));
       g.fillStyle = r; g.fillRect(0, 0, 128, 128);
     });
     T.star = mk(64, 64, (g) => {
-      g.fillStyle = '#fff'; g.beginPath();
+      g.fillStyle = blanc(); g.beginPath();
       for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 - Math.PI / 2, r = i % 2 ? 7 : 30; g.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); }
       g.closePath(); g.fill();
     });
@@ -73,16 +75,16 @@ export class Kit {
         g.bezierCurveTo(8, 72, 10, 20, 44, 18); g.bezierCurveTo(56, 17, 62, 24, 64, 32);
         g.bezierCurveTo(66, 24, 72, 17, 84, 18); g.bezierCurveTo(118, 20, 120, 72, 64, 112); g.closePath();
       };
-      path(); g.lineJoin = 'round'; g.lineWidth = 12; g.strokeStyle = 'rgba(8,10,9,.92)'; g.stroke();
-      path(); g.fillStyle = '#fff'; g.fill();
+      path(); g.lineJoin = 'round'; g.lineWidth = 12; g.strokeStyle = sombre(.92); g.stroke();
+      path(); g.fillStyle = blanc(); g.fill();
       g.globalCompositeOperation = 'source-atop';
-      const hl = g.createLinearGradient(0, 18, 0, 112); hl.addColorStop(0, 'rgba(255,255,255,0)'); hl.addColorStop(1, 'rgba(0,0,0,.28)');
+      const hl = g.createLinearGradient(0, 18, 0, 112); hl.addColorStop(0, blanc(0)); hl.addColorStop(1, sombre(.28));
       g.fillStyle = hl; g.fillRect(0, 0, 128, 128);
     });
     // bulle : remplissage et anneau séparés, teintés indépendamment, étirés en 9 tranches
     const R = 30, N = 96;
-    T.bubbleFill = mk(N, N, (g) => { g.fillStyle = '#fff'; g.beginPath(); g.roundRect(2, 2, N - 4, N - 4, R); g.fill(); });
-    T.bubbleRing = mk(N, N, (g) => { g.strokeStyle = '#fff'; g.lineWidth = 6; g.beginPath(); g.roundRect(4, 4, N - 8, N - 8, R - 2); g.stroke(); });
+    T.bubbleFill = mk(N, N, (g) => { g.fillStyle = blanc(); g.beginPath(); g.roundRect(2, 2, N - 4, N - 4, R); g.fill(); });
+    T.bubbleRing = mk(N, N, (g) => { g.strokeStyle = blanc(); g.lineWidth = 6; g.beginPath(); g.roundRect(4, 4, N - 8, N - 8, R - 2); g.stroke(); });
 
     for (const e of EMOJIS) this.emoji(e);
   }
@@ -93,14 +95,14 @@ export class Kit {
     const [c, g] = canvas(128, 128);
     g.font = '96px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.shadowColor = 'rgba(0,0,0,.55)'; g.shadowBlur = 10;
+    g.shadowColor = hexToCss(this.theme.outline, .55); g.shadowBlur = 10;
     g.fillText(ch, 64, 70);
     t = this.emojiTex[ch] = Texture.from(c);
     return t;
   }
 
   /** texte bitmap : blanc cuit + contour sombre, couleur par teinte */
-  text(str, { font = 'sr-ui', size = 36, tint = 0xffffff, wrap = 0, align = 'left' } = {}) {
+  text(str, { font = 'sr-ui', size = 36, tint = SANS_TEINTE, wrap = 0, align = 'left' } = {}) {
     const t = new BitmapText({
       text: clean(str),
       style: { fontFamily: font, fontSize: size, wordWrap: wrap > 0, wordWrapWidth: wrap, align },
@@ -116,7 +118,7 @@ export class Kit {
     return s;
   }
 
-  sprite(tex, tint = 0xffffff) {
+  sprite(tex, tint = SANS_TEINTE) {
     const s = new Sprite(tex);
     s.anchor.set(0.5); s.tint = tint;
     return s;
@@ -143,7 +145,7 @@ export class Particles {
     if (this.list.length >= this.max) return null;
     const s = this.pool.pop() || new Sprite();
     s.texture = tex; s.anchor.set(0.5);
-    s.tint = o.tint ?? 0xffffff;
+    s.tint = o.tint ?? SANS_TEINTE;
     s.blendMode = o.add ? 'add' : 'normal';
     s.visible = true;
     (o.add ? this.addContainer : this.container).addChild(s);

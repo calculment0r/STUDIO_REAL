@@ -1,0 +1,76 @@
+/* @studio-real/theme : polices. Copie de apps/conducteur/src/theme/polices.css, chemins rendus RELATIFS (./polices/)
+   pour qu'une page statique, sans build, les trouve ; Vite les résout et les copie de même.
+   Toutes libres (OFL, licences à côté des fichiers, dans polices/) :
+   - Chakra Petch 400 · 500 · 600 · 700 (latin, latin-ext) ; 300 : chakra-petch-light.ttf ;
+   - Azeret Mono, variable 100 → 900.
+   Venus Rising (titres et chiffres) n'a pas de licence connue : elle n'est JAMAIS copiée ici. Deux voies pour l'avoir
+   quand elle est présente sur la machine, sinon on reste sur le repli Chakra Petch 700 (--f-disp) :
+   1. installée dans le système : la face ci-dessous la prend par local() ;
+   2. le fichier hors git conception/conducteur/source/uploads/ : venus.js le charge à l'exécution (voir README). */
+
+@font-face {
+  font-family: 'Chakra Petch';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('./polices/chakra-petch-light.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('./polices/chakra-petch-400-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('./polices/chakra-petch-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('./polices/chakra-petch-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('./polices/chakra-petch-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('./polices/chakra-petch-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('./polices/chakra-petch-600-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('./polices/chakra-petch-700-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('./polices/chakra-petch-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Azeret Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./polices/azeret-mono.ttf') format('truetype');
+}
+
+/* Venus Rising installée dans le système (aucun fichier servi : local() seulement). Absente, la face échoue sans
+   bruit et --f-disp passe à Chakra Petch. La face couvre 100 → 900 : jamais de faux gras sur les éléments en 700. */
+@font-face {
+  font-family: 'Venus Rising';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: local('Venus Rising'), local('Venus Rising Rg'), local('VenusRising-Regular');
+}

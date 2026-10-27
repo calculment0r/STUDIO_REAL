@@ -29,6 +29,8 @@ import { TeteDeLecture } from './TeteDeLecture';
 import { BarreZoom } from './BarreZoom';
 import { CartePassage } from './CartePassage';
 import { glisser } from './glisser';
+import { CurseursDistants, useEmettreCurseur } from '../collab';
+import { PastillesConduite } from './collab-conduite';
 import './conduite.css';
 
 const LBL = LARGEUR_ENTETES;
@@ -246,6 +248,13 @@ export function Conduite() {
     return (clientX - r.left - LBL + defRef.current) / vue.current.pps;
   }, []);
 
+  // Collaboration : notre curseur part en temps (s) sur la conduite, avec le moment survolé ; sans salle, rien ne part.
+  const emettreCurseur = useEmettreCurseur('conduite', (x, y) => {
+    const t = Math.max(0, (x - LBL + defRef.current) / vue.current.pps);
+    const me = momentEtapeA(plan, t);
+    return me ? { x: t, y, moment: me.moment } : { x: t, y };
+  });
+
   const appuiCorps = (e: EvPointeur<HTMLDivElement>) => {
     if (e.button !== 0) return;
     const r = corps.current!.getBoundingClientRect();
@@ -417,6 +426,7 @@ export function Conduite() {
 
       <div ref={corps} className="cd-corps" style={{ ['--cd-x' as string]: -defilement + 'px' } as CSSProperties}
         onPointerDown={appuiCorps}
+        onPointerMove={emettreCurseur.onPointerMove} onPointerLeave={emettreCurseur.onPointerLeave}
         onContextMenu={(e) => {
           e.preventDefault();
           const r = corps.current!.getBoundingClientRect();
@@ -444,6 +454,12 @@ export function Conduite() {
         <TeteDeLecture plan={plan} pps={pps} temps={temps} largeurVue={largeurVue} defilement={defRef}
           registre={registre} repereZoom={repereZoom} onSuivre={defiler} />
         <BarreZoom total={plan.total} pps={pps} defilement={defilement} largeurVue={largeurVue} repere={repereZoom} onVue={appliquerVue} />
+        {/* Salle collaborative : commentaires épinglés (rangée TEMPS) et curseurs des autres membres (x = temps en s) */}
+        <PastillesConduite plan={plan} pps={pps} defilement={defilement} gauche={LBL} largeur={largeur} />
+        <CurseursDistants zone="conduite" projeter={(x, y) => {
+          const px = LBL + x * pps - defilement;
+          return px < LBL || px > largeur ? null : { x: px, y };
+        }} />
         {gate && (
           <CartePassage g={gate} suivant={plan.evs[gate.i + 1]?.ev.name}
             gauche={Math.max(LBL, Math.min(largeur - 310, LBL + gate.S * pps - defilement - 40))}

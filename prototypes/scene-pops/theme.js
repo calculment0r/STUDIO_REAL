@@ -1,19 +1,8 @@
-// theme.js : lit les jetons de ../../design/tokens.css À L'EXÉCUTION (getComputedStyle)
-// et les convertit en entiers 0xRRGGBB pour Pixi. Les valeurs de repli ne servent que si
-// tokens.css n'a pas pu être chargé (page ouverte hors du dépôt).
+// theme.js : lit les jetons du thème STUDIO REAL (packages/theme/) À L'EXÉCUTION (getComputedStyle)
+// et les convertit en entiers 0xRRGGBB pour Pixi. Aucune couleur écrite ici : si le thème n'a pas pu
+// être chargé (page ouverte hors du dépôt), tout tombe sur un gris neutre et la page le dit.
 
-const FALLBACK = {
-  '--bg': '#0a0d0b', '--panel': '#101413', '--panel2': '#151a18', '--panel3': '#1b211e',
-  '--ink': '#e6eae7', '--ink2': '#9ca8a2', '--cy': '#b9cfd8', '--or': '#e0674a',
-  '--grn': '#2f6b4a', '--grn2': '#3d8a60', '--amb': '#d6a24a',
-  '--coral-3': '#f2cdb8', '--coral-2': '#e79b7c', '--coral-1': '#a8603c',
-  '--nd-ryt': '#4b8fb6', '--nd-har': '#8b82bb', '--nd-tim': '#bd7294', '--nd-nrj': '#45967c', '--nd-ten': '#a0836d',
-  '--spec-3': '#d6a24a', '--spec-4': '#f7ead8', '--rouge': '#b3392b',
-  '--f-ui': "'Chakra Petch', 'Saira Semi Condensed', sans-serif",
-  '--f-mono': "'Azeret Mono', ui-monospace, monospace",
-};
-
-/** "#rrggbb" | "#rgb" | "rgb(a)(...)" -> {r,g,b,a} (0..255, a 0..1) */
+/** valeur calculée d'un jeton (hexadécimal court ou long, ou fonction rgb / rgba) -> {r,g,b,a} (0..255, a 0..1) */
 export function parseCss(str) {
   str = (str || '').trim();
   let m;
@@ -32,8 +21,13 @@ export function parseCss(str) {
   return null;
 }
 
+/** La teinte NEUTRE de Pixi (multiplier par 1 : la texture garde sa couleur). Pas une couleur d'interface. */
+export const SANS_TEINTE = 0xffffff;
+
 export const toHex = (c) => (Math.round(c.r) << 16) | (Math.round(c.g) << 8) | Math.round(c.b);
-export const hexToCss = (n) => '#' + (n & 0xffffff).toString(16).padStart(6, '0');
+const deux = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+/** entier 0xRRGGBB -> chaîne CSS « #rrggbb » ; avec a (0..1) -> « #rrggbbaa » (pour le canvas 2D) */
+export const hexToCss = (n, a = 1) => '#' + (n & 0xffffff).toString(16).padStart(6, '0') + (a >= 1 ? '' : deux(a * 255));
 
 /** mélange deux entiers 0xRRGGBB (t = 0 -> a, 1 -> b) */
 export function mix(a, b, t) {
@@ -47,32 +41,35 @@ export function readTheme() {
   let fromTokens = 0;
   const raw = (name) => {
     const v = cs.getPropertyValue(name).trim();
-    if (v) { fromTokens++; return v; }
-    return FALLBACK[name];
+    if (v) fromTokens++;
+    return v;
   };
-  const col = (name) => {
-    const p = parseCss(raw(name)) || parseCss(FALLBACK[name]) || { r: 128, g: 128, b: 128, a: 1 };
-    return toHex(p);
-  };
+  const GRIS = { r: 128, g: 128, b: 128, a: 1 };
+  const col = (name) => toHex(parseCss(raw(name)) || GRIS);
 
+  // Le thème STUDIO REAL : fond, tuiles, encres, l'accent orange, l'encre tech, les verts profonds, la rampe corail.
   const t = {
-    bg: col('--bg'), panel: col('--panel'), panel2: col('--panel2'), panel3: col('--panel3'),
+    bg: col('--bg'), panel: col('--tile'), panel2: col('--tile2'), panel3: col('--well2'),
     ink: col('--ink'), ink2: col('--ink2'),
-    cy: col('--cy'), or: col('--or'), grn: col('--grn'), grn2: col('--grn2'), amb: col('--amb'),
-    coral3: col('--coral-3'), coral2: col('--coral-2'), coral1: col('--coral-1'),
-    warn: col('--rouge'),
-    fontUi: raw('--f-ui'), fontMono: raw('--f-mono'),
+    cy: col('--cy'), or: col('--ort'), grn: col('--gdeep'), grn2: col('--gt'),
+    amb: col('--rampe-1'),                     // le chaud qui attire l'œil (vedette, vote) : le corail le plus clair
+    coral3: col('--rampe-1'), coral2: col('--rampe-2'), coral1: col('--rampe-4'),
+    warn: col('--rec'),
+    // le blanc neutre des textures que Pixi teinte ensuite (pas une couleur d'interface)
+    masque: col('--masque'),
+    fontUi: raw('--f-ui') || 'sans-serif', fontMono: raw('--f-mono') || 'monospace',
   };
 
-  // Couleurs de pseudos : une palette de teintes distinctes, éclaircies vers le blanc pour la lisibilité à 15 m
-  const names = ['--cy', '--or', '--amb', '--grn2', '--coral-2', '--coral-3', '--nd-ryt', '--nd-har', '--nd-tim', '--nd-nrj', '--nd-ten', '--spec-3'];
-  t.palette = names.map((n) => mix(col(n), 0xffffff, 0.22));
+  // Couleurs de pseudos : des teintes distinctes prises au thème, éclaircies pour la lisibilité à 15 m
+  const names = ['--cy', '--ort', '--rampe-1', '--gt', '--rampe-2', '--vert-pale', '--rampe-3', '--fam-scene', '--nd-ryt', '--nd-har', '--nd-tim', '--nd-nrj'];
+  t.palette = names.map((n) => mix(col(n), t.masque, 0.22));
 
-  // Rampe de la jauge : calme -> chaud
+  // Rampe de la jauge : calme -> chaud (vert, acier, corail, orange)
   t.ramp = [t.grn2, t.cy, t.amb, t.or];
   // Fond d'une bulle : le fond du thème légèrement relevé
-  t.bubbleFill = mix(t.bg, t.panel3, 0.7);
-  t.outline = mix(t.bg, 0x000000, 0.6);
+  t.bubbleFill = mix(t.bg, t.panel2, 0.7);
+  // Contour des textes et ombre des textures : le fond, assombri vers le puits
+  t.outline = mix(t.bg, t.panel3, 0.6);
   t.fromTokens = fromTokens > 10;
   return t;
 }

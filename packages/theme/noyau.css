@@ -1,0 +1,9 @@
+/* @studio-real/theme : le NOYAU, l'équivalent de apps/conducteur/src/theme/index.css (+ les jetons dérivés).
+   Ordre : polices → jetons du portail → couche Studio Real (conducteur) → jetons dérivés → base → composants.
+   Pour une application plein écran, ajouter plein-ecran.css ; pour une page statique, prendre theme.css. */
+@import './polices.css';
+@import './jetons-portail.css';
+@import './jetons.css';
+@import './jetons-derives.css';
+@import './base.css';
+@import './composants.css';

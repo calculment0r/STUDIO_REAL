@@ -25,7 +25,7 @@ prototypes/figurants/
   banques/              personas.json, reflexes.json (N0), repliques.json (N1), interdits.txt, prompts.md
 ```
 
-Les pages utilisent le thème : `../../../../design/tokens.css` et `../../../../design/base.css`, sans aucune couleur en dur.
+Les pages utilisent le thème STUDIO REAL : `../../../../packages/theme/theme.css` (et `venus.js`), sans aucune couleur en dur.
 Le serveur sert la racine du dépôt, ce qui rend ces chemins valides. Quand les pages sont ouvertes **sans** serveur, par exemple sur GitHub Pages, elles affichent « serveur non joignable ».
 
 ## Lancer (cible)

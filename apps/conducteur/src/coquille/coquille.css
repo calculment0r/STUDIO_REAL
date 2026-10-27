@@ -338,3 +338,69 @@
 .rch-ligne .g { font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .16em; color: var(--ink3); }
 .rch-vide { display: block; padding: 14px; font-size: 12px; color: var(--ink3); }
 .rch-pied { padding: 9px 16px; font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .16em; color: var(--ink3); box-shadow: inset 0 1px 0 rgba(var(--lr), .12); }
+
+/* ── salle collaborative et projet (chantier INTÉGRATION) ─────────────── */
+.ent-salle {
+  height: 32px; padding: 0 8px; border-radius: 7px; display: flex; align-items: center; gap: 8px; cursor: pointer; flex: none; border: none;
+  background: transparent; color: var(--ink2); box-shadow: inset 0 0 0 1px rgba(var(--lr), .16);
+}
+.ent-salle:hover, .ent-salle.on { color: var(--ink); background: var(--tile2); }
+.ent-salle.on { box-shadow: inset 0 0 0 1px var(--cy); }
+.ent-salle .sr-co-pastille { box-shadow: 0 0 0 2px var(--bg); }
+
+.eq-discussion { height: 260px; display: flex; flex-direction: column; }
+.eq-n { margin-left: 5px; font-size: 7.5px; color: var(--ort); }
+.seg.on .eq-n { color: inherit; }
+
+.fenetre.pj { width: 560px; gap: 12px; }
+.pj-courant { flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pj-cartes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pj-carte {
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: left; padding: 12px 14px; border-radius: 9px; cursor: pointer; border: none;
+  background: var(--bg); box-shadow: inset 0 0 0 1px rgba(var(--lr), .18); color: var(--ink);
+}
+.pj-carte:hover { box-shadow: inset 0 0 0 1px var(--ort); }
+.pj-carte .t { font-family: var(--f-disp); font-weight: 700; font-size: 11px; letter-spacing: .14em; }
+.pj-carte .d { font-size: 11.5px; color: var(--ink2); }
+
+/* ── pupitre de la régie : mémoires, signaux, reprises, journal ─────── */
+.rg { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rg-vide { font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .16em; color: var(--ink3); padding: 2px 0 4px; }
+.rg-mem { display: flex; flex-direction: column; gap: 6px; padding: 7px 8px; border-radius: 7px; box-shadow: inset 0 0 0 1px rgba(var(--lr), .12); }
+.rg-mem.ici { box-shadow: inset 0 0 0 1px rgba(var(--ort-rgb), .55); }
+.rg-mem-h { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.rg-nom { flex: 1; min-width: 0; font-family: var(--f-mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rg-val { font-size: 10px; color: var(--cy); max-width: 50%; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+.rg-ctrl { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.rg-b {
+  height: 24px; padding: 0 7px; border-radius: 5px; display: flex; align-items: center; cursor: pointer; border: none; background: transparent; white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(var(--lr), .18); font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink);
+}
+.rg-b:hover:not(:disabled) { background: var(--tile2); }
+.rg-b.on { background: var(--gdeep); color: var(--gink); box-shadow: none; }
+.rg-b.plein { background: var(--ort); color: var(--on-ort); box-shadow: none; }
+.rg-b:disabled { opacity: .4; cursor: default; }
+.rg-champ {
+  height: 24px; width: 64px; flex: 1 1 56px; min-width: 0; border-radius: 5px; border: none; outline: none; background: var(--bg); padding: 0 7px;
+  box-shadow: inset 0 0 0 1px rgba(var(--lr), .18); color: var(--ink); font-family: var(--f-ui); font-size: 11px;
+}
+.rg-champ.large { flex: 1 1 120px; }
+.rg-champ:focus { box-shadow: inset 0 0 0 1px var(--cy); }
+.rg-sig { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px; border-radius: 7px; box-shadow: inset 0 0 0 1px rgba(var(--lr), .12); min-width: 0; }
+.rg-sig.bouton { cursor: pointer; border: none; background: transparent; color: var(--ink); text-align: left; flex-wrap: nowrap; width: 100%; }
+.rg-sig.bouton:hover { background: var(--tile2); }
+.rg-sig.ici { box-shadow: inset 0 0 0 1px rgba(var(--ort-rgb), .55); }
+.rg-tag { font-family: var(--f-mono); font-size: 7px; letter-spacing: .14em; color: var(--ort); flex: none; width: 52px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rg-sig-n { flex: 1; min-width: 0; font-size: 11.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rg-envoi { font-family: var(--f-mono); font-size: 7px; letter-spacing: .14em; color: var(--cy); flex: none; }
+.rg-journal { display: flex; flex-direction: column; gap: 1px; max-height: 220px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(var(--lr), .28) transparent; }
+.rg-l { display: flex; align-items: baseline; gap: 7px; padding: 3px 2px; min-width: 0; box-shadow: inset 0 -1px 0 rgba(var(--lr), .06); }
+.rg-t { font-size: 8.5px; color: var(--ink3); width: 36px; flex: none; }
+.rg-l .rg-tag { width: 58px; }
+.rg-txt { flex: 1; min-width: 0; font-size: 11px; color: var(--ink2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rg-l.alerte .rg-txt { color: var(--ink); }
+
+/* pupitre de représentation : la régie en troisième colonne */
+.pup-grille.avec-regie { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(300px, .9fr); gap: 40px; }
+.pup-regie { overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(var(--lr), .28) transparent; }
+.pup-regie .rg-journal { max-height: none; }

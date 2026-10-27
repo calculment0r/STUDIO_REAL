@@ -1,0 +1,322 @@
+/* @studio-real/theme : copie FIDÈLE de apps/conducteur/src/theme/jetons-portail.css (27/10/2026). Aucune valeur changée ;
+   un écart avec le Conducteur se corrige des deux côtés, ou le Conducteur pointe ici. */
+
+/* Port tel quel de conception/conducteur/source/studio-real/tokens.css (jetons du portail SHOWRUNNER TOOLS).
+   Ne pas modifier ici : la couche propre au conducteur (valeurs du design, palette des familles, pistes, assets)
+   est dans jetons.css, chargée juste après. */
+
+/* ============================================================
+   SHOWRUNNER TOOLS — jetons de thème
+   Source unique de vérité pour tous les outils du portail. Copie des
+   jetons de Character Factory (assets/tokens.css), eux-mêmes repris du
+   rack NL (Station NL Rack
+   Verdant / Banc NL Comparatif). Aucune couleur en dur ailleurs :
+   tout composant passe par une variable définie ici.
+
+   Deux jeux (décision de Cal du 29/09) : le sombre, sous :root, reste le
+   défaut ; le clair, sous [data-theme="light"] plus bas, redonne les
+   mêmes noms. commun/theme.js pose l'attribut sur <html> au chargement
+   (la préférence « thème », commun/prefs.js) ; l'éditeur de thème
+   (commun/theme.html) ne fait que surcharger ces mêmes noms, en ligne
+   sur <html>. Un composant ne sait jamais quel thème est posé.
+   ============================================================ */
+
+:root {
+  /* le bandeau « machines éteintes » (commun/shell.js) : un rouge d'alerte, hors de la palette d'action */
+  --rouge:    #b3392b;
+  --on-rouge: #fff4f1;
+  /* fonds, du plus profond au plus relevé */
+  --bg:      #0a0d0b;
+  --panel:   #101413;
+  --panel2:  #151a18;
+  --panel3:  #1b211e;
+
+  /* encres */
+  --ink:     #e6eae7;
+  --ink2:    #9ca8a2;
+  --ink3:    #7c8884;
+
+  /* accents */
+  --cy:      #b9cfd8;   /* acier pâle — la voie A, les valeurs lues */
+  --or:      #e0674a;   /* orange — l'action, la voie B, l'alerte */
+  --grn:     #2f6b4a;   /* vert sourd — l'état engagé */
+  --grn2:    #3d8a60;   /* vert clair — la progression */
+  --amb:     #d6a24a;   /* ambre — ce qui attend Cal, jamais une action */
+
+  /* rampe des barres de la console — du plus clair au plus sourd,
+     comme la pile de logiciels du banc NL */
+  --coral-3: #f2cdb8;
+  --coral-2: #e79b7c;
+  --coral-1: #a8603c;
+  --verd-2:  #35684a;
+  --verd-1:  #2a5540;
+  --on-light: #1a0d07;
+
+  /* traits */
+  --line:    rgba(198, 213, 220, .14);
+  --line-cy: rgba(185, 207, 216, .45);
+  --line-or: rgba(224, 103, 74, .70);
+  --line-gr: rgba(47, 107, 74, .85);
+  --line-amb: rgba(214, 162, 74, .55);
+  --amb-bg:  rgba(214, 162, 74, .08);
+  --grn-bg:  rgba(47, 107, 74, .18);   /* fond d'une pastille retenue (look porté, pose montrée) */
+  --grn-bg2: rgba(61, 138, 96, .42);   /* l'éclair vert d'un champ qui vient de changer (Character Factory, fiche) */
+
+  /* voile posé sur une image, sous une étiquette */
+  --veil:    rgba(10, 13, 11, .82);
+  --veil-0:  rgba(10, 13, 11, 0);     /* départ transparent d'un dégradé de voile */
+  --scrim:   rgba(4, 6, 5, .78);
+  --voile:   rgba(5, 6, 6, .55);     /* le fond sous un panneau qui sort de la barre (le Multishot, 16/10 : 55 %) */
+
+  /* planche de présentation, rendue en PNG par factory/presentation_sheet.py :
+     la variante sombre reprend --bg, --panel et les encres ; la claire,
+     un fond de studio gris, a ses propres jetons. --shade est l'ombre de
+     contact sous les pieds. */
+  --paper:       #e6e6e2;
+  --paper2:      #dadad5;
+  --paper-ink:   #141816;
+  --paper-ink2:  #4c5551;
+  --paper-ink3:  #7d8682;
+  --paper-line:  rgba(20, 24, 22, .18);
+  --paper-shade: rgba(20, 24, 22, .30);
+  --shade:       rgba(0, 0, 0, .55);
+
+  /* portail : ce que les composants communs écrivaient en dur dans le
+     rack de Character Factory, ramené ici */
+  --hdr-bg:    rgba(10, 13, 11, .94);  /* en-tête collante, sur flou */
+  --sel-bg:    #122a2d;                /* rangée choisie */
+  --black:     #000;                   /* fond d'un moniteur, d'une vidéo */
+  --dot:       rgba(198, 213, 220, .12);  /* trame de points des dalles */
+  --dot-hi:    rgba(198, 213, 220, .16);
+  --dot-on-or: rgba(26, 13, 7, .22);   /* trame posée sur l'aplat orange */
+  --or-bg:     rgba(224, 103, 74, .14);
+  --or-bg2:    rgba(224, 103, 74, .55);
+  --cy-bg:     rgba(185, 207, 216, .10);
+  /* le surligneur d'un texte d'Idéation (ideation/objets/texte.js), et ses fonds : sous le
+     texte, assez francs pour se voir, assez transparents pour que l'encre se lise (AA) */
+  --hl-amb:    rgba(214, 162, 74, .34);
+  --hl-or:     rgba(224, 103, 74, .34);
+  --hl-cy:     rgba(185, 207, 216, .26);
+  --hl-grn:    rgba(61, 138, 96, .40);
+  --on-coral1: #fdf1ea;                /* encre sur la teinte corail la plus sourde */
+  --drop:      rgba(0, 0, 0, .5);      /* ombre portée d'un élément qui flotte */
+  --drop-lg:   rgba(0, 0, 0, .6);
+  --verd-3:    #2f6b4a;                /* cartes vertes de l'accueil, la plus claire */
+  --verd-4:    #24543b;
+  --verd-5:    #1a3f2c;
+
+  /* le spectre d'un son (commun/spectre.js, 06/10) : la rampe du silence (--spec-0) au plus fort
+     (--spec-4), mélangée en 256 teintes ; la luminance monte à chaque pas (0,004 → 0,84), le
+     plus fort tient 16:1 sur le silence, le milieu 3,8:1 (WCAG 1.4.11 : 3:1 pour un graphique) */
+  --spec-0:    #0b0f0d;
+  --spec-1:    #183d2c;
+  --spec-2:    #2f7d54;
+  --spec-3:    #d6a24a;
+  --spec-4:    #f7ead8;
+
+  /* encres inversées, posées sur un aplat d'accent */
+  --on-or:   #170c08;
+  --on-cy:   #0a0d0b;
+  --on-grn:  #eaf4ee;
+
+  /* le texte d'un film (les titres du Montage, dessinés par le serveur, server/tools/montage.py `render_titre`, qui lit ces deux
+     valeurs ici) : un blanc et un noir de film, les mêmes dans les deux thèmes — la vidéo n'a pas de thème */
+  --titre-clair:  #f4f4ef;
+  --titre-sombre: #121411;
+
+  /* typographie */
+  --f-ui:    'Chakra Petch', 'Saira Semi Condensed', sans-serif;
+  --f-mono:  'Azeret Mono', ui-monospace, monospace;
+  --f-disp:  'Venus Rising', 'Chakra Petch', sans-serif;
+  /* Norelli Demo Black ne porte que 54 glyphes : A-Z et a-z, sans
+     chiffre ni accent. Elle ne peut donc tenir que des chaînes dont on
+     maîtrise le contenu exact — en pratique le seul logotype. Partout
+     ailleurs, un caractère manquant ferait basculer la police en plein
+     mot, ce qui se voit. */
+  --f-black: 'Norelli', 'Venus Rising', 'Chakra Petch', sans-serif;
+
+  /* rayons — sobres, outil professionnel. UN SEUL réglage : --rad, le rayon moyen en px (5 = l'apparence
+     d'origine ; 0 = carré ; 10 = doux). Les autres en sont des multiples (--rl = 1,6 × --rad = 8 px par
+     défaut). La préférence Général « arrondi » le pose en ligne sur <html> (commun/theme-tot.js). Les
+     ronds (50 %) et les pastilles (999px) restent en dur : ils ne dépendent pas de ce réglage. */
+  --rad: 5px;
+  --rxs: calc(var(--rad) * .2);    /* 1 px */
+  --r0:  calc(var(--rad) * .4);    /* 2 px */
+  --rs:  calc(var(--rad) * .6);    /* 3 px */
+  --r1:  calc(var(--rad) * .8);    /* 4 px */
+  --r2:  var(--rad);               /* 5 px */
+  --r3:  calc(var(--rad) * 1.4);   /* 7 px */
+  --rl:  calc(var(--rad) * 1.6);   /* 8 px */
+  --r4:  calc(var(--rad) * 1.8);   /* 9 px */
+  --rxl: calc(var(--rad) * 2.4);   /* 12 px */
+
+  /* espacements */
+  --s1: 4px;
+  --s2: 6px;
+  --s3: 10px;
+  --s4: 14px;
+  --s5: 18px;
+  --s6: 24px;
+
+  /* gouttières du banc */
+  --rack-w:  252px;
+  --sheet-w: 340px;
+
+  /* ODIO, les cinq lanes du banc du nodal (banc/logique.ts d'ODIO_01 : #3f7a9c, #6b5fa8, #b0567f,
+     #3f8a72, #8a6f5a), à la même teinte, leur clarté réglée pour le contraste AA (4,5:1) d'un texte
+     sur les panneaux ; aussi deux arcs (arcs.js : densité, tension). Venus de musique/nodal.css le
+     09/10 : la seule source des couleurs, et l'éditeur de thème les voit. */
+  --nd-ryt: #4b8fb6;
+  --nd-har: #8b82bb;
+  --nd-tim: #bd7294;
+  --nd-nrj: #45967c;
+  --nd-ten: #a0836d;
+
+  /* la taille de l'interface (préférence Général) : commun/theme.js pose
+     --ui-zoom et « zoom » sur <html>. Sous un zoom, 100vh dépasse l'écran
+     (les unités de la fenêtre sont zoomées comme les autres longueurs,
+     mesuré sous Chromium : 100vh = 1250 px pour 1000 px à 125 %) : une
+     hauteur d'écran s'écrit calc(100 * var(--vh)). */
+  --ui-zoom: 1;
+  --vh: calc(1vh / var(--ui-zoom));
+  --vw: calc(1vw / var(--ui-zoom));   /* la même chose en largeur : calc(94 * var(--vw)) */
+
+  color-scheme: dark;
+}
+
+/* le téléphone (commun/theme-tot.js pose data-appareil) : 1vh y est la hauteur SANS la barre d'adresse
+   (la plus grande), et ce qui fait 100vh passe dessous quand elle est là. 1svh, « small viewport », est la
+   hauteur quand elle est là : rien ne s'y cache, et rien ne saute quand elle se replie (CSS Values 4,
+   § « Viewport-percentage lengths » ; MDN, length#relative_length_units_based_on_viewport : Safari 15.4,
+   Chrome 108, Firefox 101). Mêmes noms, aucune couleur : les deux thèmes le prennent. */
+html[data-appareil="mobile"] {
+  --vh: calc(1svh / var(--ui-zoom));
+  --vw: calc(1svw / var(--ui-zoom));
+}
+
+/* ============================================================
+   LE THÈME CLAIR — les mêmes noms, les mêmes rôles.
+   Un papier gris-vert (la teinte du sombre, retournée) ; les panneaux
+   sont plus clairs que le fond, les champs et les boutons un cran plus
+   gris que le panneau qui les porte. Les accents qui servent d'encre
+   (acier, orange, vert, ambre) sont assombris jusqu'au contraste AA
+   (4,5:1) sur tous les fonds ; la rampe corail aussi (elle sert de
+   couleur de piste et d'encre), son encre devenant claire ; les cartes
+   vertes et le papier de la planche ne bougent pas. Chaque couleur du
+   sombre est redonnée ici, même inchangée : les deux blocs se comparent
+   nom à nom. Mesures : docs/etudes/preferences.md, § contrastes.
+   ============================================================ */
+[data-theme="light"] {
+  --rouge:    #b3261e;
+  --on-rouge: #ffffff;
+  /* fonds, du plus profond au plus relevé */
+  --bg:      #e6e9e5;
+  --panel:   #f6f7f5;
+  --panel2:  #eaede9;
+  --panel3:  #dadfda;
+
+  /* encres */
+  --ink:     #141a17;
+  --ink2:    #3e4944;
+  --ink3:    #4f5a55;
+
+  /* accents */
+  --cy:      #25586c;   /* acier profond — la voie A, les valeurs lues */
+  --or:      #a8391b;   /* orange brûlé — l'action, la voie B, l'alerte */
+  --grn:     #2f6b4a;   /* vert sourd — l'état engagé */
+  --grn2:    #23693f;   /* vert — la progression */
+  --amb:     #7f5308;   /* ambre sombre — ce qui attend Cal, jamais une action */
+
+  /* traits */
+  --line:    rgba(22, 34, 28, .16);
+  --line-cy: rgba(37, 88, 108, .75);
+  --line-or: rgba(168, 57, 27, .70);
+  --line-gr: rgba(47, 107, 74, .70);
+  --line-amb: rgba(127, 83, 8, .50);
+  --amb-bg:  rgba(214, 162, 74, .16);
+  --grn-bg:  rgba(47, 107, 74, .12);
+  --grn-bg2: rgba(35, 105, 63, .26);
+
+  /* voile posé sur une image, sous une étiquette */
+  --veil:    rgba(246, 247, 245, .88);
+  --veil-0:  rgba(246, 247, 245, 0);
+  --scrim:   rgba(22, 28, 25, .42);
+  --voile:   rgba(22, 28, 25, .30);
+
+  /* portail */
+  --hdr-bg:    rgba(238, 241, 237, .94);
+  --sel-bg:    #d4e4e9;
+  --black:     #d5dad4;                /* fond d'un moniteur : un gris neutre en clair */
+  --dot:       rgba(22, 34, 28, .10);
+  --dot-hi:    rgba(22, 34, 28, .14);
+  --or-bg:     rgba(168, 57, 27, .08);
+  --or-bg2:    rgba(168, 57, 27, .45);
+  --cy-bg:     rgba(37, 88, 108, .09);
+  --hl-amb:    rgba(236, 178, 60, .45);   /* le surligneur (ideation/objets/texte.js) */
+  --hl-or:     rgba(232, 120, 90, .38);
+  --hl-cy:     rgba(90, 160, 190, .30);
+  --hl-grn:    rgba(80, 170, 110, .34);
+  --drop:      rgba(20, 30, 24, .16);
+  --drop-lg:   rgba(20, 30, 24, .22);
+
+  /* encres inversées, posées sur un aplat d'accent */
+  --on-or:   #fff5f0;
+  --on-cy:   #f2f6f8;
+  --on-grn:  #eaf4ee;
+  --titre-clair:  #f4f4ef;      /* le texte d'un film : les mêmes qu'au sombre */
+  --titre-sombre: #121411;
+
+  /* La rampe corail : elle sert aussi de couleur de piste (ODIO : tuile,
+     fils, étiquettes du nodal écrites en --k) et d'encre (Idéation). Le
+     pâle du sombre (#f2cdb8) faisait 1,25:1 sur --panel2 : les trois sont
+     assombries, chacune gardant sa teinte (pêche, corail, terre), jusqu'à
+     4,5:1 au moins sur tous les fonds clairs (--bg, --panel, --panel2,
+     --panel3, --sel-bg) — l'ordre de la rampe reste, retourné : pêche la
+     plus proche du fond, terre la plus loin. Mesures (29/09, luminance
+     relative WCAG, distance OKLab aux autres couleurs de piste ≥ 0,07) :
+     pêche 4,58 à 5,76 ; corail 5,87 à 7,38 ; terre 7,65 à 9,62. */
+  --coral-3: #82564f;
+  --coral-2: #8a3348;
+  --coral-1: #663214;
+  /* les aplats corail et les accents sont sombres en clair : leur encre
+     devient claire (#fbf7f4 : 5,81 sur pêche, 7,44 corail, 9,70 terre,
+     6,27 ambre, 7,33 acier, 6,74 --ink3 — l'encre sombre du sombre y
+     tombait à 2,4-2,9:1) */
+  --on-light:  #fbf7f4;
+  --on-coral1: #fbf7f4;
+  --dot-on-or: rgba(255, 245, 240, .22);   /* la trame claire sur l'orange sombre */
+  /* les verts portent leur encre (--on-grn, 5,62 à 10,42) et tiennent déjà
+     4,68:1 au moins sur les fonds clairs : les mêmes */
+  --verd-1:  #2a5540;
+  --verd-2:  #35684a;
+  --verd-3:  #2f6b4a;
+  --verd-4:  #24543b;
+  --verd-5:  #1a3f2c;
+  /* le spectre : la même rampe retournée, du papier à l'encre ; la luminance descend à chaque pas
+     (0,92 → 0,009), le plus fort tient 16,5:1 sur le silence, le milieu 3,6:1 */
+  --spec-0:  #f4f6f3;
+  --spec-1:  #b5d3c0;
+  --spec-2:  #43905f;
+  --spec-3:  #744a0a;
+  --spec-4:  #1b1612;
+
+  /* planche de présentation : un papier de studio clair dans les deux
+     thèmes (le rendu PNG de la variante claire) — les mêmes */
+  --paper:       #e6e6e2;
+  --paper2:      #dadad5;
+  --paper-ink:   #141816;
+  --paper-ink2:  #4c5551;
+  --paper-ink3:  #7d8682;
+  --paper-line:  rgba(20, 24, 22, .18);
+  --paper-shade: rgba(20, 24, 22, .30);
+  --shade:       rgba(0, 0, 0, .55);
+
+  /* ODIO, les lanes du banc (plus haut, le sombre) */
+  --nd-ryt: #356683;
+  --nd-har: #62569f;
+  --nd-tim: #95466a;
+  --nd-nrj: #316a58;
+  --nd-ten: #735c4b;
+
+  color-scheme: light;
+}

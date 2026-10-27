@@ -304,6 +304,12 @@ export class SalleProjet extends DurableObject<Env> {
         if (m.cseq !== undefined) this.envoyer(ws, { t: 'ack', cseq: m.cseq, statut: 'ok' });
         return;
       }
+      // sortie écran scène : relais pur aux autres membres (rien n'est gardé ni journalisé)
+      case 'scene':
+        return this.diffuser({ t: 'scene', message: m.message, par: a.personne, session: a.session, ts: Date.now() }, ws);
+      // signalisation WebRTC (flux du streamer) : relais pur vers une session (ou toutes, '*'), rien n'est gardé
+      case 'rtc':
+        return this.relayerRtc(ws, a as Required<Attache>, m);
     }
 
     // Messages idempotents (cseq) : un renvoi reçoit le même résultat, marqué « doublon », sans réapplication.
@@ -409,6 +415,23 @@ export class SalleProjet extends DurableObject<Env> {
         return res.ok ? { statut: 'ok', res: { version: res.version } } : { statut: 'conflit', res: { version_actuelle: res.version_actuelle } };
       }
     }
+  }
+
+  /**
+   * Relais de signalisation WebRTC (téléphone du streamer ↔ sortie écran scène) : le `signal` part tel quel, avec
+   * `de` = session de l'émetteur posée ici (un client ne peut pas se faire passer pour un autre). `vers` = une session
+   * précise (tous ses sockets) ou '*' (tous les autres membres identifiés). Destinataire absent → erreur `rtc-absent`.
+   */
+  private relayerRtc(ws: WebSocket, a: Required<Attache>, m: Extract<MessageClient, { t: 'rtc' }>) {
+    const sortant = JSON.stringify({ t: 'rtc', de: a.session, par: a.personne, vers: m.vers, signal: m.signal, ts: Date.now() } satisfies MessageServeur);
+    let remis = 0;
+    for (const autre of this.ctx.getWebSockets()) {
+      if (autre === ws) continue;
+      const b = this.attache(autre);
+      if (!b.personne || (m.vers !== '*' && b.session !== m.vers)) continue;
+      try { autre.send(sortant); remis++; } catch { /* socket fermé */ }
+    }
+    if (!remis && m.vers !== '*') this.envoyer(ws, { t: 'erreur', code: 'rtc-absent', message: `session ${m.vers} absente de la salle` });
   }
 
   private prendreVerrou(cible: string, a: Required<Attache>) {

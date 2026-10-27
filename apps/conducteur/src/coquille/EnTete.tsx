@@ -1,14 +1,17 @@
 // L'en-tête (comme le design) : marque, fil (acte › moment › étape en cours, en accent), vues, modes PRÉPARER / JOUER,
 // scène verrouillée, annuler / rétablir, transport (début, lecture, vitesses ×1 ×20 ×60), horloge MM:SS / total,
 // top régie, recherche, pupitre, raccourcis, plein écran, thème. Tous les chiffres qui changent : largeur fixe, tabulaires.
+// Salle collaborative : pastilles de présence (chantier COLLAB) dans un bouton qui ouvre « Projet » (dépôt, serveur, fichier).
 // Le retard est affiché dans la barre de la conduite (comme le design).
 import { useMagasin, type ModeConducteur } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
 import { mmss } from '../theme/format';
 import { useInterface } from './interface';
 import { situation } from './derive';
-import { IcoDebut, IcoLecture, IcoLoupe, IcoPause, IcoPleinEcran, IcoPupitre, IcoTheme, IcoVerrou, VUES } from './icones';
+import { IcoDebut, IcoLecture, IcoLoupe, IcoPause, IcoPleinEcran, IcoProjet, IcoPupitre, IcoTheme, IcoVerrou, VUES } from './icones';
+import { Presence } from '../collab';
 import { basculerPleinEcran } from './raccourcis';
+import { BoutonSortieScene } from '../sortie';
 
 const MODES: [ModeConducteur, string, string][] = [
   ['preparer', 'PRÉPARER', 'Écrire, régler et répéter avec la salle simulée : la caméra reste libre'],
@@ -62,6 +65,11 @@ export function EnTete() {
       </nav>
       <div className="ent-vide" />
 
+      <button className={'ent-salle' + (ui.projets ? ' on' : '')} onClick={() => ui.basculer('projets')}
+        title="Projet et salle : spectacle LIVE, projets du serveur, fichier, présence de l’équipe">
+        <IcoProjet /><Presence max={4} />
+      </button>
+
       <div className="seg-groupe" role="group" aria-label="Vues">
         {VUES.map(([v, tip, g]) => (
           <button key={v} className={'seg ico' + (ui.vue === v ? ' on' : '')} title={tip} onClick={() => ui.poser({ vue: v })}>
@@ -106,6 +114,7 @@ export function EnTete() {
       </button>
       <button className={'btn-carre si-moyen' + (ui.pupitre ? ' on' : '')} onClick={() => ui.basculer('pupitre')} title="Pupitre de représentation · touche P"><IcoPupitre /></button>
       <button className="btn-carre disp-txt si-moyen" onClick={() => ui.basculer('aide')} title="Raccourcis · touche ?">?</button>
+      <BoutonSortieScene />
       <button className="btn-carre" onClick={basculerPleinEcran} title={ui.pleinEcran ? 'Quitter le plein écran · F' : 'Plein écran · F'}>
         <IcoPleinEcran actif={ui.pleinEcran} />
       </button>

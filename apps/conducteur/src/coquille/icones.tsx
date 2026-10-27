@@ -69,3 +69,8 @@ export const VUES: ['board' | 'both' | 'tracks', string, string][] = [
   ['both', 'Planche et conduite', 'M2 2h12v6H2zM2 10h12v4H2z'],
   ['tracks', 'Conduite seule', 'M2 3h12M2 7h12M2 11h12'],
 ];
+export const IcoProjet = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden="true">
+    <path d="M1.5 3.5a1 1 0 0 1 1-1h3l1.3 1.5h4.7a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1z" />
+  </svg>
+);

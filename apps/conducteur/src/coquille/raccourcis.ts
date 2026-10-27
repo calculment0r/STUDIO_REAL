@@ -67,7 +67,7 @@ export function useRaccourcis(): void {
       else if (k === 'p' || k === 'P') ui.basculer('pupitre');
       else if (k === '?') ui.basculer('aide');
       else if (k === 'Escape') {
-        if (ui.aide || ui.pupitre || ui.allerA || ui.recherche) ui.poser({ aide: false, pupitre: false, allerA: false, recherche: false });
+        if (ui.aide || ui.pupitre || ui.allerA || ui.recherche || ui.projets) ui.poser({ aide: false, pupitre: false, allerA: false, recherche: false, projets: false });
         else if (ui.tiroir) ui.poser({ tiroir: false });
         else s.selectionner({});
       }

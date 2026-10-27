@@ -1,10 +1,17 @@
-// Ce qui se pose par-dessus la mise en page : cadre « en lecture », alerte de sécurité, pupitre de représentation,
-// raccourcis.
+// Ce qui se pose par-dessus la mise en page : cadre « en lecture », alerte de sécurité (repères de la piste Sécurité et
+// alertes du moteur), pupitre de représentation (avec le pupitre de la régie), ouverture de projet, raccourcis.
 import { useMagasin } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
+import { deconnecterSalle, useSalle } from '../etat/serveur';
+import { OuvrirProjet } from '../collab';
 import { mmss, mmssSigne } from '../theme/format';
 import { useInterface } from './interface';
 import { situation } from './derive';
+import { PupitreRegie } from './Regie';
+import { chargerLive } from './projet-live';
+
+/** Une alerte du moteur reste au bandeau ce temps-là (horloge murale) si personne ne l'accuse. */
+const DUREE_ALERTE_MS = 9000;
 
 export function CadreEnLecture() {
   const on = useMagasin(s => s.enLecture);
@@ -23,6 +30,7 @@ export function AlerteSecurite() {
   const t = useMagasin(s => s.lecture?.t ?? null);
   const accuses = useInterface(s => s.accuses);
   const poser = useInterface(s => s.poser);
+  const journal = useMagasin(s => s.journalRegie);
   if (t === null) return null;
   const prev = prevoir(projet);
   const debut = (ev: string) => prev.moments.find(x => x.id === ev)?.debut ?? 0;
@@ -40,7 +48,62 @@ export function AlerteSecurite() {
       );
     }
   }
+  // Alertes du moteur (garde-fou échu, machine sans réponse, consigne non lue, étape bloquée…) : la plus récente,
+  // quelques secondes, à accuser ; toutes restent dans le journal de régie.
+  const maintenant = Date.now();
+  for (let i = journal.length - 1; i >= 0; i--) {
+    const l = journal[i]!;
+    if (maintenant - l.recu > DUREE_ALERTE_MS) break;
+    if (l.genre !== 'alerte' || accuses.includes('regie:' + l.n)) continue;
+    return (
+      <div className="alerte" role="alert">
+        <span className="p" />
+        <span className="t"><span className="q">ALERTE · {l.type} · {mmss(l.t)}</span><span className="x">{l.txt}</span></span>
+        <button onClick={() => poser({ accuses: [...accuses, 'regie:' + l.n] })}>BIEN REÇU</button>
+      </div>
+    );
+  }
   return null;
+}
+
+/** Ouverture de projet : les projets du dépôt (spectacle LIVE, démonstration) en local, puis ceux du serveur, un fichier
+ *  et l'identité dans la salle (<OuvrirProjet/> du chantier COLLAB). Sans serveur, tout marche en local. */
+export function Projets() {
+  const ouvert = useInterface(s => s.projets);
+  const basculer = useInterface(s => s.basculer);
+  const titre = useMagasin(s => s.projet.titre);
+  if (!ouvert) return null;
+  const fermer = () => useInterface.getState().poser({ projets: false });
+  const demo = () => {
+    if (useSalle.getState().salle) deconnecterSalle(true);
+    const m = useMagasin.getState();
+    m.revenirDemo();
+    m.revenirAuDebut();
+    fermer();
+  };
+  return (
+    <div className="voile" onPointerDown={() => basculer('projets')}>
+      <div className="fenetre pj" onPointerDown={e => e.stopPropagation()} role="dialog" aria-label="Ouvrir un projet">
+        <div className="pn-tete">
+          <span className="disp" style={{ fontSize: 12, letterSpacing: '.14em' }}>PROJET</span>
+          <span className="pn-droite pj-courant">{titre ?? 'Sans titre'}</span>
+          <button className="pn-fermer" onClick={fermer}>ÉCHAP POUR FERMER</button>
+        </div>
+        <span className="pn-micro">PROJETS DU DÉPÔT · EN LOCAL</span>
+        <div className="pj-cartes">
+          <button className="pj-carte" onClick={() => void chargerLive().then(ok => { if (ok) fermer(); })}>
+            <span className="t">SPECTACLE LIVE</span>
+            <span className="d">Le chef, streamer en direct · la salle décide</span>
+          </button>
+          <button className="pj-carte" onClick={demo}>
+            <span className="t">DÉMONSTRATION</span>
+            <span className="d">L’exemple du design</span>
+          </button>
+        </div>
+        <OuvrirProjet onOuvert={fermer} />
+      </div>
+    </div>
+  );
 }
 
 export function Pupitre() {
@@ -68,7 +131,7 @@ export function Pupitre() {
         <button className={'pup-btn' + (verrou ? ' on' : '')} onClick={m.basculerVerrou}>SCÈNE</button>
         <button className="pup-btn" onClick={() => basculer('pupitre')}>QUITTER · ÉCHAP</button>
       </div>
-      <div className="pup-grille">
+      <div className="pup-grille avec-regie">
         <div className="pup-col">
           <span className="mono" style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--ort)', textTransform: 'uppercase' }}>{sit.tag}</span>
           <span className="disp" style={{ fontSize: 32, letterSpacing: '.08em', lineHeight: 1.2, textTransform: 'uppercase', textWrap: 'balance' }}>{sit.nom}</span>
@@ -97,6 +160,10 @@ export function Pupitre() {
           ))}
           <div style={{ flex: 1 }} />
           <button className={'pup-go' + (pret ? ' pret' : sit.passageGo !== null ? ' attend' : '')} onClick={m.top}>{go}</button>
+        </div>
+        <div className="pup-col pup-regie">
+          <span className="mono" style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--ort)' }}>RÉGIE · ENTRÉES ET COMMANDES</span>
+          <PupitreRegie large />
         </div>
       </div>
     </div>

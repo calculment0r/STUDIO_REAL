@@ -4,31 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Figurants P0.5</title>
-<link rel="stylesheet" href="../../../design/tokens.css">
-<link rel="stylesheet" href="../../../design/base.css">
+<link rel="stylesheet" href="../../../packages/theme/theme.css">
+<script src="../../../packages/theme/venus.js" defer></script>
 <link rel="stylesheet" href="commun/commun.css">
 <style>
-  body { min-height: 100%; }
+  body { min-height: 100%; height: auto; }
+  .ix-ent { min-height: 56px; display: flex; align-items: center; padding: 0 20px; box-shadow: inset 0 -1px 0 var(--filet-12); }
   .ix { max-width: 880px; margin: 0 auto; padding: var(--s6) var(--s5) calc(var(--s6) * 2); display: flex; flex-direction: column; gap: var(--s6); }
-  .ix h1 { margin: 0; font-family: var(--f-black); font-weight: 400; font-size: 30px; letter-spacing: .05em; text-transform: uppercase; }
+  .ix header { display: flex; flex-direction: column; gap: 10px; }
+  .ix header .et { color: var(--ort); letter-spacing: .2em; }
+  .ix h1 { margin: 0; font-family: var(--f-disp); font-weight: 700; font-size: 26px; letter-spacing: .1em; text-transform: uppercase; }
   .ix p { margin: 0; color: var(--ink2); font-size: 15px; line-height: 1.5; }
-  .ix-liens { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: var(--s3); }
+  .ix-liens { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 8px; }
   .ix-lien {
-    display: flex; flex-direction: column; gap: var(--s2); padding: var(--s4) var(--s5);
-    text-decoration: none; background: var(--panel); border-radius: var(--r2);
-    box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow .12s, background .12s;
+    display: flex; flex-direction: column; gap: 6px; padding: 14px 16px;
+    text-decoration: none; color: var(--ink); background: var(--tile); border-radius: var(--nl-10);
+    box-shadow: inset 0 0 0 1px var(--filet-14); transition: box-shadow .12s, background .12s;
   }
-  .ix-lien:hover { background: var(--panel2); box-shadow: inset 0 0 0 1px var(--line-or); }
-  .ix-lien b { font-size: 20px; font-weight: 600; }
+  .ix-lien:hover { color: var(--ink); background: var(--tile2); box-shadow: inset 0 0 0 1px var(--ort-55); }
+  .ix-lien b { font-size: 18px; font-weight: 600; }
   .ix-lien span.d { color: var(--ink2); font-size: 14px; line-height: 1.4; }
-  .ix-bloc { padding: var(--s4) var(--s5); background: var(--panel); border-radius: var(--r2); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: var(--s3); }
-  .ix-bloc.att { background: var(--amb-bg); box-shadow: inset 0 0 0 1px var(--line-amb); }
-  pre { margin: 0; padding: var(--s3) var(--s4); background: var(--bg); border-radius: var(--r1); box-shadow: inset 0 0 0 1px var(--line); font-family: var(--f-mono); font-size: 12px; line-height: 1.6; overflow-x: auto; color: var(--cy); }
+  .ix-bloc { padding: 14px 16px; background: var(--tile); border-radius: var(--nl-10); box-shadow: inset 0 0 0 1px var(--filet-14); display: flex; flex-direction: column; gap: 10px; }
+  .ix-bloc > .et:first-child { color: var(--ort); letter-spacing: .2em; }
+  .ix-bloc.att { background: var(--ort-08); box-shadow: inset 0 0 0 1px var(--ort-55); }
+  pre { margin: 0; padding: 10px 14px; background: var(--well2); border-radius: var(--nl-7); box-shadow: inset 0 0 0 1px var(--filet-12); font-family: var(--f-mono); font-size: 12px; line-height: 1.6; overflow-x: auto; color: var(--cy); }
   code { font-family: var(--f-mono); font-size: 12.5px; color: var(--cy); }
   @media (max-width: 480px) { .ix-liens { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
+<div class="ix-ent">
+  <div class="sr-marque"><span class="sr-marque-carre"></span>
+    <span class="sr-marque-titres"><b class="sr-marque-nom">Studio Real</b><span class="sr-marque-sous">prototype P0.5</span></span></div>
+</div>
 <div class="ix">
   <header>
     <span class="et">STUDIO_REAL · P0.5</span>
@@ -48,7 +56,7 @@
     <pre>cd STUDIO_REAL/prototypes/figurants/serveur
 npm install
 node index.mjs</pre>
-    <p>Puis ouvrir <code>http://localhost:8787/prototypes/figurants/pages/</code>. Le serveur sert la racine du dépôt, ce qui rend valides les chemins du thème.</p>
+    <p>Puis ouvrir <code>http://localhost:8787/prototypes/figurants/pages/</code>. Le serveur sert la racine du dépôt, ce qui rend valides les chemins du thème (<code>packages/theme/</code>).</p>
   </section>
 
   <section class="ix-bloc att">

@@ -1,0 +1,59 @@
+/* ============================================================
+   @studio-real/theme : jetons DÉRIVÉS (nouveaux noms, aucune nouvelle couleur).
+
+   Le Conducteur écrit ses filets et ses voiles en ligne, rgba(var(--lr), .14), rgba(var(--ort-rgb), .7)…
+   Une page qui suit la règle « aucune couleur en dur hors des jetons » les prend ici, déjà composés, aux
+   opacités que le Conducteur emploie réellement (relevé du 27/10 dans apps/conducteur/src). Les composantes
+   (--lr, --ort-rgb, --gt-rgb, --cy-rgb, --rec-rgb) viennent de jetons.css : le clair suit seul.
+
+   Posés aussi sous [data-theme] : un sous-arbre en data-theme="light" recompose ses filets avec SON --lr.
+   ============================================================ */
+
+:root,
+[data-theme] {
+  /* filets : rgba(var(--lr), α) */
+  --filet-02: rgba(var(--lr), .02);
+  --filet-07: rgba(var(--lr), .07);
+  --filet-10: rgba(var(--lr), .1);
+  --filet-12: rgba(var(--lr), .12);
+  --filet-14: rgba(var(--lr), .14);
+  --filet-16: rgba(var(--lr), .16);
+  --filet-20: rgba(var(--lr), .2);
+  --filet-22: rgba(var(--lr), .22);
+  --filet-28: rgba(var(--lr), .28);
+  --filet-40: rgba(var(--lr), .4);
+
+  /* l'accent orange : fond, halo, filets */
+  --ort-08: rgba(var(--ort-rgb), .08);
+  --ort-14: rgba(var(--ort-rgb), .14);
+  --ort-20: rgba(var(--ort-rgb), .2);
+  --ort-55: rgba(var(--ort-rgb), .55);
+  --ort-70: rgba(var(--ort-rgb), .7);
+
+  /* le rouge d'enregistrement / de sécurité */
+  --rec-14: rgba(var(--rec-rgb), .14);
+  --rec-22: rgba(var(--rec-rgb), .22);
+  --rec-70: rgba(var(--rec-rgb), .7);
+
+  /* le vert « joué, franchi » */
+  --gt-14: rgba(var(--gt-rgb), .14);
+  --gt-55: rgba(var(--gt-rgb), .55);
+
+  /* l'encre tech */
+  --cy-10: rgba(var(--cy-rgb), .1);
+  --cy-45: rgba(var(--cy-rgb), .45);
+
+  /* rayons NL-16 (style Station Rack) : les valeurs fixes du Conducteur, en px, indépendantes de --rad */
+  --nl-2:  2px;    /* repère, onglet */
+  --nl-4:  4px;
+  --nl-6:  6px;    /* bouton d'un groupe segmenté */
+  --nl-7:  7px;    /* bouton, champ, horloge */
+  --nl-8:  8px;    /* groupe de boutons, toast */
+  --nl-10: 10px;   /* menu, panneau flottant */
+  --nl-12: 12px;   /* carte, modale */
+  --nl-16: 16px;   /* grand panneau, gros bouton tactile */
+  --nl-rond: 999px;
+
+  /* teinte NEUTRE d'une texture blanche qu'un moteur (WebGL, canvas) colore ensuite : pas une couleur d'interface */
+  --masque: #ffffff;
+}

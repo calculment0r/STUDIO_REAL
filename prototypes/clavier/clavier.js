@@ -32,7 +32,7 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const haptic = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) { /* iOS : pas de vibration */ } };
 
-  // la couleur de la barre du navigateur = --bg (lue dans tokens.css, jamais ecrite ici)
+  // la couleur de la barre du navigateur = --bg (lue dans le theme packages/theme/, jamais ecrite ici)
   try {
     const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
     const m = document.querySelector('meta[name="theme-color"]');

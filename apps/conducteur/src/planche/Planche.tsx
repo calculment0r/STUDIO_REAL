@@ -19,6 +19,8 @@ import {
 import { MomentPlanche, type ApiPlanche, type RotatifProvisoire } from './MomentPlanche';
 import { bibliotheque, type EntreeBibliotheque, type ThemePlanche } from './pont-blocs';
 import { teinte } from './styles';
+import { CurseursDistants, useEmettreCurseur } from '../collab';
+import { PastillesCommentaires } from './collab-planche';
 import './planche.css';
 
 const ROMAINS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -79,6 +81,12 @@ export function Planche() {
   // ── Références vers l'état courant (les écouteurs globaux sont posés une seule fois) ──
   const etat = useRef({ cam, cadres, parId, taille, lien, prov, rotatif, sortieSel, selection, editable, projet, suivre });
   etat.current = { cam, cadres, parId, taille, lien, prov, rotatif, sortieSel, selection, editable, projet, suivre };
+  // Collaboration : notre curseur part en coordonnées du monde (avec le moment survolé) ; sans salle, rien ne part.
+  const emettreCurseur = useEmettreCurseur('planche', (x, y) => {
+    const { cam: c, cadres: F } = etat.current;
+    const w = ecranVersMonde(c, x, y), f = cadreAuPoint(F, w.x, w.y);
+    return f ? { x: w.x, y: w.y, moment: f.moment.id } : { x: w.x, y: w.y };
+  });
   const geste = useRef<Geste | null>(null);
   const pointeurs = useRef(new Map<number, Point>());
   const selectionInterne = useRef(false);
@@ -579,7 +587,7 @@ export function Planche() {
   return (
     <div ref={refBoite} className={'planche' + (pan ? ' planche--pan' : '')} style={styleBoite} tabIndex={0}
       aria-label="Planche du moment" onPointerDown={surFond} onDoubleClick={surDoubleClic} onKeyDown={surTouche}
-      onContextMenu={surMenu}>
+      onContextMenu={surMenu} onPointerMove={emettreCurseur.onPointerMove} onPointerLeave={emettreCurseur.onPointerLeave}>
       <div className="planche-grille" style={{ backgroundSize: `${24 * cam.z}px ${24 * cam.z}px`, backgroundPosition: `${cam.px}px ${cam.py}px` }} />
 
       <div className="planche-monde" style={styleMonde}>
@@ -622,7 +630,13 @@ export function Planche() {
             <path d={cheminLien(lien.sx, lien.sy, lien.mx, lien.my)} style={{ stroke: 'var(--ort)', strokeWidth: 1.5, strokeDasharray: '5 4' }} />
           </svg>
         )}
+
+        {/* Commentaires ouverts de la salle collaborative, épinglés sur une étape ou un moment */}
+        <PastillesCommentaires cadres={cadres} />
       </div>
+
+      {/* Curseurs des autres membres de la salle (monde → écran) */}
+      <CurseursDistants zone="planche" projeter={(x, y) => ({ x: x * cam.z + cam.px, y: y * cam.z + cam.py })} />
 
       {/* Barre d'outils de la planche */}
       <div className="planche-outils" data-ui="1" onPointerDown={e => e.stopPropagation()} onDoubleClick={e => e.stopPropagation()}>

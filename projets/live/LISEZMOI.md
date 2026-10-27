@@ -5,7 +5,9 @@ depuis son téléphone ; des **figurants IA** écrivent aussi dans le chat ; une
 la salle est coupée en deux camps.
 
 - `live.conducteur.json` : le projet complet, format `studio-real/conducteur@1` (`{format, project, assets, runs: []}`),
-  à ouvrir avec « Importer » dans le Conducteur. Il est lu par `chargerFichier()` et passe `validerProjet()` sans erreur ni avertissement.
+  Il est **embarqué dans le Conducteur** : bouton projet de l'en-tête (ou « Projet · versions ») → **Spectacle LIVE**, ou
+  l'adresse `…/?projet=live` ; « Importer » marche aussi. Il est lu par `chargerFichier()` et passe `validerProjet()` sans
+  erreur ni avertissement (`npm run verifier -w @studio-real/modele`).
 - Ce fichier : le déroulé lisible, les choix de mise en scène et ce que l'équipe artistique doit trancher.
 
 **En chiffres** : 4 actes · 13 moments · 97 étapes · 107 sorties · 8 mémoires de spectacle · 10 pistes · 112 éléments au catalogue.
@@ -46,12 +48,20 @@ Les passages **go** attendent le top régie.
 |---|---|---|---|
 | `destination` | bloc Mémoire après la consigne (moment 7) | boulangerie · toit · metro | texte du message final, notification du lendemain |
 | `defi` | bloc Mémoire après le défi | oui · non | ton du message final (remercie / taquine) |
-| `jauge` | variable JAUGE_SALLE (secousses agrégées) | 0 → 1000 | condition du défi (≥ 600) |
-| `camp_gagnant` | classement des équipes | Chocolatines · Pains au chocolat | salut au camp gagnant dans le message final |
-| `missions` | superviseurs (chaque mot secret validé : + 1) | 0 → 3 | fin A ou C |
+| `jauge` | **extérieur** : variable JAUGE_SALLE (secousses agrégées) | 0 → 1000 | condition du défi (≥ 600) |
+| `camp_gagnant` | **extérieur** : classement des équipes | Chocolatines · Pains au chocolat | salut au camp gagnant dans le message final |
+| `missions` | **extérieur** : superviseurs (chaque mot secret validé : + 1) | 0 → 3 | fin A ou C |
 | `homme` | bloc Mémoire après le second vote | parler · fuir | fin A, B, C ou D |
-| `recu_lance` | bouton « Reçu » de la vue privée du chef | oui · non | sortie du garde-fou du moment 4 |
-| `flux_perdu` | état du serveur vidéo | oui · non | plan B du moment 4 |
+| `recu_lance` | **extérieur** : bouton « Reçu » de la vue privée du chef (ou signal `recu`) | oui · non | sortie du garde-fou du moment 4 |
+| `flux_perdu` | **extérieur** : état du serveur vidéo | oui · non | plan B du moment 4 |
+
+**Mémoires écrites de l'extérieur** : elles sont posées pendant la représentation par `Lecteur.poser(nom, valeur)` —
+depuis le service concerné, ou à la main au **pupitre de la régie** (section RÉGIE du panneau, ou pupitre de représentation,
+touche P). Chaque étape qui en attend une le déclare dans `params.entree` (`{ memoire, valeurs | pas, min, max, par }`) :
+`co_recu` (recu_lance), `co_relance` et `co_flux` (flux_perdu), `cq_jauge` (jauge, pas de 100), `cq_podium` (camp_gagnant),
+`rs_jeu` et `rs_garde` (missions, + 1). Quand le moment joue, le pupitre met ces mémoires en tête avec leurs valeurs.
+Le garde-fou `co_recu` sort aussi par « condition remplie » sur le **signal** `recu` (`Lecteur.signal('recu')`, reçu pendant
+l'attente) : mode « une seule suffit » entre `mem:recu_lance = oui` et `sig:recu ≥ 1`.
 
 L'aiguillage du moment 12 lit les mémoires dans cet ordre (la première remplie gagne) :
 
@@ -103,11 +113,12 @@ rôles et équipes (dont messagers, superviseurs, mode calme, figurants IA), éc
 3. **Durée du spectacle** : ≈ 46 min du noir au salut. Allonger les scènes improvisées (moments 5, 7, 8, 10) si l'on vise 60 à 90 min.
 4. **Jauge** : 142 places (celle de la salle simulée) ; seuils à recaler sur la vraie jauge (128 présents, 90 % assis, 95 % prêts).
 5. **Les deux camps** : noms, couleurs, répartition par zone ; garder ou supprimer l'affrontement au défi.
-6. **Égalité au premier vote** : roue entre les trois lieux (le moteur ne sait pas encore tirer seulement entre les ex æquo) ou le chef tranche ?
-7. **Mémoires écrites de l'extérieur** : `recu_lance` (bouton Reçu), `flux_perdu` (serveur vidéo), `jauge` (secousses), `missions`
-   (validation des superviseurs) et `camp_gagnant` (classement) doivent être posées pendant la représentation ; le lecteur n'a pas
-   encore d'entrée pour ça (à prévoir, ou blocs « Message à une personne » et « Écoute d'un signal » de l'étude des 10 blocs).
-   En répétition, ces garde-fous partent donc par « délai dépassé ».
+6. **Égalité au premier vote** : la roue (`vo_roue`, `params.exaequo: true`) ne tire plus qu'entre les issues ex æquo du
+   dernier vote (écart ≤ 4 points). Reste à trancher : la roue, ou le chef tranche ?
+7. **Mémoires écrites de l'extérieur** : branchées (voir §2) ; `recu_lance`, `flux_perdu`, `jauge`, `missions` et
+   `camp_gagnant` se posent par `Lecteur.poser()` ou au pupitre de la régie, et `recu_lance` a aussi le signal `recu`.
+   Reste à brancher les vraies sources (vue privée du chef, serveur vidéo, JAUGE_SALLE, application des superviseurs,
+   classement) sur ces entrées. En répétition, sans personne au pupitre, ces garde-fous partent par « délai dépassé ».
 8. **Fin de la musique d'ouverture** : durée fixe aujourd'hui ; un OSC « fin de musique » quand le bloc Écoute d'un signal existera.
 9. **Le salut** : le chef reste en direct depuis la rue, ou le comédien vient en salle (et le pâtissier) ?
 10. **Rôles secrets** : trois messagers suffisent-ils ? Les superviseurs savent-ils qui ils sont ? Exclure mode calme et mineurs.

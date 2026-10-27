@@ -7,3 +7,6 @@ node_modules/
 dist/
 .wrangler/
 .dev.vars
+
+# vidéos précalculées et médias lourds : en local, jamais dans le dépôt
+medias-locales/

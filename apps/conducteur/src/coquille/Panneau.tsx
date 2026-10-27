@@ -1,5 +1,6 @@
 // Panneau de droite. Pour la sélection, trois niveaux : l'essentiel visible → « Réglages » (ouvert) → « Avancé »
-// (fermé). Puis « Où en est-on », la salle simulée (fermée par défaut, comme le design) et « Projet · versions ».
+// (fermé). Puis « Où en est-on », la régie (entrées extérieures du moteur, journal ; ouverte), la salle simulée
+// (fermée par défaut, comme le design), l'équipe (salle collaborative ; fermée) et « Projet · versions ».
 // Pas de phrases d'aide ici : des valeurs, des noms, des actions.
 import { useRef, type ReactNode } from 'react';
 import { dureeEtape, type Condition, type Projet } from '@studio-real/modele';
@@ -16,6 +17,10 @@ import { infoBloc, libelleCondition, regleSortie, situation } from './derive';
 import { Rotatif, RotatifSeul } from './Rotatif';
 import { CHEVRON } from './icones';
 import { nouveauMoment } from './raccourcis';
+import { PupitreRegie } from './Regie';
+import { Equipe, useCommentairesOuverts } from './Equipe';
+import { chargerLive } from './projet-live';
+import { ApercuSortie } from '../sortie';
 
 type Modif = (fn: (p: Projet) => void, etiquette?: string) => void;
 
@@ -406,6 +411,7 @@ function OuEnEstOn() {
         </div>
       ))}
       {goPossible && <button className="ou-go" onClick={top}>TOP · GO</button>}
+      <ApercuSortie />
     </div>
   );
 }
@@ -445,6 +451,8 @@ function ProjetVersions() {
         <Bouton onClick={m.exporter}>EXPORTER JSON</Bouton>
         <Bouton onClick={() => fichier.current?.click()}>IMPORTER JSON</Bouton>
         <Bouton onClick={m.revenirDemo}>DÉMONSTRATION</Bouton>
+        <Bouton onClick={() => void chargerLive()}>SPECTACLE LIVE</Bouton>
+        <Bouton onClick={() => useInterface.getState().poser({ projets: true })}>OUVRIR…</Bouton>
       </div>
       <input ref={fichier} type="file" accept="application/json,.json" hidden
         onChange={async e => { const f = e.target.files?.[0]; if (f) m.importer(await f.text()); e.target.value = ''; }} />
@@ -459,6 +467,16 @@ function ProjetVersions() {
         </div>
       ))}
       <Ligne l="SOIRS JOUÉS" v={executions.length ? executions.length + ' · dernier retard ' + (retard >= 0 ? '+' : '−') + mmss(Math.abs(retard)) : 'aucun'} />
+    </Accordeon>
+  );
+}
+
+// ─── équipe (salle collaborative) ─────────────────────────────────────────────────────────────────────
+function SectionEquipe() {
+  const n = useCommentairesOuverts();
+  return (
+    <Accordeon k="e" titre={n ? 'ÉQUIPE · ' + n : 'ÉQUIPE'}>
+      <Equipe />
     </Accordeon>
   );
 }
@@ -478,7 +496,11 @@ export function Panneau() {
     <aside className="panneau" style={{ width: largeur }} aria-label="Panneau de la sélection">
       {contenu}
       <OuEnEstOn />
+      <Accordeon k="g" titre="RÉGIE">
+        <PupitreRegie />
+      </Accordeon>
       <SalleSimulee />
+      <SectionEquipe />
       <ProjetVersions />
     </aside>
   );
