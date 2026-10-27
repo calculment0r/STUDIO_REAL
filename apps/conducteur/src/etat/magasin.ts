@@ -237,6 +237,7 @@ export const useMagasin = create<Magasin>((set, get) => {
     const apres = (e.moment ?? '') + '/' + (e.etape ?? '');
     if (apres !== avant) journal(e.etape ? 'etape' : 'passage', { moment: e.moment, etape: e.etape });
     if (e.termine) { set({ enLecture: false }); fermerExecution(); }
+    else if (e.attenteGo) set({ enLecture: false });   // pause automatique sur chaque passage (losange) : seul le TAP repart
   };
 
   return {

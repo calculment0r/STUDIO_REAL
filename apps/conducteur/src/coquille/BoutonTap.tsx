@@ -1,5 +1,5 @@
-// Gros bouton TAP en bas de l'écran (spectacle du soir) : passe à l'étape suivante. Grisé tant que l'étape en cours n'est
-// pas arrivée à son passage « go » ; disponible seulement quand on peut passer. Lecture arrêtée : il la lance.
+// Gros bouton TAP en bas de l'écran (spectacle du soir). La lecture se met en pause sur chaque passage (losange) ;
+// le TAP donne le top et repart. Grisé pendant qu'une étape se joue : disponible seulement quand on peut passer.
 import { useMagasin } from '../etat/magasin';
 
 export function BoutonTap() {
@@ -8,18 +8,17 @@ export function BoutonTap() {
   const projet = useMagasin((s) => s.projet);
   const top = useMagasin((s) => s.top);
   const lancer = useMagasin((s) => s.lancer);
-  const pret = enLecture && !!lecture?.attenteGo;
-  const arrete = !enLecture;
+  const auPassage = !!lecture?.attenteGo;
+  const actif = !enLecture;
   const i = lecture ? projet.ev.findIndex((m) => m.id === lecture.moment) : -1;
   const ici = i >= 0 ? projet.ev[i]?.name : projet.ev[0]?.name;
   const suivant = i >= 0 ? projet.ev[i + 1]?.name : projet.ev[0]?.name;
-  const actif = pret || arrete;
   return (
     <button type="button" className={'tap-geant' + (actif ? ' pret' : '')} disabled={!actif}
-      onClick={() => (arrete ? lancer() : top())}
-      title={actif ? 'Passer à l’étape suivante' : 'Attendre : l’étape en cours n’est pas finie'}>
-      <b>{arrete ? '▶ LECTURE' : 'TAP'}</b>
-      <span>{arrete ? (ici ?? '') : pret ? (suivant ? '→ ' + suivant : 'fin') : 'en cours : ' + (ici ?? '')}</span>
+      onClick={() => { if (auPassage) top(); lancer(); }}
+      title={actif ? 'Passer à l’étape suivante' : 'Attendre : l’étape en cours se joue'}>
+      <b>TAP</b>
+      <span>{!actif ? 'en cours : ' + (ici ?? '') : auPassage ? '→ ' + (suivant ?? 'fin') : '▶ ' + (ici ?? '')}</span>
     </button>
   );
 }

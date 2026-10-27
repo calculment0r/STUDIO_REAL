@@ -7,7 +7,8 @@ let ref: Window | null = null;
 /** Adresse de la page de sortie (même origine que la régie). */
 export function adresseSortie(): string {
   const base = (import.meta.env?.BASE_URL as string | undefined) ?? '/';
-  return new URL(base.replace(/\/?$/, '/') + 'sortie.html', location.href).toString();
+  // ?v= : la fenêtre charge toujours la dernière version (GitHub Pages garde l'ancienne en cache quelques minutes)
+  return new URL(base.replace(/\/?$/, '/') + 'sortie.html?v=' + Date.now(), location.href).toString();
 }
 
 interface EcranDetaille { left: number; top: number; availLeft?: number; availTop?: number; width: number; height: number; isPrimary?: boolean }
