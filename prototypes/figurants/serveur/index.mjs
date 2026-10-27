@@ -134,7 +134,7 @@ const serveur = http.createServer(servir);
 
 // ------------------------------------------------------------------ WebSocket /ws
 
-const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });   // 64 Ko : les offres WebRTC de la visio
 serveur.on('upgrade', (req, socket, tete) => {
   let p = '';
   try { p = new URL(req.url, 'http://x').pathname; } catch { /* rien */ }

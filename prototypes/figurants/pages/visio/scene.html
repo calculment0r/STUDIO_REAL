@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Visio · écran scène</title>
+<link rel="stylesheet" href="../../../../packages/theme/theme.css">
+<link rel="stylesheet" href="visio.css">
+</head>
+<body data-poste="scene">
+  <!-- Écran scène (projecteur + sono) : la ministre et Franck côte à côte. Son de la ministre sur la sono,
+       son de Franck COUPÉ par défaut (il est dans la salle). F = plein écran. -->
+  <main class="vi-scene">
+    <div class="vi-case"><video id="v_ministre" class="distant" playsinline autoplay></video><span>Junon Maréchal · ministre</span></div>
+    <div class="vi-case"><video id="v_franck" class="distant" playsinline autoplay muted></video><span>Jim</span></div>
+  </main>
+  <div class="vi-bas">
+    <button class="vi-bt discret" id="sonFranck" type="button">son de Franck : COUPÉ</button>
+    <button class="vi-bt" id="sonBloque" type="button" hidden>🔊 activer le son de la ministre</button>
+    <span id="ws">connexion…</span><span id="liaisons"></span><span>· F = plein écran</span>
+  </div>
+  <script type="module" src="visio.js"></script>
+</body>
+</html>

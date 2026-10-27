@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Visio · Ministre</title>
+<link rel="stylesheet" href="../../../../packages/theme/theme.css">
+<link rel="stylesheet" href="visio.css">
+</head>
+<body data-poste="ministre">
+  <!-- Téléphone de la ministre : elle voit et entend Franck ; sa caméra part vers l'écran scène. -->
+  <video id="v_franck" class="vi-plein distant" playsinline autoplay></video>
+  <video id="moi" class="vi-vignette miroir" playsinline autoplay muted></video>
+  <div class="vi-titre">MINISTRE · visio</div>
+  <div class="vi-bas">
+    <button class="vi-bt" id="camera" type="button">ACTIVER LA CAMÉRA ET LE MICRO</button>
+    <button class="vi-bt discret" id="sonBloque" type="button" hidden>🔊 entendre Franck</button>
+    <span id="ws">connexion…</span><span id="liaisons"></span>
+  </div>
+  <script type="module" src="visio.js"></script>
+</body>
+</html>

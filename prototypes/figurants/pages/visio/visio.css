@@ -1,0 +1,29 @@
+/* Visio d'Écho : téléphones (Franck, ministre) et écran scène. Thème STUDIO REAL sombre. */
+html, body { margin: 0; height: 100%; background: #000; color: var(--ink); overflow: hidden; }
+video { display: block; background: #000; }
+.vi-bas {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: rgba(0, 0, 0, .55);
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; color: var(--ink2);
+}
+.vi-bt { min-height: 48px; padding: 0 18px; border-radius: 10px; font-family: var(--f-disp); font-weight: 700; letter-spacing: .1em;
+  background: var(--ort); color: var(--on-ort); font-size: 15px; }
+.vi-bt.discret { background: var(--tile); color: var(--ink); box-shadow: inset 0 0 0 1px var(--filet-20); }
+.vi-bt.actif { background: var(--ort); color: var(--on-ort); }
+.vi-titre { position: absolute; left: 14px; top: calc(12px + env(safe-area-inset-top)); z-index: 4; font-family: var(--f-disp); font-weight: 700;
+  letter-spacing: .14em; font-size: 14px; color: #fff; text-shadow: 0 1px 4px #000; }
+
+/* téléphone : soi en plein écran (Franck) ou l'autre en plein écran + soi en vignette (ministre) */
+.vi-plein { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.vi-vignette { position: fixed; right: 12px; top: calc(12px + env(safe-area-inset-top)); width: 28vw; max-width: 160px; aspect-ratio: 9 / 16;
+  object-fit: cover; border-radius: 10px; z-index: 3; box-shadow: 0 0 0 2px rgba(255, 255, 255, .4); }
+.miroir { transform: scaleX(-1); }
+
+/* écran scène : les deux vidéos côte à côte */
+.vi-scene { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1.2vmin; padding: 1.2vmin; background: #000; }
+.vi-case { position: relative; min-width: 0; min-height: 0; border-radius: 1vmin; overflow: hidden; background: #0a0d0b; }
+.vi-case video { width: 100%; height: 100%; object-fit: cover; }
+.vi-case span { position: absolute; left: 1.4vmin; bottom: 1.2vmin; font-family: var(--f-disp); font-weight: 700; letter-spacing: .12em;
+  font-size: clamp(14px, 2vmin, 28px); color: #fff; text-shadow: 0 1px 6px #000; }
+.vi-scene + .vi-bas { opacity: .25; transition: opacity .3s; }
+.vi-scene + .vi-bas:hover { opacity: 1; }

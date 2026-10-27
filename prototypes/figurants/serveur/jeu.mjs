@@ -7,7 +7,7 @@ import path from 'node:path';
 import { Fenetre } from './util.mjs';
 import { FluxAsr } from './asr-flux.mjs';
 
-const ROLES = new Set(['chat', 'regie', 'comedien', 'telephone', 'ministre']);   // ministre : écran « téléphone de la ministre » (vote, séquence 6)
+const ROLES = new Set(['chat', 'regie', 'comedien', 'telephone', 'ministre', 'visio']);   // visio : téléphones de Franck et de la ministre, écran scène   // ministre : écran « téléphone de la ministre » (vote, séquence 6)
 const COULEURS_HUMAINS = ['--cy', '--or', '--grn2', '--amb', '--coral-3', '--ink2', '--coral-2'];
 const CHAMPS_PUBLICS = ['t', 'id', 'pseudo', 'couleur', 'texte', 'ts', 'grand'];   // grand : commentaire d'un spectateur (plus gros à l'écran)
 
@@ -229,6 +229,24 @@ export class Jeu {
 
   /** Discours de Junon (bloc 3) : l'audio part sur le mur (page chat, son de la salle) et les commentaires pré-écrits
    *  de junon-commentaires.json tombent à leur seconde, par la porte unique du filtre. */
+  /** Visio (Franck ↔ ministre, vues sur l'écran scène) : relais pur de la signalisation WebRTC entre postes, rien n'est gardé.
+   *  present → le nouveau reçoit la liste des postes déjà là, les autres apprennent son arrivée ; sinon relais vers m.vers. */
+  _rtc(c, m) {
+    if (c.role !== 'visio') return;
+    const POSTES = ['franck', 'ministre', 'scene'];
+    if (m.type === 'present') {
+      if (!POSTES.includes(m.poste)) return;
+      c.poste = m.poste;
+      const autres = [...this.clients.values()].filter((x) => x !== c && x.role === 'visio' && x.poste);
+      this.envoyer(c, { t: 'rtc', type: 'presents', postes: autres.map((x) => x.poste) });
+      for (const x of autres) this.envoyer(x, { t: 'rtc', type: 'present', de: c.poste });
+      this.journalRegie('visio : ' + c.poste + ' connecté');
+      return;
+    }
+    if (!c.poste || !POSTES.includes(m.vers)) return;
+    for (const x of this.clients.values()) if (x.role === 'visio' && x.poste === m.vers) this.envoyer(x, { t: 'rtc', type: m.type, de: c.poste, data: m.data });
+  }
+
   _ecran(c, m) {
     if (c.role !== 'regie' || !['mur', 'noir'].includes(m.mode)) return;
     this.ecran = m.mode;
@@ -335,6 +353,7 @@ export class Jeu {
       case 'tel.cmd': return this._telCmd(c, m);
       case 'junon': return this._junon(c, m);
       case 'ecran': return this._ecran(c, m);
+      case 'rtc': return this._rtc(c, m);
       case 'choix.reponse': return this._choixReponse(c, m);
       case 'diag':                                          // diagnostic de la page comédien (micro, moteur audio)
         if (c.role !== 'comedien') return;
