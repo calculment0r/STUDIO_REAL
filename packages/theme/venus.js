@@ -13,6 +13,7 @@
   var base = (balise && balise.src) || document.baseURI;
   var essais = [];
   if (balise && balise.dataset.src) essais.push(new URL(balise.dataset.src, document.baseURI).href);
+  essais.push(new URL('polices/venus-rising.otf', base).href);
   essais.push(new URL('../../conception/conducteur/source/uploads/Venus%20Rising%20Rg.otf', base).href);
   essais.push(new URL('/polices-privees/Venus%20Rising%20Rg.otf', document.baseURI).href);
 

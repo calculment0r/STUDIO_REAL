@@ -1,10 +1,8 @@
-// Venus Rising : police d'affichage du design, SANS licence connue → jamais dans le dépôt ni dans dist/.
-// On la charge à l'exécution depuis /polices-privees/ (servi par vite.config.ts, en dev et en preview, à partir du
-// fichier local hors git conception/conducteur/source/uploads/). Absente : la promesse échoue sans bruit et le texte
-// reste en Chakra Petch 700 (repli déclaré par --f-disp et la graisse 700 des éléments d'affichage).
+// Venus Rising : police d'affichage du design, livrée dans public/polices/ (dépôt, dist/, GitHub Pages).
+// Absente : la promesse échoue sans bruit et le texte reste en Chakra Petch 700 (repli de --f-disp).
 // La face couvre les graisses 100 → 900 : le navigateur ne fabrique jamais de faux gras sur Venus Rising.
 
-const URL_VENUS = '/polices-privees/Venus%20Rising%20Rg.otf';
+const URL_VENUS = ((import.meta.env?.BASE_URL as string | undefined) ?? '/').replace(/\/?$/, '/') + 'polices/venus-rising.otf';
 
 export async function chargerPolicePrivee(): Promise<boolean> {
   if (typeof document === 'undefined' || typeof FontFace === 'undefined') return false;
