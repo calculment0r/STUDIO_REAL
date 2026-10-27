@@ -72,6 +72,7 @@ const ws = connecter({
       case 'fig.stat': recevoirStat(m); break;
       case 'fig.attente': recevoirAttente(m); break;
       case 'journal': journal(m.ligne, m.ts, false); break;
+      case 'vote': recevoirVote(m); break;
       default: break;
     }
   },
@@ -507,3 +508,30 @@ document.addEventListener('click', (ev) => {       // un bouton cliqué ne garde
 });
 
 journal('régie prête', Date.now(), true);
+
+// ---------- vote truqué (séquence 6) : tops forcés à la main ----------
+function voteCmd(cmd, bouton) {
+  const m = { t: 'vote.cmd', cmd };
+  if (cmd === 'ouvrir') m.numero = Number($('voteNumero').value);
+  const envoye = ws.envoyer(m, true);
+  journal('→ vote ' + cmd + (m.numero ? ' question ' + m.numero : '') + (envoye ? '' : ' (en file : hors ligne)'), Date.now(), true);
+  if (bouton) { bouton.classList.add('flash'); setTimeout(() => bouton.classList.remove('flash'), 250); }
+}
+$('bVoteOuvrir').addEventListener('click', (e) => voteCmd('ouvrir', e.currentTarget));
+$('bVoteReveler').addEventListener('click', (e) => voteCmd('reveler', e.currentTarget));
+$('bVoteFermer').addEventListener('click', (e) => voteCmd('fermer', e.currentTarget));
+
+function recevoirVote(m) {
+  const libelle = { compte: 'compteurs en cours', revele: 'résultat affiché', ferme: 'fermé' }[m.etat] || m.etat;
+  $('voteEtat').textContent = m.numero ? 'question ' + m.numero + ' · ' + libelle : libelle;
+  const d = $('voteDetail');
+  d.textContent = '';
+  if (!m.numero) return;
+  (m.reponses || []).forEach((r, i) => {
+    const l = el('div', 'vt-ligne');
+    l.append(el('b', '', 'ABCD'[i] || String(i + 1)), el('span', 'vt-r', r),
+      el('span', 'vt-n', (m.comptes?.[i] ?? 0) + ' / ' + (m.scores?.[i] ?? '?') + ' · réels ' + (m.reels?.[i] ?? 0)));
+    d.appendChild(l);
+  });
+  if (m.resultat) d.appendChild(el('p', 'vt-res', m.resultat));
+}

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Téléphone de la ministre</title>
+<!-- Écran de scène de la séquence 6 : le téléphone de la ministre. Veille « Écho » hors vote ; pendant un vote, la
+     question de Jim, les 4 compteurs (A à D, sans le texte des réponses) qui montent, puis la phrase de résultat.
+     Rôle `ministre` du serveur figurants (PROTOCOLE.md, message `vote`). F : plein écran. -->
+<link rel="stylesheet" href="../../../../packages/theme/theme.css">
+<script src="../../../../packages/theme/venus.js" defer></script>
+<link rel="stylesheet" href="ministre.css">
+</head>
+<body class="mi">
+  <main class="mi-scene">
+    <div class="mi-tel" aria-label="Téléphone de la ministre">
+      <div class="mi-encoche"></div>
+      <div class="mi-barre"><span id="heure">--:--</span><span class="mi-reseau">●●● 5G</span></div>
+
+      <section class="mi-veille" id="veille">
+        <div class="mi-logo">ÉCHO</div>
+        <div class="mi-sous">ministère du bien-être numérique</div>
+      </section>
+
+      <section class="mi-vote" id="vote" hidden>
+        <div class="mi-et">Question <span id="numero"></span> · Jim</div>
+        <p class="mi-q" id="question"></p>
+        <div class="mi-lignes" id="lignes"></div>
+        <div class="mi-total"><span>total</span><b id="total">0</b></div>
+        <p class="mi-resultat" id="resultat" hidden></p>
+      </section>
+    </div>
+    <div class="mi-hors" id="hors" hidden></div>
+  </main>
+  <script type="module" src="ministre.js"></script>
+</body>
+</html>

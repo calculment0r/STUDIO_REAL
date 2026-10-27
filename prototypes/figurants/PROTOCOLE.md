@@ -45,12 +45,14 @@ Toutes les heures sont en millisecondes. `ts` est l'heure du serveur (`Date.now(
 ### Client → serveur
 | `t` | Envoyé par | Champs | Sens |
 |---|---|---|---|
-| `hello` | toutes les pages | `role` (`chat`/`regie`/`comedien`/`telephone`), `pseudo?`, `tc` | identification ; le serveur répond `welcome` |
+| `hello` | toutes les pages | `role` (`chat`/`regie`/`comedien`/`telephone`/`ministre`), `pseudo?`, `tc` | identification ; le serveur répond `welcome` |
 | `asr` | comedien | `kind` (`partial`/`final`), `texte`, `tc`, `tFinPhrase?` | transcription au fil de l'eau |
 | `msg` | telephone, regie (prendre la main) | `cseq` (entier croissant par client), `texte`, `persona?` (si la régie parle à la place d'un persona) | message de chat (idempotent par `cseq`) |
 | `fig.cmd` | regie | `cmd` : un objet parmi `{densite: "silence"\|"calme"\|"normal"\|"chaud"\|"folie"}` · `{humeur: {valence: -1..1, energie: 0..1, etiquettes: []}}` · `{dire: {intention, nb: 1..5, validation: bool}}` · `{parle: {persona, texte}}` · `{relance: true}` · `{vague: "😂"}` · `{chut: true}` · `{coupe: bool}` · `{fournisseur: "auto"\|"ollama"\|"anthropic"\|"banque"}` · `{segment: id}` · `{marquage: "masque"\|"discret"}` · `{chauffe: true}` (contrôle de chauffe des machines Ollama) | commandes de la régie |
 | `fig.valide` | regie | `id`, `ok` (bool), `texte?` (version corrigée) | décision sur une réplique en attente |
 | `ping` | toutes | `tc` | synchronisation d'horloge ; réponse `pong {tc, ts}` |
+| `vote.cmd` | regie | `cmd` : `ouvrir` (+ `numero`) · `reveler` · `fermer` | vote truqué de la séquence 6 (`banques/<…>/votes.json`, relu à chaque commande) : tops forcés à la main |
+| `vote.choix` | telephone | `numero`, `index` (0 à 3) | vote réel : un seul par téléphone et par question, journalisé (`vote_reel`), sans effet sur l'affichage |
 
 ### Serveur → client
 | `t` | Destinataires | Champs | Sens |
@@ -62,6 +64,8 @@ Toutes les heures sont en millisecondes. `ts` est l'heure du serveur (`Date.now(
 | `fig.attente` | regie | `id`, `pid`, `pseudo`, `texte`, `origine` | réplique soumise à validation |
 | `journal` | regie | `ts`, `ligne` | journal lisible |
 | `pong` | l'émetteur | `tc`, `ts` | — |
+| `props` | telephone | `segment`, `titre`, `phrases[]`, `emojis[]` | commentaires proposés pour le segment courant (`propositions.json`), au `welcome` et à chaque changement de segment |
+| `vote` | telephone, chat, ministre, regie | `etat` (`compte`/`revele`/`ferme`), `numero`, `question`, `nb` · **telephone et regie** : `reponses[]` ; telephone : `choisi?` · **autres** : `comptes[]` (affichés, montent jusqu'aux scores truqués en `duree_s`, environ 4 fois par seconde), `total` · `resultat` une fois révélé · **regie** : `scores[]`, `reels[]`, `resultat` | vote de la séquence 6. Les téléphones ne reçoivent que les changements d'état, pas les pas des compteurs. Rôle `ministre` = l'écran « téléphone de la ministre » (`pages/ministre/`) |
 
 ## Règles dures (pour toutes les parties)
 - **Aucun texte de figurant n'est affiché sans passer par le filtre** (`banques/interdits.txt` + normalisation des accents, du leet et des espacements). Pareil pour les messages humains.

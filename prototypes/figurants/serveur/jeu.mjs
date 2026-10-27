@@ -6,16 +6,19 @@ import fs from 'node:fs';
 import { Fenetre } from './util.mjs';
 import { FluxAsr } from './asr-flux.mjs';
 
-const ROLES = new Set(['chat', 'regie', 'comedien', 'telephone']);
+const ROLES = new Set(['chat', 'regie', 'comedien', 'telephone', 'ministre']);   // ministre : écran « téléphone de la ministre » (vote, séquence 6)
 const COULEURS_HUMAINS = ['--cy', '--or', '--grn2', '--amb', '--coral-3', '--ink2', '--coral-2'];
 const CHAMPS_PUBLICS = ['t', 'id', 'pseudo', 'couleur', 'texte', 'ts', 'grand'];   // grand : commentaire d'un spectateur (plus gros à l'écran)
 
 function hache(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 export class Jeu {
-  constructor({ moderateur, journal, banques, etatInitial = {}, jetonRegie = null, asrUrl = null, fichierPropositions = null }) {
+  constructor({ moderateur, journal, banques, etatInitial = {}, jetonRegie = null, asrUrl = null, fichierPropositions = null, fichierVotes = null }) {
     this.moderateur = moderateur; this.journal = journal; this.banques = banques;
-    this.fichierPropositions = fichierPropositions;   // propositions.json : phrases et émojis à toucher, par segment (relu à chaque changement)
+    this.fichierPropositions = fichierPropositions;
+    this.fichierVotes = fichierVotes;               // votes.json : questions du vote truqué (relu à chaque commande)
+    this.vote = null;                               // vote en cours : { numero, etat, q, comptes, debut, reels: Map(cle → index) }
+    this.minuteurVote = null;   // propositions.json : phrases et émojis à toucher, par segment (relu à chaque changement)
     this.jetonRegie = jetonRegie;
     this.asrUrl = asrUrl;              // service Whisper : le micro du comédien arrive en binaire sur /ws
     this.clients = new Map();          // ws → client
@@ -99,6 +102,91 @@ export class Jeu {
     return { t: 'props', segment: seg, titre: this.banques.segments?.[seg]?.titre ?? '', phrases: textes(p?.phrases, 120), emojis: textes(p?.emojis, 16) };
   }
 
+  // ------------------------------------------------------------------ vote truqué (séquence 6)
+  // La régie force les tops : ouvrir {numero} → les compteurs montent jusqu'aux scores décidés à l'avance (duree_s),
+  // reveler → la phrase de résultat, fermer → retour au fil. Les votes réels sont acceptés et journalisés, sans effet.
+
+  _questionVote(numero) {
+    try {
+      const l = JSON.parse(fs.readFileSync(this.fichierVotes, 'utf8'))?.questions;
+      const q = Array.isArray(l) ? l.find((x) => Number(x?.numero) === Number(numero)) : null;
+      if (!q || !Array.isArray(q.reponses) || !Array.isArray(q.scores)) return null;
+      const n = Math.min(q.reponses.length, q.scores.length, 4);
+      return { numero: Number(q.numero), question: String(q.question || ''), reponses: q.reponses.slice(0, n).map(String),
+        scores: q.scores.slice(0, n).map((x) => Math.max(0, Math.round(Number(x) || 0))), resultat: String(q.resultat || ''),
+        duree: Math.min(120, Math.max(3, Number(q.duree_s) || 20)) * 1000 };
+    } catch { return null; }
+  }
+
+  /** Vue du vote selon le rôle : les réponses ne vont qu'aux téléphones (et à la régie), le résultat seulement une fois révélé. */
+  vueVote(role, c = null) {
+    const v = this.vote;
+    if (!v) return { t: 'vote', etat: 'ferme' };
+    const o = { t: 'vote', etat: v.etat, numero: v.numero, question: v.q.question, nb: v.q.scores.length };
+    if (role === 'telephone' || role === 'regie') o.reponses = v.q.reponses;
+    if (role === 'telephone' && c) { const i = v.reels.get(c.cle); if (i != null) o.choisi = i; }
+    if (role !== 'telephone') { o.comptes = v.comptes; o.total = v.comptes.reduce((a, b) => a + b, 0); }
+    if (v.etat === 'revele') o.resultat = v.q.resultat;
+    if (role === 'regie') { o.reels = v.q.scores.map((_, i) => [...v.reels.values()].filter((x) => x === i).length); o.scores = v.q.scores; o.resultat = v.q.resultat; }
+    return o;
+  }
+
+  /** compteurs = true : un pas des compteurs, inutile aux téléphones (ils ne voient pas les nombres ; leurs boutons ne sont pas redessinés) */
+  diffuserVote(compteurs = false) {
+    for (const c of this.clients.values()) if (['telephone', 'chat', 'ministre', 'regie'].includes(c.role) && !(compteurs && c.role === 'telephone')) this.envoyer(c, this.vueVote(c.role, c));
+  }
+
+  _pasVote() {
+    const v = this.vote;
+    if (!v || v.etat !== 'compte') return;
+    const p = Math.min(1, (Date.now() - v.debut) / v.q.duree);
+    const f = 1 - Math.pow(1 - p, 1.6);                               // vite au début, puis ralentit
+    v.comptes = v.comptes.map((avant, i) => {
+      if (p >= 1) return v.q.scores[i];
+      const vise = v.q.scores[i] * Math.min(1, f * (0.85 + Math.random() * 0.3));
+      return Math.min(v.q.scores[i], Math.max(avant, Math.round(vise)));   // jamais de recul, pas irrégulier
+    });
+    this.diffuserVote(true);
+    if (p >= 1) { clearInterval(this.minuteurVote); this.minuteurVote = null; }
+  }
+
+  _voteCmd(c, m) {
+    if (c.role !== 'regie') return;
+    const cmd = String(m.cmd || '');
+    if (cmd === 'ouvrir') {
+      const q = this._questionVote(m.numero);
+      if (!q) { this.journalRegie(`vote : question ${m.numero} introuvable dans votes.json`); return; }
+      clearInterval(this.minuteurVote);
+      this.vote = { numero: q.numero, etat: 'compte', q, comptes: q.scores.map(() => 0), debut: Date.now(), reels: new Map() };
+      this.minuteurVote = setInterval(() => this._pasVote(), 250);
+    } else if (cmd === 'reveler') {
+      if (!this.vote) return;
+      const q = this._questionVote(this.vote.numero);                 // relu : une correction de dernière minute passe
+      if (q) this.vote.q = q;
+      clearInterval(this.minuteurVote); this.minuteurVote = null;
+      this.vote.comptes = this.vote.q.scores.slice();
+      this.vote.etat = 'revele';
+    } else if (cmd === 'fermer') {
+      clearInterval(this.minuteurVote); this.minuteurVote = null;
+      if (this.vote) this.journal.ecrire({ e: 'vote_fin', numero: this.vote.numero, reels: [...this.vote.reels.values()] });
+      this.vote = null;
+    } else return;
+    this.journal.ecrire({ e: 'vote_cmd', cmd, numero: this.vote?.numero ?? null });
+    this.journalRegie(`vote : ${cmd}${this.vote ? ' question ' + this.vote.numero : ''}`);
+    this.diffuserVote();
+  }
+
+  _voteChoix(c, m) {
+    const v = this.vote;
+    if (c.role !== 'telephone' || !v || v.etat !== 'compte' || Number(m.numero) !== v.numero) return;
+    const i = Number(m.index);
+    if (!Number.isInteger(i) || i < 0 || i >= v.q.scores.length || v.reels.has(c.cle)) return;
+    v.reels.set(c.cle, i);
+    this.journal.ecrire({ e: 'vote_reel', numero: v.numero, pseudo: c.pseudo, index: i });
+    this.envoyer(c, this.vueVote('telephone', c));
+    this.versRegie(this.vueVote('regie'));
+  }
+
   // ------------------------------------------------------------------ diffusion
 
   /**
@@ -155,6 +243,8 @@ export class Jeu {
       case 'msg': return this._msg(c, m);
       case 'fig.cmd': return this._cmd(c, m);
       case 'fig.valide': return this._valide(c, m);
+      case 'vote.cmd': return this._voteCmd(c, m);
+      case 'vote.choix': return this._voteChoix(c, m);
       case 'diag':                                          // diagnostic de la page comédien (micro, moteur audio)
         if (c.role !== 'comedien') return;
         this.journal.ecrire({ e: 'diag_client', etape: String(m.etape || '').slice(0, 40), detail: JSON.stringify(m.detail ?? null).slice(0, 400) });
@@ -188,6 +278,7 @@ export class Jeu {
     this.envoyer(c, { t: 'welcome', ts: Date.now(), etat: this.etatPour(role), historique, ...(role === 'telephone' ? { pseudo: c.pseudo } : {}),
       ...(role === 'comedien' ? { asr_serveur: !!this.asrUrl } : {}) });
     if (role === 'telephone') this.envoyer(c, this.propositions());
+    if (this.vote && ['telephone', 'chat', 'ministre', 'regie'].includes(role)) this.envoyer(c, this.vueVote(role, c));   // vote en cours (reconnexion)
   }
 
   _asr(c, m) {

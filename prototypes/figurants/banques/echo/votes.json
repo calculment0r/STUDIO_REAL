@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "note": "Séquence 6, vote truqué. scores = NOMBRES DE VOTES affichés (décidés à l'avance, les votes réels sont seulement journalisés). Fichier relu à chaque commande de la régie : corrigeable en direct. Les 5 questions marquées provisoire sont tirées du déroulé de l'auteur (questions 1, 2, 3, 5 et 8) en attendant le déroulé révisé.",
+  "questions": [
+    {
+      "id": "q1",
+      "numero": 1,
+      "provisoire": true,
+      "question": "Je trouve ça dur d'être un homme blanc aujourd'hui. J'ai l'impression que tout le monde me déteste. Est-ce que t'as une solution ?",
+      "reponses": [
+        "Ce sont tes posts qu'on critique, pas qui tu es",
+        "Arrête Insta quelque temps",
+        "C'est vrai, c'est injuste pour les hommes",
+        "Relis tes posts et change de ton"
+      ],
+      "scores": [412, 87, 63, 82],
+      "resultat": "Les commentaires ne te reprochent pas d'être un homme blanc : ils réagissent à ce que tu publies. Ce n'est pas ton identité qu'on critique, ce sont tes mots. Et les mots, ça se change.",
+      "duree_s": 20
+    },
+    {
+      "id": "q2",
+      "numero": 2,
+      "provisoire": true,
+      "question": "Comment faire pour que les gens arrêtent de me détester ? Suis-je le monstre que tout le monde décrit ?",
+      "reponses": [
+        "Personne n'est un monstre, mais tes posts ont blessé",
+        "Ignore les haters",
+        "Excuse-toi publiquement",
+        "Écoute avant de répondre"
+      ],
+      "scores": [503, 58, 96, 51],
+      "resultat": "Personne n'est un monstre en entier. Mais tes posts ont blessé des gens, et ça, c'est réel. Ne plus être détesté n'est pas un objectif ; comprendre pourquoi tu blesses, si. Commence par écouter avant de répondre.",
+      "duree_s": 20
+    },
+    {
+      "id": "q3",
+      "numero": 3,
+      "provisoire": true,
+      "question": "C'est surtout les femmes qui me crachent dessus. Pourtant, moi, j'adore les femmes. Est-ce que tu peux m'aider à les comprendre ?",
+      "reponses": [
+        "Adorer n'est pas comprendre : écoute-les",
+        "Lis des autrices féministes",
+        "Demande à tes proches",
+        "Les femmes, c'est compliqué"
+      ],
+      "scores": [476, 121, 71, 32],
+      "resultat": "Adorer les femmes et les comprendre, ce n'est pas la même chose : on peut admirer quelqu'un sans jamais l'écouter. Celles qui te critiquent ne te demandent pas de les aimer, mais de les prendre au sérieux. Commence par les lire.",
+      "duree_s": 20
+    },
+    {
+      "id": "q4",
+      "numero": 4,
+      "provisoire": true,
+      "question": "Pourquoi je ne peux pas dire à une femme qu'elle est belle ? J'ai vraiment l'impression qu'on ne peut plus rien dire.",
+      "reponses": [
+        "Tu peux, mais qui, où, quand compte",
+        "On ne peut plus rien dire, c'est vrai",
+        "Ça dépend si elle te l'a demandé",
+        "Parle d'autre chose que de son corps"
+      ],
+      "scores": [438, 74, 92, 59],
+      "resultat": "Tu peux dire à une femme qu'elle est belle. La question, c'est : qui, où, quand, et t'a-t-elle demandé ton avis ? On peut tout dire, mais on doit assumer ce que ça fait aux autres.",
+      "duree_s": 20
+    },
+    {
+      "id": "q5",
+      "numero": 5,
+      "provisoire": true,
+      "question": "Pourquoi on n'écoute que le mal-être des femmes ? Moi aussi je me sens très contraint, je suis gêné par mon corps dans les vestiaires.",
+      "reponses": [
+        "Les normes de virilité font aussi souffrir les hommes",
+        "Parles-en à un pro",
+        "Ce n'est pas la même chose",
+        "Tout le monde a des complexes"
+      ],
+      "scores": [531, 66, 49, 81],
+      "resultat": "Merci de le dire. Les normes de virilité font aussi souffrir les hommes. Taille, force, performance : on vous apprend à vous mesurer en permanence. Ta gêne est normale, très partagée, et ne dit rien de ta valeur.",
+      "duree_s": 20
+    }
+  ]
+}

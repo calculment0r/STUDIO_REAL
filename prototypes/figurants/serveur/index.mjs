@@ -50,7 +50,7 @@ const fournisseurs = {
   ollama: new GroupeOllama(CONFIG.machines.map((m) => new FournisseurOllama({ ...m, keepAlive: CONFIG.spectacle ? -1 : '30m' }))),
   anthropic: new FournisseurAnthropic({ budgetUsd: CONFIG.budgetUsd }),
 };
-const jeu = new Jeu({ moderateur, journal, banques, jetonRegie: CONFIG.jetonRegie, asrUrl: CONFIG.asrUrl, fichierPropositions: path.join(CONFIG.banques, 'propositions.json'), etatInitial: { fournisseur: CONFIG.fournisseur, densite: CONFIG.densite } });
+const jeu = new Jeu({ moderateur, journal, banques, jetonRegie: CONFIG.jetonRegie, asrUrl: CONFIG.asrUrl, fichierPropositions: path.join(CONFIG.banques, 'propositions.json'), fichierVotes: path.join(CONFIG.banques, 'votes.json'), etatInitial: { fournisseur: CONFIG.fournisseur, densite: CONFIG.densite } });
 const orch = new Orchestrateur({ banques, moderateur, journal, jeu, fournisseurs,
   config: { acceleration: CONFIG.acceleration, maxAppelsMin: CONFIG.maxAppelsMin, ollamaMode: CONFIG.ollamaMode,
     // en spectacle, nos machines d'abord (3090 › dgx2 › dgx1), Haiku en secours ; en répétition, Haiku d'abord s'il a une clé

@@ -48,6 +48,7 @@ function entrer() {
     onMessage(m) {
       if (m.t === 'welcome' && m.pseudo) $('moi').textContent = '@' + m.pseudo;
       else if (m.t === 'props') montrer(m);
+      else if (m.t === 'vote') montrerVote(m);
     },
   });
 }
@@ -103,3 +104,35 @@ function confirmer(t) {
 function majVide() { $('vide').hidden = $('fil').children.length > 0; $('fil').hidden = !$('vide').hidden; }
 
 if (pseudo && validerPseudo(pseudo).ok) entrer();
+
+// ---------- vote (séquence 6) : la question et 4 gros boutons ; un seul vote par question ----------
+const LETTRES = ['A', 'B', 'C', 'D'];
+function montrerVote(m) {
+  const sec = $('vote');
+  if (m.etat === 'ferme' || !m.numero) { sec.hidden = true; return; }
+  sec.hidden = false;
+  $('voteQ').textContent = m.question || '';
+  const choisi = typeof m.choisi === 'number' ? m.choisi : null;
+  const ouvert = m.etat === 'compte';
+  const box = $('voteChoix');
+  box.textContent = '';
+  (m.reponses || []).forEach((r, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ec-vote-bt' + (choisi === i ? ' choisi' : '');
+    b.disabled = !ouvert || choisi !== null;
+    const l = document.createElement('b'); l.textContent = LETTRES[i] || String(i + 1);
+    const t = document.createElement('span'); t.textContent = r;
+    b.append(l, t);
+    b.addEventListener('click', () => {
+      if (!ws || b.disabled) return;
+      ws.envoyer({ t: 'vote.choix', numero: m.numero, index: i }, true);
+      navigator.vibrate?.(40);
+      for (const x of box.children) x.disabled = true;
+      b.classList.add('choisi');
+      $('voteEtat').textContent = 'Vote enregistré ✓';
+    });
+    box.appendChild(b);
+  });
+  $('voteEtat').textContent = m.etat === 'revele' ? 'Résultat à l’écran' : choisi !== null ? 'Vote enregistré ✓' : ouvert ? 'Touche ta réponse' : '';
+}
