@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d0b">
+<title>ÉCHO</title>
+<!-- Page du PUBLIC d'Écho (cible du QR projeté). Page fixe, sans serveur : le pseudo reste sur le téléphone. -->
+<link rel="stylesheet" href="../packages/theme/theme.css">
+<script src="../packages/theme/venus.js" defer></script>
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-size: 16px; -webkit-text-size-adjust: 100%; }
+  main {
+    min-height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 22px;
+    max-width: 440px; margin: 0 auto;
+    padding: max(28px, env(safe-area-inset-top)) 22px max(28px, env(safe-area-inset-bottom));
+  }
+  h1 { margin: 0; font-family: var(--f-disp); font-weight: 700; font-size: 44px; letter-spacing: .14em; line-height: 1; color: var(--ort); }
+  p { margin: 0; color: var(--ink2); line-height: 1.55; }
+  label { display: flex; flex-direction: column; gap: 8px; }
+  input {
+    font: inherit; font-size: 18px; color: var(--ink); background: var(--tile); border: 0; border-radius: var(--nl-10, 10px);
+    box-shadow: inset 0 0 0 1px var(--filet-14); padding: 14px 16px; outline: none;
+  }
+  input:focus { box-shadow: inset 0 0 0 1px var(--ort); }
+  button {
+    font: inherit; font-family: var(--f-disp); font-weight: 700; font-size: 16px; letter-spacing: .12em; text-transform: uppercase;
+    border: 0; border-radius: var(--nl-10, 10px); padding: 16px; background: var(--ort); color: var(--on-ort); cursor: pointer;
+  }
+  button:disabled { opacity: .4; }
+  .pseudo { font-family: var(--f-disp); font-weight: 700; font-size: 26px; letter-spacing: .06em; color: var(--ink); word-break: break-word; }
+  ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  li { padding: 12px 14px; border-radius: var(--nl-10, 10px); background: var(--tile); box-shadow: inset 0 0 0 1px var(--filet-12); color: var(--ink2); line-height: 1.45; }
+  .lien { background: none; color: var(--ink3); font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; padding: 8px; align-self: center; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <span class="sr-micro ort">Studio Real · spectacle</span>
+  <h1>ÉCHO</h1>
+
+  <form id="entree" hidden>
+    <label><span class="sr-micro">Ton pseudo</span>
+      <input id="saisie" name="pseudo" maxlength="24" autocomplete="nickname" autocapitalize="off" spellcheck="false" placeholder="@pseudo" required>
+    </label>
+    <button id="valider" type="submit" disabled>Entrer</button>
+  </form>
+
+  <section id="dedans" hidden>
+    <span class="sr-micro">Bienvenue</span>
+    <div class="pseudo" id="nom"></div>
+    <p style="margin-top: 14px">Le spectacle va commencer. Garde cette page ouverte.</p>
+    <ul style="margin-top: 18px">
+      <li>Luminosité au maximum, mise en veille désactivée si tu peux.</li>
+      <li>Mode silencieux, pas d'appel pendant la représentation.</li>
+      <li>Puis lève les yeux : tout se passe sur scène.</li>
+    </ul>
+    <button class="lien" id="changer" type="button">changer de pseudo</button>
+  </section>
+</main>
+<script>
+(function () {
+  'use strict';
+  var CLE = 'studio-real:echo:pseudo';
+  var lire = function () { try { return localStorage.getItem(CLE) || ''; } catch (e) { return ''; } };
+  var ecrire = function (v) { try { if (v) localStorage.setItem(CLE, v); else localStorage.removeItem(CLE); } catch (e) { /* navigation privée */ } };
+  var entree = document.getElementById('entree'), dedans = document.getElementById('dedans');
+  var saisie = document.getElementById('saisie'), valider = document.getElementById('valider'), nom = document.getElementById('nom');
+  var propre = function (v) { v = v.trim().replace(/^@+/, '').replace(/\s+/g, '_'); return v ? '@' + v : ''; };
+  function montrer(p) {
+    if (p) { nom.textContent = p; entree.hidden = true; dedans.hidden = false; }
+    else { entree.hidden = false; dedans.hidden = true; saisie.value = ''; valider.disabled = true; }
+  }
+  saisie.addEventListener('input', function () { valider.disabled = !propre(saisie.value); });
+  entree.addEventListener('submit', function (e) { e.preventDefault(); var p = propre(saisie.value); if (!p) return; ecrire(p); saisie.blur(); montrer(p); });
+  document.getElementById('changer').addEventListener('click', function () { ecrire(''); montrer(''); saisie.focus(); });
+  montrer(lire());
+})();
+</script>
+</body>
+</html>

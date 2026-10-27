@@ -161,7 +161,7 @@ export type MessageSortie =
 // ── adresse et configuration ─────────────────────────────────────────────────────────────────────────────────────
 
 /** Adresse publique des pages spectateur (docs/04 §1) ; VITE_ADRESSE_PUBLIC la remplace au build. */
-export const ADRESSE_PUBLIC_DEFAUT = 'https://calculment0r.github.io/STUDIO_REAL/';
+export const ADRESSE_PUBLIC_DEFAUT = 'https://calculment0r.github.io/STUDIO_REAL/echo/';
 export const CONSIGNE_DEFAUT = 'Scannez pour entrer';
 
 export function configParDefaut(titre?: string): ConfigSortie {
