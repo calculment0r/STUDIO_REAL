@@ -180,7 +180,7 @@ export function configParDefaut(titre?: string): ConfigSortie {
     else if (q && /^https?:\/\//i.test(q)) localStorage.setItem(CLE, q);
     const retenue = localStorage.getItem(CLE);
     // une adresse du réseau local est injoignable en 4G/5G : on l'oublie
-    if (retenue && /^https?://(192.168.|10.|127.|localhost)/i.test(retenue)) localStorage.removeItem(CLE);
+    if (retenue && /^https?:\/\/(192\.168\.|10\.|127\.|localhost)/i.test(retenue)) localStorage.removeItem(CLE);
     else if (retenue) adresse = retenue;
   } catch { /* hors navigateur, stockage indisponible */ }
   return { titre: titre?.trim() || 'Studio Real', adresse, consigne: CONSIGNE_DEFAUT };
