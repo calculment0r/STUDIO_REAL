@@ -7,7 +7,7 @@ import type { TypeScene } from './protocole';
 import './sortie.css';
 
 const NOMS: Record<TypeScene, string> = {
-  noir: 'noir', 'accueil-qr': 'QR d’accueil', streamer: 'direct', vote: 'vote', chrono: 'chrono', titre: 'titre', image: 'image', video: 'vidéo',
+  noir: 'noir', 'accueil-qr': 'QR d’accueil', streamer: 'direct', vote: 'vote', chrono: 'chrono', titre: 'titre', image: 'image', video: 'vidéo', page: 'page',
 };
 
 export function ApercuSortie({ className }: { className?: string }) {

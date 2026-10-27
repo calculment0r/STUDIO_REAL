@@ -261,7 +261,7 @@ export function PageSortie() {
 
   const typeScene = scene.scene.type;
   const gabarit = scene.scene.type === 'streamer' ? scene.scene.gabarit : scene.scene.type === 'vote' ? 'vote' : undefined;
-  const calqueVisible = !['noir', 'accueil-qr', 'chrono'].includes(typeScene);
+  const calqueVisible = !['noir', 'accueil-qr', 'chrono', 'page'].includes(typeScene);
   useEffect(() => { if (gabarit) calque.current?.gabarit(gabarit); }, [gabarit, calquePret]);
 
   // ── plein écran, curseur, touches ──

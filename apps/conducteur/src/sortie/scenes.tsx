@@ -130,6 +130,9 @@ export function Fondus({ scene, n, fondu, miniature = false }: { scene: Scene | 
 export function RenduScene({ scene, n, miniature }: { scene: Scene; n: number; miniature: boolean }) {
   switch (scene.type) {
     case 'noir': return <div className="so-noir" />;
+    case 'page': return miniature
+      ? <div className="so-noir" />
+      : <iframe src={scene.url} title="page" allow="autoplay; camera; microphone; fullscreen" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, background: '#000' }} />;
     case 'accueil-qr': return <SceneQr scene={scene} />;
     case 'streamer': return <SceneStreamer scene={scene} miniature={miniature} />;
     case 'vote': return <SceneVote scene={scene} miniature={miniature} />;

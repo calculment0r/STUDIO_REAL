@@ -61,11 +61,22 @@ const BLOCS: Bloc[] = [
 /** k[0] tel que la durée prévue (k0 × 6 + 10 s) approche les minutes données : la durée n'est qu'un repère, le top fait foi. */
 const k0 = (min: number) => Math.max(0, Math.round((min * 60 - 10) / 6));
 
+// Ce que montre la sortie Écran scène du Conducteur à chaque étape : le QR et le noir en natif ; le mur du serveur du
+// spectacle (réponses, vote, « @x a voté ») et la visio en page plein écran.
+const SERVEUR = 'https://highway-regions-temperatures-penn.trycloudflare.com';
+const MUR = { type: 'page', url: SERVEUR + '/prototypes/figurants/pages/chat/' };
+const VISIO = { type: 'page', url: SERVEUR + '/prototypes/figurants/pages/visio/scene.html' };
+const SORTIES: Record<string, string | Record<string, unknown>> = {
+  b1_entree: 'accueil-qr', b1_flux: 'noir', b1_choix: MUR, b2_lecture: MUR, b3_junon: MUR, b4_notif: 'noir',
+  b6_visio: VISIO, b6_pause: 'noir', b7_president: MUR,
+};
+
 const ev: Moment[] = [];
 BLOCS.forEach((b, act) => {
   for (const e of b.etapes) {
     const params: Record<string, unknown> = { ecran: e.ecran, plateau: e.plateau, telephones: e.telephones, ...(e.outil ? { outil: e.outil } : {}), ...(e.cmds ? { cmds: e.cmds } : {}) };
-    if (e.sortie) params.sortie = e.sortie;
+    const sortie = SORTIES[e.id] ?? (e.id.startsWith('b5_') ? MUR : e.sortie);
+    if (sortie) params.sortie = sortie;
     ev.push({
       id: e.id, act, name: e.nom, entry: e.id + '_s',
       st: [{ id: e.id + '_s', name: e.nom, ty: 'k:scene', c: 0, r: 0, dx: 0, dy: 0, k: [0, 50, 50], params: { ...params, duree_reperes_min: e.minutes } }],   // 10 s puis ATTENTE DU TOP

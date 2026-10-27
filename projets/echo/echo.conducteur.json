@@ -116,6 +116,7 @@
                   "mode": "mur"
                 }
               ],
+              "sortie": "noir",
               "duree_reperes_min": 1
             }
           }
@@ -157,6 +158,10 @@
               "plateau": "chaise / table",
               "telephones": "à la fin de la vidéo : ABONNEZ-VOUS / DÉSABONNEZ-VOUS, puis « pourquoi ? » et valider",
               "outil": "automatique en fin de vidéo (tap 3 pour forcer)",
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }
@@ -198,6 +203,10 @@
               "plateau": "Franck entre sur scène et lit",
               "telephones": "merci, regardez l’écran",
               "outil": "aucun tap : on est en pause",
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 4
             }
           }
@@ -249,6 +258,10 @@
                   "mode": "mur"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }
@@ -300,6 +313,7 @@
                   "mode": "noir"
                 }
               ],
+              "sortie": "noir",
               "duree_reperes_min": 1
             }
           }
@@ -352,6 +366,10 @@
                   "numero": 1
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 1
             }
           }
@@ -399,6 +417,10 @@
                   "cmd": "reveler"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }
@@ -451,6 +473,10 @@
                   "numero": 2
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 1
             }
           }
@@ -498,6 +524,10 @@
                   "cmd": "reveler"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }
@@ -550,6 +580,10 @@
                   "numero": 3
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 1
             }
           }
@@ -597,6 +631,10 @@
                   "cmd": "reveler"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }
@@ -649,6 +687,10 @@
                   "numero": 4
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 1
             }
           }
@@ -696,6 +738,10 @@
                   "cmd": "reveler"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }
@@ -748,6 +794,10 @@
                   "numero": 15
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 1
             }
           }
@@ -795,6 +845,10 @@
                   "cmd": "reveler"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }
@@ -850,6 +904,10 @@
                   "mode": "scene"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/visio/scene.html"
+              },
               "duree_reperes_min": 4
             }
           }
@@ -891,6 +949,7 @@
               "plateau": "",
               "telephones": "« Regardez la scène »",
               "outil": "aucun tap : pause",
+              "sortie": "noir",
               "duree_reperes_min": 1
             }
           }
@@ -942,6 +1001,10 @@
                   "mode": "scene"
                 }
               ],
+              "sortie": {
+                "type": "page",
+                "url": "https://highway-regions-temperatures-penn.trycloudflare.com/prototypes/figurants/pages/chat/"
+              },
               "duree_reperes_min": 2
             }
           }

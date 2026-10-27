@@ -113,7 +113,7 @@ function sceneExplicite(e: Etape, c: ConfigSortie): Scene | null {
     case 'titre': return { type: 'titre', titre: texteParam(e, 'texte') ?? e.name };
     case 'video': case 'image': return e.asset ? (t === 'video' ? { type: 'video', asset: e.asset, ...(e.params?.boucle === false ? { boucle: false } : {}) } : { type: 'image', asset: e.asset }) : null;
     case 'chrono': return { type: 'chrono', duree: dureeEtape(e), titre: e.name };
-    case 'vote': return null;
+    case 'vote': case 'page': return null;
   }
 }
 

@@ -36,8 +36,8 @@ export const NOM_FENETRE = 'studio-real-sortie-scene';
 export const BATTEMENT_MS = 1000;
 export const PERTE_MS = 3500;
 
-export type TypeScene = 'noir' | 'accueil-qr' | 'streamer' | 'vote' | 'chrono' | 'titre' | 'image' | 'video';
-export const TYPES_SCENE: readonly TypeScene[] = ['noir', 'accueil-qr', 'streamer', 'vote', 'chrono', 'titre', 'image', 'video'];
+export type TypeScene = 'noir' | 'accueil-qr' | 'streamer' | 'vote' | 'chrono' | 'titre' | 'image' | 'video' | 'page';
+export const TYPES_SCENE: readonly TypeScene[] = ['noir', 'accueil-qr', 'streamer', 'vote', 'chrono', 'titre', 'image', 'video', 'page'];
 /** Fondu enchaîné entre deux scènes : 0 → 2 s. */
 export const FONDU_MAX_MS = 2000;
 export const FONDU_DEFAUT_MS = 600;
@@ -53,6 +53,8 @@ export interface OptionVote { cle: string; libelle: string }
 
 export type Scene =
   | { type: 'noir' }
+  /** une page web en plein écran (spectacle du soir : le mur du serveur, la visio) */
+  | { type: 'page'; url: string }
   | { type: 'accueil-qr'; adresse: string; titre: string; consigne: string; code?: string }
   | {
       type: 'streamer'; gabarit?: Gabarit; bandeau?: string;
@@ -234,6 +236,7 @@ export function sceneValide(x: unknown): x is Scene {
   if (!estObjet(x) || !TYPES_SCENE.includes(x.type as TypeScene)) return false;
   switch (x.type as TypeScene) {
     case 'noir': return true;
+    case 'page': return estTexte(x.url, 1000) && /^https?:\/\//.test(x.url);
     case 'accueil-qr': return estTexte(x.adresse, 1000) && estTexte(x.titre) && estTexte(x.consigne) && texteOpt(x.code, 40);
     case 'streamer': return (x.gabarit === undefined || GABARITS.includes(x.gabarit as Gabarit)) && texteOpt(x.bandeau) && texteOpt(x.secours);
     case 'vote':
