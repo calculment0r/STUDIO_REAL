@@ -1,10 +1,10 @@
 // La coquille du conducteur : en-tête, planche (haut) et panneau de droite, conduite (bas, pleine largeur),
 // tiroir des assets, superpositions. Assemble <Planche/> (chantier PLANCHE) et <Conduite/> (chantier CONDUITE).
-// Au démarrage : `?projet=live` ouvre le spectacle LIVE ; sinon la dernière salle collaborative est rouverte si son jeton
+// Au démarrage : `?projet=live` ouvre le spectacle LIVE, `?projet=echo` le spectacle ÉCHO ; sinon la dernière salle collaborative est rouverte si son jeton
 // est connu (sans serveur : statut « hors ligne », tout reste local, aucun message bloquant).
 import { useEffect, useRef, type DragEvent } from 'react';
 import { reprendreDerniereSalle } from '../collab';
-import { chargerLive, projetDemandeParAdresse } from './projet-live';
+import { chargerEcho, chargerLive, projetDemandeParAdresse } from './projet-live';
 import { useMagasin, demarrerBoucle } from '../etat/magasin';
 import { ETAPE_DE_ASSET, PISTE_DE_ASSET, TYPES_PISTE } from '../etat/assets';
 import { nouvelId } from '../etat/ids';
@@ -107,7 +107,9 @@ export function App() {
   useEffect(() => {
     if (demarre.current) return;   // StrictMode monte deux fois en développement
     demarre.current = true;
-    if (projetDemandeParAdresse() === 'live') void chargerLive();
+    const demande = projetDemandeParAdresse();
+    if (demande === 'live') void chargerLive();
+    else if (demande === 'echo') void chargerEcho();
     else reprendreDerniereSalle();
   }, []);
 

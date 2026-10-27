@@ -8,7 +8,7 @@ import { mmss, mmssSigne } from '../theme/format';
 import { useInterface } from './interface';
 import { situation } from './derive';
 import { PupitreRegie } from './Regie';
-import { chargerLive } from './projet-live';
+import { chargerEcho, chargerLive } from './projet-live';
 
 /** Une alerte du moteur reste au bandeau ce temps-là (horloge murale) si personne ne l'accuse. */
 const DUREE_ALERTE_MS = 9000;
@@ -94,6 +94,10 @@ export function Projets() {
           <button className="pj-carte" onClick={() => void chargerLive().then(ok => { if (ok) fermer(); })}>
             <span className="t">SPECTACLE LIVE</span>
             <span className="d">Le chef, streamer en direct · la salle décide</span>
+          </button>
+          <button className="pj-carte" onClick={() => void chargerEcho().then(ok => { if (ok) fermer(); })}>
+            <span className="t">SPECTACLE ÉCHO</span>
+            <span className="d">Jim, influenceur · l’IA qui synthétise le public</span>
           </button>
           <button className="pj-carte" onClick={demo}>
             <span className="t">DÉMONSTRATION</span>
