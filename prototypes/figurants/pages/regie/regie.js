@@ -550,3 +550,32 @@ $('bTelPhrases').addEventListener('click', () => telCmd('phrases'));
 // ---------- discours de Junon (bloc 3) : l'audio sur le mur + les commentaires pré-écrits ----------
 $('bJunon').addEventListener('click', () => { ws.envoyer({ t: 'junon', cmd: 'lancer' }, true); journal('→ Junon : lancer', Date.now(), true); });
 $('bJunonStop').addEventListener('click', () => { ws.envoyer({ t: 'junon', cmd: 'arreter' }, true); journal('→ Junon : arrêt', Date.now(), true); });
+
+// ---------- CONDUITE ÉCHO : les taps dans l'ordre du spectacle (chaque bouton se marque une fois joué) ----------
+const CONDUITE = [
+  ['1 · Téléphones : « Regardez la vidéo »', () => ws.envoyer({ t: 'tel.cmd', mode: 'video' }, true)],
+  ['2 · FLUX INSTA sur les téléphones', () => ws.envoyer({ t: 'tel.cmd', mode: 'flux' }, true)],
+  ['3 · (forcer) Abonne / désabonne', () => ws.envoyer({ t: 'tel.cmd', mode: 'choix' }, true)],
+  ['4 · JUNON : audio + commentaires (téléphones : regardez la scène)', () => ws.envoyer({ t: 'junon', cmd: 'lancer' }, true)],
+  ['5 · Notification « modérateur » · écran NOIR', () => { ws.envoyer({ t: 'tel.cmd', mode: 'notif' }, true); ws.envoyer({ t: 'ecran', mode: 'noir' }, true); }],
+  ...[1, 2, 3, 4, 15].flatMap((n) => [
+    [`Q${n} · réponses sur les téléphones et en grand à l'écran`, () => { ws.envoyer({ t: 'ecran', mode: 'mur' }, true); ws.envoyer({ t: 'vote.cmd', cmd: 'ouvrir', numero: n }, true); }],
+    [`Q${n} · RÉSULTAT`, () => ws.envoyer({ t: 'vote.cmd', cmd: 'reveler' }, true)],
+  ]),
+  ['Fin des questions · écran NOIR (appel de la ministre en visio)', () => { ws.envoyer({ t: 'vote.cmd', cmd: 'fermer' }, true); ws.envoyer({ t: 'ecran', mode: 'noir' }, true); ws.envoyer({ t: 'tel.cmd', mode: 'scene' }, true); }],
+  ['PRÉSIDENT BOILOT : discours (audio)', () => ws.envoyer({ t: 'junon', cmd: 'president' }, true)],
+];
+{
+  const box = $('conduite');
+  CONDUITE.forEach(([nom, faire], i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'bt cd-pas'; b.textContent = nom;
+    b.addEventListener('click', () => { faire(); b.classList.add('fait'); $('conduiteEtat').textContent = 'dernier : ' + (i + 1) + '/' + CONDUITE.length; journal('→ ' + nom, Date.now(), true); });
+    box.appendChild(b);
+  });
+  const extra = document.createElement('div'); extra.className = 'cd-extra';
+  for (const [nom, faire] of [['ÉCRAN : MUR', () => ws.envoyer({ t: 'ecran', mode: 'mur' }, true)], ['ÉCRAN : NOIR', () => ws.envoyer({ t: 'ecran', mode: 'noir' }, true)], ['ARRÊT AUDIO', () => ws.envoyer({ t: 'junon', cmd: 'arreter' }, true)]]) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'bt'; b.textContent = nom; b.addEventListener('click', faire); extra.appendChild(b);
+  }
+  box.appendChild(extra);
+}

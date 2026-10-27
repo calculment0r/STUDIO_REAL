@@ -12,6 +12,13 @@
 </head>
 <body class="ch">
   <main id="chat" class="ch-flux" aria-live="off" aria-label="Chat"></main>
+  <div class="ch-noir" id="noir" hidden></div>
+  <section class="ch-vote" id="vote" hidden>
+    <div class="ch-vote-et">Question <span id="voteNum"></span> · le public répond</div>
+    <p class="ch-vote-q" id="voteQ"></p>
+    <div class="ch-vote-rep" id="voteRep"></div>
+    <div class="ch-vote-pops" id="votePops"></div>
+  </section>
   <div id="horsligne" class="hors-ligne ch-hors" role="status" hidden></div>
   <script type="module" src="chat.js"></script>
 </body>

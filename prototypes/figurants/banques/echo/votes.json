@@ -1,80 +1,70 @@
 {
-  "version": 1,
-  "note": "Séquence 6, vote truqué. scores = NOMBRES DE VOTES affichés (décidés à l'avance, les votes réels sont seulement journalisés). Fichier relu à chaque commande de la régie : corrigeable en direct. Les 5 questions marquées provisoire sont tirées du déroulé de l'auteur (questions 1, 2, 3, 5 et 8) en attendant le déroulé révisé.",
+  "version": 2,
+  "note": "Séquence Écho, vote truqué : questions 1, 2, 3, 4 et 15 du déroulé de l'auteur (numero = numéro de l'auteur). scores = pourcentages affichés au 2e tap (forcés, les votes réels sont seulement journalisés) ; la réponse gagnante porte le pourcentage de la synthèse de l'auteur. resultat = la synthèse d'Écho (texte de l'auteur, mot pour mot), dite par l'agent ElevenLabs. Fichier relu à chaque commande : corrigeable en direct.",
   "questions": [
     {
-      "id": "q1",
-      "numero": 1,
-      "provisoire": true,
-      "question": "Je trouve ça dur d'être un homme blanc aujourd'hui. J'ai l'impression que tout le monde me déteste. Est-ce que t'as une solution ?",
+      "id": "q1", "numero": 1,
+      "question": "Je trouve ça dur d’être un homme blanc aujourd’hui. Ça a l’air plus facile d’être une femme dans le milieu de l’influence. T’as vu ce qu’il y a écrit dans mes commentaires Insta ? J’ai l’impression que tout le monde me déteste. Est-ce que t’as une solution ?",
       "reponses": [
-        "Ce sont tes posts qu'on critique, pas qui tu es",
-        "Arrête Insta quelque temps",
-        "C'est vrai, c'est injuste pour les hommes",
-        "Relis tes posts et change de ton"
+        "On ne critique pas qui tu es, mais ce que tu publies",
+        "Oui, c’est plus dur pour les hommes aujourd’hui",
+        "Coupe Insta quelque temps, ça passera",
+        "Ignore les haters, continue comme avant"
       ],
-      "scores": [412, 87, 63, 82],
-      "resultat": "Les commentaires ne te reprochent pas d'être un homme blanc : ils réagissent à ce que tu publies. Ce n'est pas ton identité qu'on critique, ce sont tes mots. Et les mots, ça se change.",
+      "scores": [64, 13, 15, 8],
+      "resultat": "Les commentaires ne te reprochent pas d’être un homme blanc : ils réagissent à ce que tu publies. Ce n’est pas ton identité qu’on critique, ce sont tes mots. Et les mots, ça se change. Lequel de tes posts relirais-tu aujourd’hui sans gêne ?",
       "duree_s": 20
     },
     {
-      "id": "q2",
-      "numero": 2,
-      "provisoire": true,
+      "id": "q2", "numero": 2,
       "question": "Comment faire pour que les gens arrêtent de me détester ? Suis-je le monstre que tout le monde décrit ?",
       "reponses": [
-        "Personne n'est un monstre, mais tes posts ont blessé",
-        "Ignore les haters",
-        "Excuse-toi publiquement",
-        "Écoute avant de répondre"
+        "Fais une vidéo d’excuses, vite",
+        "Personne n’est un monstre, mais tes posts ont blessé",
+        "Les gens oublient vite, attends",
+        "Oui, un peu quand même"
       ],
-      "scores": [503, 58, 96, 51],
-      "resultat": "Personne n'est un monstre en entier. Mais tes posts ont blessé des gens, et ça, c'est réel. Ne plus être détesté n'est pas un objectif ; comprendre pourquoi tu blesses, si. Commence par écouter avant de répondre.",
+      "scores": [11, 71, 6, 12],
+      "resultat": "Personne n’est un monstre en entier. Mais tes posts ont blessé des gens, et ça, c’est réel. Ne plus être détesté n’est pas un objectif ; comprendre pourquoi tu blesses, si. Commence par écouter avant de répondre. Qu’as-tu ressenti en lisant le commentaire qui t’a le plus touché ?",
       "duree_s": 20
     },
     {
-      "id": "q3",
-      "numero": 3,
-      "provisoire": true,
-      "question": "C'est surtout les femmes qui me crachent dessus. Pourtant, moi, j'adore les femmes. Est-ce que tu peux m'aider à les comprendre ?",
+      "id": "q3", "numero": 3,
+      "question": "J’ai remarqué que c’est surtout les femmes qui me crachent dessus. J’ai l’impression que je ne les comprends pas. Pourtant, moi, j’adore les femmes. Est-ce que tu peux m’aider à les comprendre ?",
       "reponses": [
-        "Adorer n'est pas comprendre : écoute-les",
-        "Lis des autrices féministes",
-        "Demande à tes proches",
-        "Les femmes, c'est compliqué"
+        "Les femmes sont compliquées, laisse tomber",
+        "Demande à ta mère",
+        "Les adorer, ce n’est pas les écouter : lis-les",
+        "Fais plus de compliments"
       ],
-      "scores": [476, 121, 71, 32],
-      "resultat": "Adorer les femmes et les comprendre, ce n'est pas la même chose : on peut admirer quelqu'un sans jamais l'écouter. Celles qui te critiquent ne te demandent pas de les aimer, mais de les prendre au sérieux. Commence par les lire.",
+      "scores": [9, 7, 68, 16],
+      "resultat": "Adorer les femmes et les comprendre, ce n’est pas la même chose : on peut admirer quelqu’un sans jamais l’écouter. Celles qui te critiquent ne te demandent pas de les aimer, mais de les prendre au sérieux. Commence par les lire. Mona Chollet, par exemple.",
       "duree_s": 20
     },
     {
-      "id": "q4",
-      "numero": 4,
-      "provisoire": true,
-      "question": "Pourquoi je ne peux pas dire à une femme qu'elle est belle ? J'ai vraiment l'impression qu'on ne peut plus rien dire.",
+      "id": "q4", "numero": 4,
+      "question": "C’est qui, Mona Chollet ?",
       "reponses": [
-        "Tu peux, mais qui, où, quand compte",
-        "On ne peut plus rien dire, c'est vrai",
-        "Ça dépend si elle te l'a demandé",
-        "Parle d'autre chose que de son corps"
+        "Une influenceuse lifestyle",
+        "Aucune idée",
+        "Une ministre",
+        "Une journaliste et essayiste féministe"
       ],
-      "scores": [438, 74, 92, 59],
-      "resultat": "Tu peux dire à une femme qu'elle est belle. La question, c'est : qui, où, quand, et t'a-t-elle demandé ton avis ? On peut tout dire, mais on doit assumer ce que ça fait aux autres.",
+      "scores": [12, 21, 8, 59],
+      "resultat": "Mona Chollet est une journaliste et essayiste suisse, longtemps au Monde diplomatique. Dans Sorcières (2018), elle montre comment les femmes indépendantes, célibataires, sans enfants ou âgées ont été et restent stigmatisées. Dans Réinventer l’amour (2021), elle analyse comment la domination masculine s’invite jusque dans l’intimité. Tu veux que je te résume un chapitre ?",
       "duree_s": 20
     },
     {
-      "id": "q5",
-      "numero": 5,
-      "provisoire": true,
-      "question": "Pourquoi on n'écoute que le mal-être des femmes ? Moi aussi je me sens très contraint, je suis gêné par mon corps dans les vestiaires.",
+      "id": "q15", "numero": 15,
+      "question": "Apparemment, le consentement doit se demander à chaque instant. Mais comment faire, pendant l’acte sexuel, pour s’en assurer sans tout casser ?",
       "reponses": [
-        "Les normes de virilité font aussi souffrir les hommes",
-        "Parles-en à un pro",
-        "Ce n'est pas la même chose",
-        "Tout le monde a des complexes"
+        "Demander, ça fait partie de l’intimité",
+        "Si elle ne dit pas non, c’est oui",
+        "On ne peut plus rien faire, franchement",
+        "Un seul oui au début suffit"
       ],
-      "scores": [531, 66, 49, 81],
-      "resultat": "Merci de le dire. Les normes de virilité font aussi souffrir les hommes. Taille, force, performance : on vous apprend à vous mesurer en permanence. Ta gêne est normale, très partagée, et ne dit rien de ta valeur.",
+      "scores": [72, 9, 11, 8],
+      "resultat": "Ça ne casse rien, au contraire. Demander « Ça te va ? » ou « Tu veux que je continue ? », c’est déjà de l’intimité. Sois attentif aux signes : un corps qui se crispe, un silence, un regard qui fuit, c’est un stop. Le consentement peut se retirer à tout moment, même s’il était là au début. Et l’alcool, la peur ou un rapport de pouvoir empêchent de consentir librement.",
       "duree_s": 20
     }
   ]

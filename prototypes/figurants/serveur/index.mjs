@@ -69,7 +69,7 @@ const MIME = {
 // Jamais servis : fichiers cachés (.git, .env…), journaux, dépendances.
 const INTERDITS = [/(^|\/)\.[^/]/, /^prototypes\/figurants\/serveur\/(journaux|node_modules)(\/|$)/, /(^|\/)node_modules(\/|$)/];
 // + les vidéos et images du spectacle posées dans medias-locales/ (hors git), jamais les sons ni les autres fichiers
-const AUTORISES = [/^prototypes\/figurants\/pages\//, /^packages\/theme\//, /^medias-locales\/[^/]+\.(mp4|jpg|jpeg|png|webp)$/i, /^medias-locales\/junon_discours\.mp3$/];
+const AUTORISES = [/^prototypes\/figurants\/pages\//, /^packages\/theme\//, /^medias-locales\/[^/]+\.(mp4|jpg|jpeg|png|webp)$/i, /^medias-locales\/(junon_discours|president_boilot_speech)\.mp3$/];
 let racineReelle = RACINE;
 try { racineReelle = fs.realpathSync(RACINE); } catch { /* rien */ }
 

@@ -39,6 +39,16 @@
       <div class="ec-vide" id="vide" hidden>Regarde la scène…</div>
       <div class="ec-envoye" id="envoye" aria-live="polite"></div>
       <nav class="ec-emojis" id="emojis" aria-label="Émojis"></nav>
+      <!-- écrans d'attente poussés par la régie -->
+      <section class="ec-plein" id="attente" hidden>
+        <span class="et">Écho</span>
+        <h2 class="ec-choix-q" id="attenteTexte">Regardez la vidéo</h2>
+      </section>
+      <section class="ec-plein ec-notif" id="notif" hidden>
+        <span class="et">Ministère de la Santé mentale</span>
+        <h2 class="ec-choix-q">Vous êtes désormais modérateur</h2>
+        <p class="ec-choix-merci">Au vu de la pertinence de vos commentaires, Écho 2.0 vous confie la modération. Restez connecté : vos réponses vont compter.</p>
+      </section>
       <!-- bloc 1 : le flux Instagram (vidéo plein écran), puis abonne / désabonne et pourquoi -->
       <section class="ec-flux" id="flux" hidden>
         <video id="fluxVideo" playsinline webkit-playsinline preload="auto"></video>

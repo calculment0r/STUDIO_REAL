@@ -68,7 +68,7 @@ html, body.ec {
 
 /* ---------- vote (séquence 6) ---------- */
 .ec-vote {
-  position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; gap: 14px;
+  position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; gap: 14px;
   padding: calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
   background: var(--bg); overflow-y: auto;
 }
@@ -114,3 +114,8 @@ html, body.ec {
 .ec-choix-bt:active { transform: scale(.98); }
 .ec-pourquoi { font: inherit; font-size: 18px; line-height: 1.4; padding: 14px 16px; border-radius: var(--nl-12); resize: none; min-height: 120px; }
 .ec-choix-merci { margin: 0; color: var(--ink2); font-size: 17px; line-height: 1.5; }
+
+/* écrans d'attente (regardez la vidéo / la scène) et notification modérateur */
+.ec-plein { position: fixed; inset: 0; z-index: 19; background: var(--bg); display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 24px; }
+.ec-plein .et { color: var(--ort); letter-spacing: .18em; font-size: 11px; }
+.ec-notif { background: var(--tile); box-shadow: inset 0 0 0 2px var(--ort); }

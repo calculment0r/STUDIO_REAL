@@ -21,6 +21,9 @@ connecter({
     if (m.t === 'welcome') chat.historique(m.historique);
     else if (m.t === 'chat') chat.ajouter(m);
     else if (m.t === 'media') media(m);
+    else if (m.t === 'ecran') document.getElementById('noir').hidden = m.mode !== 'noir';
+    else if (m.t === 'vote') montrerVote(m);
+    else if (m.t === 'vote.pop') pop(m.pseudo);
   },
 });
 
@@ -35,4 +38,35 @@ document.body.appendChild(sonOk);
 function media(m) {
   if (m.action === 'stop') { audio.pause(); return; }
   if (m.action === 'play' && m.src) { audio.src = m.src; audio.currentTime = 0; audio.play().catch(() => { sonOk.textContent = '🔊 SON BLOQUÉ : cliquer ici'; if (!sonOk.isConnected) document.body.appendChild(sonOk); }); }
+}
+
+// Vote (questions à Écho) : 1er tap = la question et les 4 réponses en grand, les « @x a voté » qui apparaissent ;
+// 2e tap = les pourcentages forcés, la réponse gagnante en avant.
+const LETTRES = ['A', 'B', 'C', 'D'];
+let voteNum = null;
+function montrerVote(m) {
+  const sec = document.getElementById('vote');
+  if (m.etat === 'ferme' || !m.numero) { sec.hidden = true; voteNum = null; return; }
+  sec.hidden = false;
+  document.getElementById('voteNum').textContent = m.numero;
+  document.getElementById('voteQ').textContent = m.question || '';
+  const box = document.getElementById('voteRep');
+  if (voteNum !== m.numero) { voteNum = m.numero; document.getElementById('votePops').textContent = ''; }
+  const pc = m.pourcents || null;
+  const max = pc ? Math.max(...pc) : -1;
+  box.textContent = '';
+  (m.reponses || []).forEach((r, i) => {
+    const l = document.createElement('div'); l.className = 'ch-rep' + (pc && pc[i] === max ? ' gagne' : '') + (pc ? ' revele' : '');
+    const b = document.createElement('b'); b.textContent = LETTRES[i] || String(i + 1);
+    const t = document.createElement('span'); t.textContent = r;
+    const p = document.createElement('em'); p.textContent = pc ? pc[i] + ' %' : '';
+    const barre = document.createElement('i'); barre.style.width = pc ? pc[i] + '%' : '0';
+    l.append(barre, b, t, p); box.appendChild(l);
+  });
+}
+function pop(pseudo) {
+  const box = document.getElementById('votePops');
+  const d = document.createElement('span'); d.className = 'ch-pop'; d.textContent = '@' + String(pseudo || '').replace(/^@+/, '') + ' a voté';
+  box.prepend(d);
+  while (box.children.length > 8) box.lastChild.remove();
 }

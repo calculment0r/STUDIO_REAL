@@ -147,6 +147,11 @@ const video = $('fluxVideo');
 
 function montrerTel(m) {
   if (m.video && !video.getAttribute('src')) { video.src = m.video; video.load(); }   // préchargée dès l'entrée
+  $('attente').hidden = !(m.mode === 'video' || m.mode === 'scene');
+  $('attenteTexte').textContent = m.mode === 'scene' ? 'Regardez la scène' : 'Regardez la vidéo';
+  $('notif').hidden = m.mode !== 'notif';
+  if (m.mode === 'notif') navigator.vibrate?.([200, 100, 200]);
+  if (m.mode === 'video' || m.mode === 'scene' || m.mode === 'notif') { arreterFlux(); $('choix').hidden = true; return; }
   if (m.mode === 'flux') { if (etapeChoix === 0) jouerFlux(); }
   else if (m.mode === 'choix') { arreterFlux(); ouvrirChoix(); }
   else { arreterFlux(); $('choix').hidden = true; }
