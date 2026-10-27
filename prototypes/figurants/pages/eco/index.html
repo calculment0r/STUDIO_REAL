@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>ÉCO · Franck</title>
+<!-- Ordinateur de Franck sur scène : l'appel à l'agent ElevenLabs « ECO » et les 5 questions en prompteur.
+     La question que la régie vient d'ouvrir (vote) est mise en avant (rôle `ministre` du serveur). -->
+<link rel="stylesheet" href="../../../../packages/theme/theme.css">
+<script src="../../../../packages/theme/venus.js" defer></script>
+<link rel="stylesheet" href="eco.css">
+</head>
+<body class="eco">
+  <header class="eco-tete">
+    <span class="eco-marque">ÉCO</span>
+    <span class="eco-aide">1 · Clique sur l’appel en bas à droite · 2 · Dis « question numéro … » puis la question</span>
+    <span class="eco-ws" id="ws">régie…</span>
+  </header>
+  <main class="eco-liste" id="liste"></main>
+  <elevenlabs-convai agent-id="agent_8101m5yz1d90fbj9583m2ynf0pwt"></elevenlabs-convai>
+  <script src="https://unpkg.com/@elevenlabs/convai-widget-embed@0.19.0" async type="text/javascript"></script>
+  <a class="eco-secours" href="https://elevenlabs.io/app/talk-to?agent_id=agent_8101m5yz1d90fbj9583m2ynf0pwt" target="_blank" rel="noopener">secours : ouvrir l’appel dans un onglet</a>
+  <script type="module" src="eco.js"></script>
+</body>
+</html>
