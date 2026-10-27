@@ -1,5 +1,5 @@
 // Panneau de droite. Pour la sélection, trois niveaux : l'essentiel visible → « Réglages » (ouvert) → « Avancé »
-// (fermé). Puis « Où en est-on », la salle simulée (en Répéter seulement) et « Projet · versions ».
+// (fermé). Puis « Où en est-on », la salle simulée (fermée par défaut, comme le design) et « Projet · versions ».
 // Pas de phrases d'aide ici : des valeurs, des noms, des actions.
 import { useRef, type ReactNode } from 'react';
 import { dureeEtape, type Condition, type Projet } from '@studio-real/modele';
@@ -410,7 +410,7 @@ function OuEnEstOn() {
   );
 }
 
-// ─── salle simulée (Répéter) ──────────────────────────────────────────────────────────────────────────
+// ─── salle simulée (Préparer : elle produit les signaux de la salle) ──────────────────────────────────────────────────────────────────────────
 function SalleSimulee() {
   const sens = useMagasin(s => s.projet.sens);
   const regler = useMagasin(s => s.reglerSalle);
@@ -466,7 +466,6 @@ function ProjetVersions() {
 // ─── le panneau ───────────────────────────────────────────────────────────────────────────────────────
 export function Panneau() {
   const sel = useMagasin(s => s.selection);
-  const mode = useMagasin(s => s.mode);
   const largeur = useInterface(s => s.largeurPanneau);
   let contenu: ReactNode = null;
   if (sel.piste) contenu = <PanneauPiste sel={sel} />;
@@ -479,7 +478,7 @@ export function Panneau() {
     <aside className="panneau" style={{ width: largeur }} aria-label="Panneau de la sélection">
       {contenu}
       <OuEnEstOn />
-      {mode === 'repeter' && <SalleSimulee />}
+      <SalleSimulee />
       <ProjetVersions />
     </aside>
   );

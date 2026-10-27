@@ -1,6 +1,7 @@
 // Aperçus vivants des blocs, dessinés sur <canvas> à 216 × 92 (unités du design).
-// Port fidèle de `D` (studio-real/blocs.js) et `KD` (conducteur-core.js), plus les 10 aperçus de l'étude.
-import { BORNE_BOUCLE } from '@studio-real/modele';
+// Port fidèle de `D` (studio-real/blocs.js) et `KD` (conducteur-core.js), plus les 10 aperçus de l'étude et les 2 des
+// figurants IA.
+import { BORNE_BOUCLE, COMMANDES_MACHINE } from '@studio-real/modele';
 import { trouverBloc, valeurReglage } from './catalogue';
 import { F, MSGS, OPTS, TEAMS, av, dot, emb, feu, fm, fr, phone, ring, seats, seg7, sr, tx, wave, type Ctx } from './dessin';
 import type { Palette } from './palette';
@@ -470,7 +471,7 @@ D['q:signal'] = (c, w, h, t, C, _S, o) => {
 };
 
 // 5 · Commande machine : ligne de commande mono, pastille verte à l'accusé, rouge sinon.
-const COMMANDES = ['/lx/cue/12 GO', '/qlab/cue/12 GO', '/video/play 3', '/sono/volume -6'];
+const COMMANDES: readonly string[] = COMMANDES_MACHINE;
 D['s:machine'] = (c, w, h, t, C, _S, o) => {
   const ty = 's:machine', cible = Math.round(reglage(ty, 0, o)), attente = reglage(ty, 1, o);
   const cmd = param(o, 'commande', COMMANDES[cible] ?? COMMANDES[1]);
@@ -590,6 +591,89 @@ D['p:reprise'] = (c, w, h, t, C, _S, o) => {
   c.globalAlpha = .5 + .5 * pulse; c.strokeStyle = o.k; c.lineWidth = 1.5; c.stroke(); c.globalAlpha = 1;
   tx(c, 'REPRENDRE ICI', x0 + (w - x0 - 12) / 2, 54.5, F.m(7.5, 600), o.k, 'center', '1px');
   tx(c, 'RESTAURE : ' + choix(ty, 0, o).toUpperCase(), 12, h - 8, F.m(6.5), C['--ink3'], 'left', '1px');
+};
+
+/* ───────────── les blocs de l'étude des figurants IA ───────────── */
+
+/** Répliques de démonstration des figurants (pseudo, texte), dans l'esprit de la banque de répliques du prototype. */
+const FIG_MSGS: [string, string][] = [
+  ['kev_lamouette', 'frr ton portefeuille 😭'], ['lucie.b', 'elle ment la boulangère'], ['troll_gégé', 'KEKW'],
+  ['paulette', 'oh non 😬'], ['modo_flo', 'on se calme les amis'], ['nico', 'LETS GOOO 🔥'], ['inès_b', 'derrière toi !!'],
+  ['sacha', 'mdrrr le malaise'],
+];
+/** Période entre deux bulles (s) et débit cible (msg/min) par densité : silence, calme, normal, chaud, folie (§6.7). */
+const PERIODES_FIG = [0, 2.4, 1.3, .7, .35];
+const DEBITS_FIG = [0, 6, 20, 60, 180];
+
+// Figurants : bulles de chat qui défilent au rythme de la densité, humeur ou intention soufflée en pied.
+D['x:figurants'] = (c, w, h, t, C, _S, o) => {
+  const ty = 'x:figurants', di = Math.max(0, Math.min(4, Math.round(reglage(ty, 0, o))));
+  const dens = param(o, 'densite', choix(ty, 0, o)), humeur = param(o, 'humeur', choix(ty, 1, o)), intention = param(o, 'intention', '');
+  tx(c, 'FIGURANTS', 12, 9, F.m(6.5), C['--ink3'], 'left', '1px');
+  for (let i = 0; i < 4; i++) fr(c, w - 12 - (4 - i) * 7, 6, 5, 6, i < di ? o.k : C['--panel3']);
+  tx(c, dens.toUpperCase(), w - 12 - 4 * 7 - 4, 9, F.m(6.5, 600), di === 0 ? C['--ink3'] : o.k, 'right', '1px');
+  const y0 = 16, y1 = h - 15, bh = 15, pas = bh + 3;
+  c.save(); c.beginPath(); c.rect(10, y0, w - 20, y1 - y0); c.clip();
+  if (di === 0) {
+    tx(c, 'CHUT · LE CHAT SE TAIT', w / 2, (y0 + y1) / 2, F.m(7, 600), C['--ink3'], 'center', '1px');
+  } else {
+    const per = PERIODES_FIG[di] ?? 1.3, T = o.run ? o.te : t, n = Math.floor(T / per), f = Math.min(1, ((T % per) / per) / .35);
+    for (let j = 0; j < 5; j++) {
+      const k = n - j;
+      if (k < 0) break;
+      const [pseudo, texte] = FIG_MSGS[(k * 5 + 3) % FIG_MSGS.length], y = y1 - bh - j * pas + (1 - f) * pas;
+      const bw = Math.min(w - 42, 14 + pseudo.length * 4.2 + texte.length * 4.6);
+      c.globalAlpha = j === 0 ? f : 1;
+      av(c, 12, y + 2, 11, k % 12, C);
+      rondRect(c, 27, y, bw, bh, 5); c.fillStyle = j === 0 ? C['--panel3'] : C['--panel2']; c.fill();
+      tx(c, pseudo, 32, y + bh / 2, F.m(6, 600), o.k, 'left');
+      tx(c, texte, 36 + pseudo.length * 4.2, y + bh / 2 + .5, F.u(8.5, 500), C['--ink']);
+      c.globalAlpha = 1;
+    }
+  }
+  c.restore();
+  const pied = intention ? '› « ' + (intention.length > 30 ? intention.slice(0, 29) + '…' : intention) + ' »' : 'HUMEUR : ' + humeur.toUpperCase();
+  tx(c, pied, 12, h - 7, intention ? F.u(8.5, 500) : F.m(6.5), intention ? C['--amb'] : C['--ink2'], 'left', intention ? undefined : '1px');
+  tx(c, (DEBITS_FIG[di] ?? 0) + '/MIN', w - 12, h - 7, F.d(8), C['--cy'], 'right');
+};
+
+// Quand le comédien dit : onde de voix qui défile, transcription mot à mot, mot-clé surligné quand il est entendu.
+const PHRASE = ['je', 'voudrais', 'une', '*', 'pour', 'ce', 'soir'];
+D['q:comedien-dit'] = (c, w, h, t, C, _S, o) => {
+  const ty = 'q:comedien-dit', pm = o.params?.mots;
+  const mots = (Array.isArray(pm) ? pm.map(String) : typeof pm === 'string' ? pm.split(/[,;|]/) : []).map((x) => x.trim()).filter(Boolean);
+  const mot = mots[0] ?? 'religieuse', ecoute = Math.max(1, reglage(ty, 0, o));
+  const parMot = .55, cycle = PHRASE.length * parMot + 2.2, T = o.run ? o.te : t % cycle, iMot = PHRASE.indexOf('*');
+  const dits = Math.min(PHRASE.length, Math.floor(T / parMot) + 1), entendu = dits > iMot, pasDit = o.run && !entendu && T >= ecoute;
+  const parle = (tau: number) => tau >= 0 && tau < PHRASE.length * parMot;
+  const surMot = (tau: number) => tau >= iMot * parMot && tau < (iMot + 1) * parMot;
+  // en-tête : micro ouvert, état
+  c.globalAlpha = .5 + .5 * (Math.sin(t * 5) + 1) / 2; dot(c, 16, 9, 3, C['--rouge']); c.globalAlpha = 1;
+  tx(c, 'COMÉDIEN · TRANSCRIPTION', 24, 9, F.m(6.5), C['--ink3'], 'left', '1px');
+  tx(c, entendu ? 'ENTENDU' : pasDit ? 'PAS DIT' : 'ÉCOUTE…', w - 12, 9, F.m(6.5, 600), entendu ? C['--grn2'] : pasDit ? C['--rouge'] : C['--amb'], 'right', '1px');
+  // onde de voix : 3 s glissantes, le passage du mot-clé en couleur du bloc
+  const x0 = 12, W = w - 24, mid = 32, A = 13, n = 72, fen = 3;
+  fr(c, x0, mid, W, 1, C['--line']);
+  for (let i = 0; i < n; i++) {
+    const u = i / n, tau = T - (1 - u) * fen, on = parle(tau);
+    const a = on ? (.25 + .75 * Math.abs(Math.sin(tau * 23.7 + i * .9) * Math.sin(tau * 5.3 + 1.2))) : .06 + .04 * Math.abs(Math.sin(i * 1.7 + t * 3));
+    fr(c, x0 + u * W, mid - a * A, 1.6, Math.max(1, 2 * a * A), on && surMot(tau) ? o.k : on ? C['--cy'] : C['--panel3']);
+  }
+  // transcription mot à mot
+  let x = 12;
+  const y = 58;
+  for (let i = 0; i < dits && i < PHRASE.length; i++) {
+    const m = PHRASE[i] === '*' ? mot : PHRASE[i], lw = m.length * 5.2 + 6;
+    if (x + lw > w - 12) break;
+    if (PHRASE[i] === '*') {
+      rondRect(c, x - 2, y - 7, lw, 14, 4); c.fillStyle = o.k; c.fill();
+      tx(c, m, x + 1, y + .5, F.u(9, 700), C['--bg']);
+    } else tx(c, m, x, y + .5, F.u(9, 500), C['--ink2']);
+    x += lw + 2;
+  }
+  if (dits < PHRASE.length && (t * 2) % 1 < .5) fr(c, x, y - 5, 1.5, 10, C['--ink3']);
+  tx(c, 'MOTS : ' + (mots.length ? mots.join(' · ') : mot).toUpperCase(), 12, h - 8, F.m(6.5), C['--ink3'], 'left', '1px');
+  tx(c, choix(ty, 1, o).toUpperCase(), w - 12, h - 8, F.m(6.5), C['--ink3'], 'right', '1px');
 };
 
 /** Aperçu générique (bloc inconnu) : une liaison. */

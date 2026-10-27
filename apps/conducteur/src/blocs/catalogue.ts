@@ -1,6 +1,11 @@
 // Catalogue des blocs : port fidèle de studio-real/blocs.js (familles, réglages, ports, aperçus) et des étapes de base
-// de conducteur-core.js (CK), plus les 10 blocs de conception/conducteur/etude-10-blocs.md.
-import { TY_BOUCLE, TY_GARDE, TY_MEMOIRE, TY_TIRAGE } from '@studio-real/modele';
+// de conducteur-core.js (CK), plus les 10 blocs de conception/conducteur/etude-10-blocs.md et les 2 blocs figurants
+// de docs/etudes/figurants-ia.md §8.4. Codes, choix des rotatifs et sorties nommées viennent du moteur (blocs-moteur.ts).
+import {
+  AFFICHAGES_CHRONO, CIBLES_MACHINE, DENSITES_FIGURANTS, DESTINATAIRES_MESSAGE, HUMEURS_FIGURANTS, RECONNAISSANCES_MOT,
+  RESTAURATIONS_REPRISE, SOURCES_SIGNAL, indexChoix, TY_BOUCLE, TY_CHRONO, TY_COMEDIEN_DIT, TY_FIGURANTS, TY_GARDE, TY_MACHINE,
+  TY_MEMOIRE, TY_MESSAGE, TY_REPRISE, TY_SEQUENCE, TY_SIGNAL, TY_TIRAGE,
+} from '@studio-real/modele';
 import { fm } from './dessin';
 import { COULEURS_FAMILLES, versClair } from './palette';
 import type { Catalogue, CouleurTheme, DefBloc, Famille, IdFamille, Port, Reglage, TypePort } from './types';
@@ -102,28 +107,34 @@ S('s2', 'scene', 'streamer : consigne', 'MILO', ['exec:', 'txt:consigne'], ['exe
 S('s3', 'scene', 'envoyer osc', '/LX/12', ['exec:', 'num:valeur'], [], [['échelle', .5, 0, 1, '', 1]], 'oscout', 'Une façade de console miniature.');
 S('g1', 'gate', 'point d’arrêt', 'ARMÉ', ['exec:', 'num:quorum'], ['exec:passage', 'exec:avertir'], [['délai max', .6, 0, 150, ' s', 0]], 'gate', 'gate_porte : la règle de passage se lit en une phrase.');
 
-/** Codes des 10 blocs de l'étude. Garde-fou, mémoire, tirage et boucle viennent du moteur (`blocs-moteur.ts`,
- *  chantier MODÈLE) ; les six autres n'ont pas encore de comportement moteur : codes proposés ici. */
+/** Codes des 10 blocs de l'étude : tous ont leur comportement dans le moteur (`blocs-moteur.ts`, chantier MODÈLE). */
 export const TY_NOUVEAUX = {
   garde: TY_GARDE,
   memoire: TY_MEMOIRE,
   tirage: TY_TIRAGE,
-  signal: 'q:signal',
-  machine: 's:machine',
+  signal: TY_SIGNAL,
+  machine: TY_MACHINE,
   boucle: TY_BOUCLE,
-  sequence: 'd:sequence',
-  message: 'c:message',
-  chrono: 'u:chrono',
-  reprise: 'p:reprise',
+  sequence: TY_SEQUENCE,
+  message: TY_MESSAGE,
+  chrono: TY_CHRONO,
+  reprise: TY_REPRISE,
 } as const;
 
-/** Bloc de l'étude des 10 blocs. */
-function N(ty: string, famille: IdFamille, nom: string, cle: string, outs: string[], sets: ReglageCourt[], description: string, siProbleme: string) {
+/** Codes des blocs de l'étude des figurants IA (docs/etudes/figurants-ia.md §8.4), eux aussi dans le moteur. */
+export const TY_FIGURANTS_IA = {
+  figurants: TY_FIGURANTS,
+  comedienDit: TY_COMEDIEN_DIT,
+} as const;
+
+/** Bloc nouveau (absent du design d'origine). */
+function N(ty: string, famille: IdFamille, nom: string, cle: string, outs: string[], sets: ReglageCourt[], description: string, siProbleme: string, origine = 'étude des 10 blocs') {
   BLOCS.push({
-    ty, famille, nom, cle, apercu: ty, description, siProbleme, nouveau: true,
+    ty, famille, nom, cle, apercu: ty, description, siProbleme, nouveau: true, origine,
     couleur: coul(COULEURS_FAMILLES[famille]), reglages: reglages(sets), entrees: ports(['exec:']), sorties: ports(outs),
   });
 }
+const liste = (l: readonly string[]): string[] => [...l];
 
 // ── les 10 blocs de etude-10-blocs.md (dans l'ordre de fabrication proposé) ──
 N(TY_NOUVEAUX.garde, 'flow', 'garde-fou de temps', 'DÉLAI', ['exec:condition remplie', 'exec:délai dépassé'],
@@ -135,15 +146,15 @@ N(TY_NOUVEAUX.memoire, 'data', 'mémoire de spectacle', 'FUITE', ['exec:', 'num:
   'Une variable nommée qui traverse les moments : compteur, drapeau, score, dernier choix. Lisible depuis toute condition (« mem:fuite »).',
   'Une mémoire non définie vaut 0 / non, jamais une erreur.');
 N(TY_NOUVEAUX.machine, 'scene', 'commande machine', 'GO', ['exec:confirmé', 'exec:sans réponse'],
-  [['cible', .34, 0, 3, '', 0, ['console LX', 'QLab', 'vidéo', 'sono']], ['attente accusé', (2 - .5) / 9.5, .5, 10, ' s', 1]],
+  [['cible', .34, 0, 3, '', 0, liste(CIBLES_MACHINE)], ['attente accusé', (2 - .5) / 9.5, .5, 10, ' s', 1]],
   'Envoie une cue lumière, un GO QLab, une lecture vidéo ou un volume, et attend l’accusé de réception.',
   'Sans réponse : bandeau Sécurité « la console ne répond pas » et sortie dédiée.');
 N(TY_NOUVEAUX.signal, 'trig', 'écoute d’un signal', 'OSC', ['exec:reçu', 'num:réceptions'],
-  [['source', 0, 0, 3, '', 0, ['OSC', 'MIDI', 'clavier', 'GPIO']], ['reçu N fois', 0, 1, 20, '', 0]],
+  [['source', 0, 0, 3, '', 0, liste(SOURCES_SIGNAL)], ['reçu N fois', 0, 1, 20, '', 0]],
   'Attend un signal extérieur : pédale du comédien, note MIDI, message OSC de QLab, touche régie, capteur de porte.',
   'Signal absent : le bloc reste en attente ; à combiner avec le garde-fou de temps.');
 N(TY_NOUVEAUX.chrono, 'ui', 'chrono visible', '00:20', ['exec:zéro', 'exec:10 s restantes'],
-  [['durée', (20 - 5) / 115, 5, 120, ' s', 0, 'temps'], ['affichage', 1, 0, 2, '', 0, ['téléphones', 'écran de scène', 'les deux']]],
+  [['durée', (20 - 5) / 115, 5, 120, ' s', 0, 'temps'], ['affichage', 1, 0, 2, '', 0, liste(AFFICHAGES_CHRONO)]],
   'Le compte à rebours que le public voit : voter, s’asseoir, allumer son téléphone.',
   'Si les téléphones décrochent, l’écran de scène prend le relais automatiquement.');
 N(TY_NOUVEAUX.tirage, 'flow', 'tirage au sort', '3 ISSUES', ['exec:a', 'exec:b', 'exec:c'],
@@ -155,17 +166,27 @@ N(TY_NOUVEAUX.boucle, 'flow', 'boucle', '3 TOURS', ['exec:encore', 'exec:termin�
   'Rejouer une suite d’étapes N fois, ou jusqu’à ce qu’un signal de la salle soit atteint.',
   'Borne dure de 50 tours, même réglée sur ∞ (rotatif en butée), avec note Sécurité.');
 N(TY_NOUVEAUX.message, 'cible', 'message à une personne', 'MILO', ['exec:lu', 'exec:non lu'],
-  [['destinataire', 0, 0, 3, '', 0, ['Milo · streamer', 'Superviseur', 'régie plateau', 'comédien']], ['délai non lu', (30 - 5) / 115, 5, 120, ' s', 0, 'temps']],
+  [['destinataire', 0, 0, 3, '', 0, liste(DESTINATAIRES_MESSAGE)], ['délai non lu', (30 - 5) / 115, 5, 120, ' s', 0, 'temps']],
   'Une consigne individuelle à un rôle précis (streamer, comédien, régisseur) avec accusé de lecture.',
   'Non lu : sortie dédiée et bandeau « Milo n’a pas lu la consigne ».');
 N(TY_NOUVEAUX.reprise, 'gate', 'point de reprise', 'SÛR', ['exec:'],
-  [['restaure', 0, 0, 3, '', 0, ['tout', 'mémoires', 'état plateau', 'écrans publics']]],
+  [['restaure', 0, 0, 3, '', 0, liste(RESTAURATIONS_REPRISE)]],
   'Un endroit sûr d’où reprendre le spectacle avec le bon état (mémoires, lumière, écrans publics). Ne dure pas.',
   'Reprise impossible (état incomplet) : le pupitre propose le point de reprise précédent.');
 N(TY_NOUVEAUX.sequence, 'deroule', 'séquence réutilisable', 'NOIR', ['exec:fin'],
   [['durée globale', (100 - 50) / 150, 50, 200, ' %', 0], ['intensité', 1, 0, 100, ' %', 0]],
   'Un sous-déroulé nommé (« noir salle + voix off + lumière lente »), instancié comme un bloc, modifié à un seul endroit.',
   'Séquence supprimée : bloc en pointillés rouges, sortie directe.');
+
+// ── les blocs de l'étude des figurants IA (docs/etudes/figurants-ia.md §8.4) ──
+N(TY_FIGURANTS_IA.figurants, 'scene', 'figurants', 'CHAT', ['exec:fini'],
+  [['densité', .5, 0, 4, '', 0, liste(DENSITES_FIGURANTS)], ['humeur', 0, 0, 4, '', 0, liste(HUMEURS_FIGURANTS)]],
+  'Règle les figurants du chat : densité (silence → folie), humeur, et souffle une intention à quelques personas (mode souffleur). La régie relaie la commande au service figurants.',
+  'Service figurants muet : le serveur joue la banque de secours ; « fini » part quand même à la fin de la durée prévue.', 'étude figurants IA');
+N(TY_FIGURANTS_IA.comedienDit, 'trig', 'quand le comédien dit', 'MOT-CLÉ', ['exec:dit', 'exec:pas dit'],
+  [['écoute', (120 - 5) / 595, 5, 600, ' s', 0, 'temps'], ['reconnaissance', 0, 0, 1, '', 0, liste(RECONNAISSANCES_MOT)]],
+  'Écoute la transcription du comédien : un mot-clé entendu (« religieuse ») déclenche la suite ; une sortie nommée d’après un mot-clé l’emporte pour ce mot.',
+  'Transcription muette : le bloc attend, « pas dit » au délai ; le top régie vaut le mot-clé.', 'étude figurants IA');
 
 /** Glyphes propres aux étapes de base et aux blocs de l'étude (les autres prennent celui de leur famille). */
 const ICONES: Record<string, string> = {
@@ -187,22 +208,20 @@ const ICONES: Record<string, string> = {
   'c:message': 'M4 5h16v11H9l-5 4zM8 10h8',
   'u:chrono': 'M12 9v4l3 2M9 2h6M12 5a8 8 0 1 0 0 16 8 8 0 0 0 0-16z',
   'p:reprise': 'M5 21V4M5 4h14l-3 4 3 4H5',
+  'x:figurants': 'M3 5h12v8H8l-4 3v-3H3zM17 9h4v8h-1v3l-3-3h-5v-2',
+  'q:comedien-dit': 'M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM6 11a6 6 0 0 0 12 0M12 17v4',
 };
 BLOCS.forEach((b) => { if (ICONES[b.ty]) b.icone = ICONES[b.ty]; });
 
 const PAR_TY = new Map(BLOCS.map((b) => [b.ty, b]));
 
-/** Le catalogue complet : familles et blocs (8 étapes de base + 35 blocs du design + 10 blocs de l'étude). */
+/** Le catalogue complet : familles et blocs (8 étapes de base + 35 blocs du design + 10 blocs de l'étude + 2 blocs figurants). */
 export const CATALOGUE: Catalogue = { familles: FAMILLES, blocs: BLOCS };
 
 /** Définition d'un bloc par son code, ou `undefined`. */
 export const trouverBloc = (ty: string): DefBloc | undefined => PAR_TY.get(ty);
 
 export const trouverFamille = (id: string): Famille | undefined => FAMILLES.find((f) => f.id === id);
-
-/** Index du choix désigné par un rotatif : parts égales, bornes incluses à gauche (lecture du moteur). */
-const indexChoix = (n: number, position: number): number =>
-  Math.max(0, Math.min(n - 1, Math.ceil(Math.max(0, Math.min(100, position)) / 100 * n - 1e-9) - 1));
 
 /** Valeur réelle d'un réglage pour une position de rotatif 0 → 100 (index du choix pour un réglage à choix). */
 export function valeurReglage(r: Reglage, position: number): number {

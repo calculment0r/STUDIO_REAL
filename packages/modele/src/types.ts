@@ -34,6 +34,25 @@ export interface Projet {
   tracks: Piste[];
   /** Mémoires de spectacle (bloc « Mémoire ») : nom → valeur. Ajout STUDIO_REAL. */
   memoires?: Record<string, number | string | boolean>;
+  /** Séquences réutilisables (bloc « Séquence », 'd:sequence') : sous-déroulés nommés. Ajout STUDIO_REAL. */
+  sequences?: Sequence[];
+}
+
+/**
+ * Séquence réutilisable (etude-10-blocs.md n° 7) : un sous-déroulé nommé (« noir salle + voix off + lumière lente »),
+ * instancié par les étapes 'd:sequence' (params.sequence = id ou nom) et modifié à un seul endroit. Ajout STUDIO_REAL.
+ * Ses étapes et sorties suivent les règles d'un moment ; une sortie vers '' (ou une étape sans sortie) termine la
+ * séquence, et le `nom` de cette sortie choisit la sortie de même nom du bloc appelant (défaut : « fin »).
+ */
+export interface Sequence {
+  id: string;
+  nom: string;
+  /** Étape d'entrée. */
+  entry: string;
+  st: Etape[];
+  tr: Sortie[];
+  /** Sorties déclarées par la séquence, dans l'ordre (défaut ['fin']) : ce sont les sorties du bloc appelant. */
+  sorties?: string[];
 }
 
 export interface Acte { n: string }
@@ -76,7 +95,8 @@ export interface Etape {
 export interface Condition {
   /** Signal : 't' durée (s) · 'pres' présents · 'quorum' % de votes · 'prets' % de téléphones prêts ·
    *  'bruit' niveau sonore (dB) · 'assis' % public assis · 'issue' issue du vote ('A'|'B'|'T'…) ·
-   *  'mem:<nom>' mémoire de spectacle. */
+   *  'mem:<nom>' mémoire de spectacle · 'sig:<nom>' nombre de réceptions d'un signal extérieur depuis l'entrée dans
+   *  l'étape (ou le passage) en cours · 'sigv:<nom>' dernière valeur reçue de ce signal (non reçu = 0). */
   k: string;
   op: '≥' | '≤' | '=' | '≠' | '>' | '<';
   v: number | string;

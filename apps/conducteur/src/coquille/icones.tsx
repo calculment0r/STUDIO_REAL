@@ -36,6 +36,11 @@ export const IcoPleinEcran = ({ actif }: { actif: boolean }) => actif ? (
     <path d="M1.5 5 V1.5 H5" /><path d="M9 1.5 H12.5 V5" /><path d="M12.5 9 V12.5 H9" /><path d="M5 12.5 H1.5 V9" />
   </svg>
 );
+export const IcoLoupe = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true">
+    <circle cx="6" cy="6" r="4" /><path d="M9 9l3.5 3.5" />
+  </svg>
+);
 export const IcoTheme = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
     <circle cx="7" cy="7" r="5.2" fill="none" stroke="currentColor" strokeWidth="1.2" /><path d="M7 1.8 A5.2 5.2 0 0 1 7 12.2 Z" fill="currentColor" />

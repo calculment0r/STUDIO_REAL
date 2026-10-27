@@ -76,6 +76,7 @@ export const signauxSalle: FonctionSignauxSalle = (sens, t, graine) => {
     bruit: valeurSignal('bruit', sens, t),
     assis: valeurSignal('assis', sens, t),
     issue: issueSalle(sens),
+    votes: votesSalle(sens),
   };
   if (graine !== undefined) {
     const sec = Math.floor(Math.max(0, t));

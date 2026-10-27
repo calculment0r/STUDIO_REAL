@@ -74,8 +74,10 @@ export interface DefBloc {
   apercu: string;
   /** Étape de base du déroulé (« k:… »). */
   base?: boolean;
-  /** Bloc ajouté par l'étude des 10 blocs (absent du design d'origine). */
+  /** Bloc absent du design d'origine (étude des 10 blocs, étude des figurants IA). */
   nouveau?: boolean;
+  /** D'où vient un bloc `nouveau` (« étude des 10 blocs », « étude figurants IA »). */
+  origine?: string;
   /** Comportement en cas de problème (blocs de l'étude). */
   siProbleme?: string;
 }

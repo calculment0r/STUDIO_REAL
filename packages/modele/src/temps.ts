@@ -3,13 +3,17 @@
 // sinon jusqu'à l'instant où la salle simulée remplit la sortie ; une étape qui ne peut pas sortir compte
 // « durée + 10:00 » ; un passage est prêt quand toutes ses conditions le sont (10:00 au plus), puis un passage « go »
 // ajoute l'attente mesurée (Projet.hold).
+// Blocs à événements extérieurs (signal, machine, message, quand le comédien dit) : durée prévue et sortie nominale
+// (reçu, confirmé, lu, dit) ; chrono : sa durée (moins 10 s si « 10 s restantes » est branchée) ; point de reprise :
+// 0 s ; séquence : parcours linéaire de la séquence (dureeSequence), durées × durée globale.
 import type { Condition, Moment, Projet, SalleSimulee, Sortie } from './types';
 import { dureeEtape } from './types';
-import { JAMAIS, instantFranchissement, issueSalle } from './salle';
+import { JAMAIS, instantFranchissement, issueSalle, votesSalle } from './salle';
 import { comparer } from './conditions';
 import {
-  appliquerMemoire, comportementBloc, poidsTirage, reglagesBoucle, reglagesGarde, reglagesMemoire, sortiesBoucle,
-  sortiesGarde,
+  appliquerMemoire, comportementBloc, dureeSequence, issuesExaequo, poidsExaequo, poidsTirage, reglagesBoucle,
+  reglagesChrono, reglagesGarde, reglagesMemoire, reglagesSequence, reglagesTirage, sortieApresSequence, sortiesBoucle,
+  sortiesChrono, sortiesComedien, sortiesGarde, sortiesMachine, sortiesMessage, sortiesSignal, trouverSequence,
 } from './blocs-moteur';
 
 /** Plafond d'attente d'un passage dont les conditions ne viennent pas, et surcoût d'une étape bloquée (design : 600 s). */
@@ -116,8 +120,27 @@ export function planifier(projet: Projet, opts: OptionsPlanning = {}): Planning 
         const lim = Math.max(d, reglagesGarde(st).delai);
         const ch = choisirSortie(conditions, d, fr);
         if (ch.s && ch.c <= lim) { sortie = ch.s; ex = Math.max(d, ch.c); } else { sortie = delai ?? null; ex = lim; }
+      } else if (comp === 'signal' || comp === 'machine' || comp === 'message' || comp === 'comedien') {
+        sortie = (comp === 'signal' ? sortiesSignal(outs).recu : comp === 'machine' ? sortiesMachine(outs).confirme
+          : comp === 'message' ? sortiesMessage(outs).lu : sortiesComedien(outs).dit) ?? null;
+      } else if (comp === 'chrono') {
+        const r = reglagesChrono(st);
+        const { zero, dixSecondes } = sortiesChrono(outs);
+        const dix = !!dixSecondes && r.duree > 10;
+        sortie = (dix ? dixSecondes : zero) ?? null;
+        ex = dix ? r.duree - 10 : r.duree;
+      } else if (comp === 'reprise') {
+        sortie = outs.find(o => !o.g.length) ?? outs[0] ?? null;
+        ex = 0;
+      } else if (comp === 'sequence') {
+        const r = reglagesSequence(st);
+        const seq = trouverSequence(projet.sequences, r.sequence);
+        ex = seq ? dureeSequence(projet.sequences, seq, r.facteur) : 0;
+        sortie = sortieApresSequence(outs, undefined) ?? null;
       } else if (comp === 'tirage') {
-        const p = poidsTirage(st, outs);
+        const rt = reglagesTirage(st);
+        let p = poidsTirage(st, outs);
+        if (rt.exaequo) p = poidsExaequo(p, outs, issuesExaequo(votesSalle(sens), issue, rt.ecart));
         let bi = 0;
         p.forEach((v, j) => { if (v > (p[bi] ?? 0)) bi = j; });
         sortie = outs[bi] ?? null;

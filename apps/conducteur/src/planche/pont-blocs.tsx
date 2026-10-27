@@ -1,7 +1,7 @@
 // SEUL point d'import du chantier BLOCS dans la planche (contrat : src/blocs/index.ts → `CATALOGUE`, `<ApercuBloc />`).
 // Pour rebrancher sur une autre source, il suffit de changer cet import et ces deux fonctions.
 import { memo } from 'react';
-import { ApercuBloc, CATALOGUE, formaterReglage, type DefBloc } from '../blocs';
+import { ApercuBloc, CATALOGUE, formaterReglage, rotatifsParDefaut, type DefBloc } from '../blocs';
 
 export type ThemePlanche = 'sombre' | 'clair';
 
@@ -45,3 +45,17 @@ export interface ProprietesApercu { ty: string; k: number[]; t: number; actif: b
 export const ApercuEtape = memo(function ApercuEtape({ ty, k, t, actif, theme, echelle }: ProprietesApercu) {
   return <ApercuBloc ty={ty} k={k} t={t} actif={actif} theme={theme} echelle={echelle} />;
 });
+
+// ── Bibliothèque (+ BLOC, clic droit) ──
+export interface EntreeBibliotheque { ty: string; nom: string; couleur: string; k: number[] }
+export interface FamilleBibliotheque { id: string; nom: string; couleur: string; blocs: EntreeBibliotheque[] }
+
+/** Les blocs du catalogue rangés par famille, dans l'ordre du catalogue. */
+export function bibliotheque(theme: ThemePlanche): FamilleBibliotheque[] {
+  return CATALOGUE.familles.map(f => ({
+    id: f.id, nom: f.nom, couleur: theme === 'clair' ? f.couleur.clair : f.couleur.sombre,
+    blocs: CATALOGUE.blocs.filter(b => b.famille === f.id).map(b => ({
+      ty: b.ty, nom: b.nom, couleur: theme === 'clair' ? b.couleur.clair : b.couleur.sombre, k: rotatifsParDefaut(b),
+    })),
+  })).filter(f => f.blocs.length);
+}

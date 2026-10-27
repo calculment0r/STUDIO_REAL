@@ -10,6 +10,8 @@ export interface Signaux {
   /** niveau sonore (dB) */ bruit: number;
   /** % du public assis */ assis: number;
   /** issue du dernier vote ('A' | 'B' | 'T' …) */ issue?: string;
+  /** répartition du dernier vote (issue → % ou nombre de voix) ; sert au tirage parmi les ex æquo (ajout STUDIO_REAL) */
+  votes?: Record<string, number>;
 }
 
 export type ModeLecture = 'repetition' | 'scene';
@@ -35,6 +37,19 @@ export interface EtatLecture {
   alertes?: AlerteLecture[];
   /** tours faits par les boucles du moment courant (id de l'étape → nombre d'entrées) */
   tours?: Record<string, number>;
+  /** journal des événements venus de l'extérieur (signaux, mémoires posées), des reprises et des étapes jouées dans
+   *  une séquence ; `parcours` garde, lui, les seules étapes des moments [moment, étape, t] */
+  journal?: EvenementLecture[];
+  /** commandes émises vers l'extérieur, numérotées (la régie relaie celles qu'elle n'a pas encore vues) */
+  commandes?: CommandeLecture[];
+  /** points de reprise passés (le plus récent en dernier), pour le bouton « REPRENDRE ICI » du pupitre */
+  reprises?: PointReprise[];
+  /** étape jouée à l'intérieur d'une séquence réutilisable (etape = l'étape 'd:sequence' du moment) */
+  sequence?: PositionSequence;
+  /** répartition du dernier vote retenue (avec `issue`) */
+  votes?: Record<string, number>;
+  /** réceptions de chaque signal depuis l'entrée dans l'étape (ou le passage) en cours (nom normalisé → nombre) */
+  receptions?: Record<string, number>;
 }
 
 /** Alerte produite pendant la lecture (ajout STUDIO_REAL). */
@@ -42,8 +57,60 @@ export interface AlerteLecture {
   t: number;
   moment: string;
   etape?: string;
-  type: 'delai' | 'boucle' | 'bloque' | 'force';
+  type: 'delai' | 'boucle' | 'bloque' | 'force' | 'signal' | 'machine' | 'message' | 'sequence' | 'reprise';
   txt: string;
+}
+
+/** Événement du journal de lecture (ajout STUDIO_REAL). */
+export interface EvenementLecture {
+  t: number;
+  /** 'signal' reçu · 'memoire' posée de l'extérieur · 'mot' entendu (Quand le comédien dit) · 'reprise' · 'sous-etape'
+   *  (étape jouée dans une séquence) */
+  type: 'signal' | 'memoire' | 'mot' | 'reprise' | 'sous-etape';
+  nom: string;
+  valeur?: unknown;
+  moment: string;
+  etape?: string;
+}
+
+/** Types des commandes émises par le lecteur (ajout STUDIO_REAL). */
+export type TypeCommande = 'machine' | 'message' | 'chrono' | 'chrono.10s' | 'figurants.cmd' | 'reprise';
+
+/** Commande émise vers l'extérieur : la régie la relaie (console, QLab, téléphones, service figurants…) et renvoie
+ *  l'accusé éventuel par `Lecteur.signal(donnees.accuse)`. */
+export interface CommandeLecture {
+  /** numéro d'ordre (1, 2, 3…) */
+  n: number;
+  t: number;
+  type: TypeCommande;
+  moment: string;
+  etape?: string;
+  donnees: Record<string, unknown>;
+}
+
+/** Point de reprise passé (bloc 'p:reprise'). */
+export interface PointReprise {
+  nom: string;
+  /** temps de lecture au dernier passage */
+  t: number;
+  moment: string;
+  etape: string;
+  /** ce qui est restauré : 'tout' | 'memoires' | 'plateau' | 'ecrans' */
+  restaure: 'tout' | 'memoires' | 'plateau' | 'ecrans';
+  memoires: Record<string, number | string | boolean>;
+  issue?: string;
+}
+
+/** Position dans une séquence réutilisable (ajout STUDIO_REAL). */
+export interface PositionSequence {
+  /** id de la séquence la plus profonde en cours */
+  id: string;
+  nom: string;
+  /** étape de la séquence en cours et temps passé dedans (s) */
+  etape: string;
+  tEtape: number;
+  /** fil d'Ariane : noms des séquences imbriquées, de la plus externe à la plus profonde */
+  chemin: string[];
 }
 
 export interface Lecteur {
@@ -56,6 +123,16 @@ export interface Lecteur {
   allerA(moment: string, etape?: string): EtatLecture;
   /** Repart du début. */
   reinitialiser(): EtatLecture;
+  // Ajouts STUDIO_REAL : entrées venues de l'extérieur pendant une représentation (journalisées dans `journal`).
+  /** Pose une mémoire de spectacle (ex. 'missions' ← validation des superviseurs), lisible par 'mem:<nom>'. */
+  poser(nom: string, valeur: number | string | boolean): EtatLecture;
+  /** Signal extérieur reçu : OSC, MIDI, touche clavier, GPIO, accusé d'une machine ('accuse:<étape>'), accusé de
+   *  lecture d'un message ('lu:<étape>'), transcription du comédien ('transcription', donnees = texte)… Lisible par
+   *  'sig:<nom>' (réceptions dans l'étape) et 'sigv:<nom>' (dernière valeur : donnees, ou donnees.valeur). */
+  signal(nom: string, donnees?: unknown): EtatLecture;
+  /** Reprend au point de reprise `nom` (ou au dernier passé) avec l'état mémorisé ; point jamais passé → le
+   *  précédent (alerte « reprise »). */
+  reprendre(nomPoint?: string): EtatLecture;
 }
 
 export interface OptionsLecteur { mode: ModeLecture; graine?: number }

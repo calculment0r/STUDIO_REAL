@@ -82,7 +82,7 @@
 .planche-passage__losange { width: 16px; height: 16px; transform: rotate(45deg); border-radius: 3px; }
 
 /* Barre d'outils, mini-carte */
-.planche-outils { position: absolute; left: 12px; top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; z-index: 8; cursor: default; }
+.planche-outils { position: absolute; left: 34px; top: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; z-index: 8; cursor: default; }
 .planche-groupe { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); align-items: center; }
 .planche-seg { height: 28px; padding: 0 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap;
   font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .16em; background: transparent; color: var(--ink2); border: 0; }
@@ -111,3 +111,43 @@
   .planche-pulse, .planche-defile, .planche-lien--actif, .planche-impulsion { animation: none; }
   .planche-impulsion { display: none; }
 }
+
+/* Barre d'outils (suite) : plein écran de la planche, + BLOC (le design) */
+.planche-carre { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+  background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); color: var(--ink2); border: 0; }
+.planche-carre:hover { color: var(--ink); background: var(--tile2); }
+.planche-bloc-btn { height: 32px; padding: 0 12px; border-radius: 8px; display: flex; align-items: center; gap: 7px; cursor: pointer; border: 0;
+  background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .16em; color: var(--ink); }
+.planche-bloc-btn:hover { background: var(--tile2); }
+.planche-bloc-btn > span { color: var(--ort); font-size: 13px; line-height: 1; }
+
+/* Mode Jouer : suivi de la caméra */
+.planche-suivi { position: absolute; right: 12px; top: 12px; height: 32px; padding: 0 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px;
+  cursor: pointer; z-index: 8; border: 0; background: var(--tile); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ort) 70%, transparent);
+  font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .16em; color: var(--ink); }
+.planche-suivi--on { cursor: default; pointer-events: none; background: var(--gdeep); color: var(--gink); box-shadow: none; }
+
+/* Légende (le design : en bas à gauche) */
+.planche-legende { position: absolute; left: 34px; bottom: 10px; display: flex; gap: 14px; align-items: center; height: 26px; padding: 0 10px; z-index: 7;
+  border-radius: 7px; background: var(--bg); box-shadow: inset 0 0 0 1px rgba(var(--lr), .12); pointer-events: none; flex-wrap: nowrap; overflow: hidden;
+  white-space: nowrap; max-width: calc(100% - 60px); }
+.planche-legende > span { display: flex; align-items: center; gap: 6px; font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .14em; color: var(--ink2); }
+.planche-legende i { width: 16px; height: 2px; display: block; }
+.planche-legende i.tirets { height: 0; border-top: 2px dashed rgba(var(--lr), .35); }
+.planche-legende .aide { color: var(--ink3); padding-left: 12px; box-shadow: inset 1px 0 0 rgba(var(--lr), .14); }
+
+/* Menu du clic droit, bibliothèque de blocs */
+.planche-menu { position: absolute; z-index: 30; width: 260px; padding: 6px; border-radius: 10px; background: var(--tile); display: flex; flex-direction: column; gap: 2px;
+  box-shadow: inset 0 0 0 1px rgba(var(--lr), .2), 0 14px 40px var(--ombre-2); cursor: default; }
+.planche-menu__tete { padding: 4px 8px; font-family: var(--f-mono); font-size: 7px; letter-spacing: .16em; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.planche-menu__item { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 7px 8px; border-radius: 6px; cursor: pointer; background: none; border: 0;
+  text-align: left; color: var(--ink); font-family: inherit; width: 100%; }
+.planche-menu__item:hover { background: var(--tile2); }
+.planche-menu__item .n { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.planche-menu__item .d { font-size: 10.5px; color: var(--ink3); }
+.planche-menu__item--ligne { flex-direction: row; align-items: center; gap: 9px; padding: 6px 8px; }
+.planche-biblio { width: 280px; }
+.planche-biblio input { height: 30px; border: 0; outline: none; border-radius: 6px; padding: 0 9px; margin: 2px 2px 4px; background: var(--bg); color: var(--ink);
+  font-family: var(--f-ui); font-size: 12px; box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); user-select: text; }
+.planche-biblio__liste { max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(var(--lr), .28) transparent; }
+.planche-biblio__fam { display: block; padding: 8px 8px 3px; font-family: var(--f-mono); font-size: 7px; letter-spacing: .18em; }

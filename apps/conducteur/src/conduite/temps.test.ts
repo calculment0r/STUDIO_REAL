@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MARGE_FIN, ZOOM_MAX, ZOOM_MIN, bornerDefilement, defilementMax, fenetreVisible, fm, graduations, pasRegle, pxVersTemps,
+  MARGE_FIN, ZOOM_MAX, ZOOM_MIN, bornerDefilement, defilementMax, fenetreVisible, fm, graduations, pasRegle, pxVersTemps, sousPasRegle,
   suivre, tempsVersPx, vueDepuisFenetre, zoomCentre, zoomMolette, zoomPourTout,
 } from './temps';
 
@@ -63,24 +63,30 @@ describe('défilement borné', () => {
 });
 
 describe('règle', () => {
-  it('une étiquette a au moins 84 px', () => {
+  it('une étiquette a au moins 70 px, une petite graduation au moins 12 px (le design)', () => {
     for (const pps of [0.05, 0.2, 0.6, 1, 3, 8]) {
-      const pas = pasRegle(pps);
-      expect(pas * pps).toBeGreaterThanOrEqual(Math.min(84, 1800 * pps));
+      const pas = pasRegle(pps), sp = sousPasRegle(pps);
+      expect(pas * pps).toBeGreaterThanOrEqual(Math.min(70, 1800 * pps));
+      expect(sp * pps).toBeGreaterThanOrEqual(Math.min(12, 1800 * pps));
+      expect(pas % sp).toBe(0);
     }
     expect(pasRegle(100)).toBe(1);
     expect(pasRegle(0.01)).toBe(1800);
   });
-  it('graduations entières en MM:SS, demi-graduations au-delà de 160 px', () => {
+  it('spectacle de 40 min au zoom TOUT (≈ 1410 px) : étiquettes toutes les 2 min, petites toutes les 30 s', () => {
+    const pps = zoomPourTout(2412, 1410);
+    expect(pasRegle(pps)).toBe(120);
+    expect(sousPasRegle(pps)).toBe(30);
+  });
+  it('graduations entières en MM:SS ; les petites, sans étiquette, entre les étiquetées', () => {
     const g = graduations(0.6, 0, 600);
     const pas = pasRegle(0.6);
     const pleines = g.filter((x) => !x.sous);
     expect(pleines[0]).toMatchObject({ t: 0, x: 0, libelle: '00:00' });
     expect(pleines[1].t).toBe(pas);
     expect(pleines.every((x) => Number.isInteger(x.t))).toBe(true);
-    expect(g.some((x) => x.sous)).toBe(pas * 0.6 >= 160);
-    const fort = graduations(8, 0, 2000);
-    expect(fort.some((x) => x.sous)).toBe(pasRegle(8) * 8 >= 160);
+    expect(g.filter((x) => x.sous).every((x) => x.libelle === '' && x.t % pas !== 0)).toBe(true);
+    expect(g.some((x) => x.sous)).toBe(sousPasRegle(0.6) < pas);
   });
 });
 

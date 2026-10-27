@@ -5,6 +5,7 @@ import {
   nouveauMomentIci, nouvelActeIci, positionsAbsolues, redimensionnerMoment, reglerPoint,
 } from './edition';
 import { planifier } from './planning';
+import { MARQUE_POSTE } from '../etat/ids';
 
 const absolus = (p: ReturnType<typeof exempleDemo>) => new Map(positionsAbsolues(p).map(([it, a]) => [it.id, a]));
 
@@ -38,11 +39,11 @@ describe('créer depuis la conduite', () => {
     expect(p.ev.find((x) => x.id === id2)!.act).toBe(3);
   });
 
-  it('les identifiants viennent de nid', () => {
+  it('les identifiants viennent de nid, avec la marque du poste', () => {
     const p = exempleDemo();
     const nid = p.nid;
     const id = insererMoment(p, 0);
-    expect(id).toBe('m' + (nid + 1));
+    expect(id).toBe('m' + (nid + 1) + '·' + MARQUE_POSTE);
     expect(p.nid).toBe(nid + 2); // le moment et sa première étape
   });
 

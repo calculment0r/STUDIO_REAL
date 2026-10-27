@@ -42,7 +42,7 @@ function Carte({ b, theme, etat, t }: { b: DefBloc; theme: ThemeApercu; etat: Et
           ))}
         </div>
       )}
-      {b.nouveau && <span style={{ ...micro, color: C['--or'] }}>nouveau · étude des 10 blocs</span>}
+      {b.nouveau && <span style={{ ...micro, color: C['--or'] }}>nouveau · {b.origine ?? 'étude des 10 blocs'}</span>}
     </div>
   );
 }

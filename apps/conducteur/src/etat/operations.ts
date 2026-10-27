@@ -3,7 +3,7 @@
 import type { Condition, Moment, Projet, TypePiste } from '@studio-real/modele';
 import { TYPES_PISTE } from './assets';
 
-const nouvelId = (p: Projet, prefixe: string): string => prefixe + ++p.nid;
+import { nouvelId } from './ids';
 
 export const entreesDuMoment = (m: Moment): string[] => (typeof m.entry === 'string' ? [m.entry] : Object.values(m.entry));
 

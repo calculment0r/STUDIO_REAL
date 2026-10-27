@@ -3,10 +3,12 @@
 import { useEffect, useRef, type DragEvent } from 'react';
 import { useMagasin, demarrerBoucle } from '../etat/magasin';
 import { ETAPE_DE_ASSET, PISTE_DE_ASSET, TYPES_PISTE } from '../etat/assets';
+import { nouvelId } from '../etat/ids';
 import { Planche } from '../planche/Planche';
 import { Conduite } from '../conduite/Conduite';
 import { useInterface } from './interface';
-import { EnTete, MenuAller } from './EnTete';
+import { EnTete } from './EnTete';
+import { Recherche } from './Recherche';
 import { Panneau } from './Panneau';
 import { TiroirAssets, TYPE_ASSET, type AssetGlisse } from './TiroirAssets';
 import { AlerteSecurite, Aide, CadreEnLecture, Pupitre } from './Superpositions';
@@ -31,7 +33,7 @@ function deposerSurPlanche(a: AssetGlisse) {
   s.modifierProjet(p => {
     const m = p.ev.find(x => x.id === ev);
     if (!m) return;
-    id = 'n' + ++p.nid;
+    id = nouvelId(p, 'n');
     const c = m.st.length ? Math.max(...m.st.map(x => x.c)) + 1 : 0;
     m.st.push({ id, name: a.nom, ty: ETAPE_DE_ASSET[a.cat] ?? 'k:scene', c, r: 0, dx: 0, dy: 0, k: [Math.max(0, Math.min(100, Math.round((a.dur - 10) / 6))), 50, 50], asset: a.nom });
     p.ver++;
@@ -47,8 +49,8 @@ function deposerSurConduite(a: AssetGlisse) {
   let ids: [string, string] = ['', ''];
   s.modifierProjet(p => {
     let tk = p.tracks.find(x => x.type === type);
-    if (!tk) { tk = { id: 't' + ++p.nid, type, name: TYPES_PISTE[type][0], open: true, clips: [] }; p.tracks.push(tk); }
-    const id = 'c' + ++p.nid;
+    if (!tk) { tk = { id: nouvelId(p, 't'), type, name: TYPES_PISTE[type][0], open: true, clips: [] }; p.tracks.push(tk); }
+    const id = nouvelId(p, 'c');
     (tk.clips ??= []).push({ id, name: a.nom, ev, off: 0, dur: a.dur || 30 });
     tk.open = true;
     ids = [tk.id, id];
@@ -121,7 +123,7 @@ export function App() {
         )}
       </div>
       <TiroirAssets />
-      <MenuAller />
+      <Recherche />
       <AlerteSecurite />
       <Pupitre />
       <Aide />

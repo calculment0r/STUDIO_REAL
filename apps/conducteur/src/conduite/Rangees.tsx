@@ -17,7 +17,9 @@ export const Regle = memo(function Regle({ pps, total, largeurVue }: { pps: numb
   return (
     <div className="cd-regle" aria-hidden="true">
       {g.map((k) => (
-        <span key={k.t} className={k.sous ? 'sr-mk sub' : 'sr-mk'} style={{ left: k.x }}>{k.libelle}</span>
+        <span key={k.t} className={k.sous ? 'cd-gr sub' : 'cd-gr'} style={{ left: k.x }}>
+          {k.libelle && <span className="cd-gr-l">{k.libelle}</span>}
+        </span>
       ))}
     </div>
   );
@@ -34,7 +36,9 @@ export const RangeeActes = memo(function RangeeActes({ plan, acts, pps, onRenomm
       {acts.map((A, a) => {
         const es = plan.evs.filter((e) => e.ev.act === a);
         if (!es.length) return null;
-        const S = es[0].S, E = es[es.length - 1].E;
+        const der = es[es.length - 1], g = plan.gates.find((x) => x.i === der.i);
+        // comme le design : l'acte couvre aussi le passage vers un moment du même acte
+        const S = es[0].S, E = g && plan.evs[g.i + 1]?.ev.act === a ? g.pass : der.E;
         const w = Math.max(4, (E - S) * pps - 3);
         const nom = A.n.toUpperCase();
         return (
@@ -66,7 +70,7 @@ interface PropsMoments {
   plan: Plan; pps: number; selMoment?: string;
   /** registre des éléments des moments : la tête de lecture y pose l'avancement sans re-rendu */
   registre: Map<string, HTMLDivElement>;
-  onChoisir: (id: string) => void; onOuvrir: (id: string) => void;
+  onChoisir: (id: string, clientX?: number) => void; onOuvrir: (id: string) => void;
   onRedimensionner: (id: string, ratio: number) => void; onAjouter: () => void;
 }
 
@@ -82,8 +86,8 @@ export const RangeeMoments = memo(function RangeeMoments({ plan, pps, selMoment,
         return (
           <div key={e.ev.id} className="cd-moment" style={acc} data-sel={selMoment === e.ev.id ? '' : undefined}
             ref={(el) => { if (el) registre.set(e.ev.id, el); else registre.delete(e.ev.id); }}
-            title={e.ev.name + ' · ' + fm(duree) + ' — clic : choisir · double-clic : ouvrir dans la planche'}
-            onPointerDown={(ev) => { if (ev.button !== 0) return; ev.stopPropagation(); onChoisir(e.ev.id); }}
+            title={e.ev.name + ' · ' + fm(duree) + ' — clic : choisir · double-clic : cadrer dans la planche'}
+            onPointerDown={(ev) => { if (ev.button !== 0) return; ev.stopPropagation(); onChoisir(e.ev.id, ev.clientX); }}
             onDoubleClick={(ev) => { ev.stopPropagation(); onOuvrir(e.ev.id); }}>
             {e.run.slice(1).map((r) => (
               <span key={r.st.id} className="cran" style={{ left: ((r.S - e.S) / Math.max(1, duree)) * 100 + '%' }} />

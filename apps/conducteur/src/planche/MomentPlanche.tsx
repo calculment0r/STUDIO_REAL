@@ -83,7 +83,7 @@ export const MomentPlanche = memo(function MomentPlanche(p: ProprietesMoment) {
             <span className="planche-titre" style={{ fontSize: `clamp(9px, calc((${f.r.w}px * var(--z) - 10px) / ${(nom.length * 1.02).toFixed(2)}), 20px)`, letterSpacing: '.08em', lineHeight: 1.2, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nom}</span>
           </div>
         ) : (
-          <div style={{ position: 'absolute', left: 18, top: 16, display: 'flex', flexDirection: 'column', gap: 6, opacity: p.terne ? 0.5 : 1 }}>
+          <div style={{ position: 'absolute', left: 18, top: 16, width: 'max-content', display: 'flex', flexDirection: 'column', gap: 6, opacity: p.terne ? 0.5 : 1 }}>
             <span className="planche-micro" style={{ color: 'var(--ink3)', whiteSpace: 'nowrap' }}>{p.tag}</span>
             <span className="planche-titre" style={{ fontSize: 14, letterSpacing: '.08em', lineHeight: 1.2, color: 'var(--ink)', maxWidth: `max(60px, calc(${f.r.w}px * var(--z) - 120px))` }}>{nom}</span>
           </div>

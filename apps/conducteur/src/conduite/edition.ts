@@ -14,7 +14,7 @@ type Element = Clip | Repere;
 
 export interface Resultat { ok: boolean; message: string; id?: string }
 
-const nouvelId = (p: Projet, prefixe: string): string => prefixe + ++p.nid;
+import { nouvelId } from '../etat/ids';
 
 /** Le temps absolu de chaque clip et repère. */
 export function positionsAbsolues(p: Projet, plan: Plan = planifier(p)): [Element, number][] {

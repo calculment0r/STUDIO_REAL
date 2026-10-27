@@ -19,7 +19,13 @@ import {
   type VersionLocale,
 } from './persistance';
 
-export type ModeConducteur = 'ecrire' | 'repeter' | 'jouer';
+/** Les deux modes du design : PRÉPARER (écrire, régler, répéter avec la salle simulée ; la caméra reste libre) et
+ *  JOUER (représentation : la caméra suit le spectacle). */
+export type ModeConducteur = 'preparer' | 'jouer';
+/** Anciennes valeurs (Écrire / Répéter), acceptées par `changerMode` et ramenées à 'preparer'. Le magasin ne les
+ *  contient jamais ; elles restent dans le type pour que le code d'autres chantiers qui les compare compile encore. */
+export type ModeAncien = 'ecrire' | 'repeter';
+export const normaliserMode = (m: ModeConducteur | ModeAncien): ModeConducteur => (m === 'jouer' ? 'jouer' : 'preparer');
 
 /** Ce qui est choisi. `moment` + `etape` : une étape ; `moment` + `sortie` (index dans moment.tr) : une sortie ;
  *  `moment` + `passage` : le passage vers le moment suivant ; `moment` seul : le moment ; `acte` : un acte ;
@@ -35,7 +41,8 @@ interface EntreeHistorique { projet: Projet; etiquette: string; t: number }
 export interface Magasin {
   projet: Projet;
   selection: Selection;
-  mode: ModeConducteur;
+  /** Toujours 'preparer' ou 'jouer' (voir ModeAncien). */
+  mode: ModeConducteur | ModeAncien;
   /** État du moteur de lecture ; null tant que rien n'est lancé. */
   lecture: EtatLecture | null;
   enLecture: boolean;
@@ -48,7 +55,7 @@ export interface Magasin {
   /** Modifie le projet par une fonction qui reçoit une copie (immutabilité simple). `etiquette` regroupe les gestes
    *  continus (rotatif, glisser) en une seule entrée d'annulation s'ils se suivent à moins de 0,9 s. */
   modifierProjet: (fn: (p: Projet) => void, etiquette?: string) => void;
-  changerMode: (m: ModeConducteur) => void;
+  changerMode: (m: ModeConducteur | ModeAncien) => void;
   lancer: () => void;
   pause: () => void;
   /** Top régie : franchit le passage « go » qui attend (ou l'arme s'il n'est pas encore prêt). */
@@ -59,6 +66,9 @@ export interface Magasin {
   basculerTheme: () => void;
 
   // ── ajouts COQUILLE ──
+  /** Demande à la planche de cadrer un moment (double-clic sur la conduite, recherche) ; `n` change à chaque demande. */
+  cadrage: { moment: string; n: number } | null;
+  cadrerMoment: (moment: string) => void;
   vitesse: number;
   changerVitesse: (v: number) => void;
   basculerLecture: () => void;
@@ -90,6 +100,8 @@ export interface Magasin {
   exporter: () => void;
   importer: (texte: string) => void;
   revenirDemo: () => void;
+  /** Projet venu de la salle collaborative (sans annulation possible, verrou ignoré). */
+  remplacerProjetDistant: (p: Projet, o?: { premier?: boolean }) => void;
 }
 
 // ─── hors React : le lecteur, sa révision, l'exécution en cours ───────────────────────────────────────
@@ -188,7 +200,7 @@ export const useMagasin = create<Magasin>((set, get) => {
   return {
     projet: reprise?.project ?? exempleDemo(),
     selection: {},
-    mode: 'ecrire',
+    mode: 'jouer',
     lecture: null,
     enLecture: false,
     zoomPlanche: 1,
@@ -206,8 +218,10 @@ export const useMagasin = create<Magasin>((set, get) => {
       remplacerProjet(copie);
     },
 
-    changerMode: (mode) => {
-      if (mode === 'ecrire') set({ enLecture: false });
+    changerMode: (m) => {
+      const mode = normaliserMode(m);
+      if (mode === get().mode) return;
+      revision++;   // le lecteur est recréé dans le bon mode (scène / répétition), à la même place
       set({ mode });
     },
 
@@ -253,7 +267,10 @@ export const useMagasin = create<Magasin>((set, get) => {
       set({ theme });
     },
 
-    vitesse: 1,
+    cadrage: null,
+    cadrerMoment: (moment) => set(s => ({ selection: { moment }, cadrage: { moment, n: (s.cadrage?.n ?? 0) + 1 } })),
+
+    vitesse: 20,
     changerVitesse: (vitesse) => set({ vitesse }),
     basculerLecture: () => { if (get().enLecture) get().pause(); else get().lancer(); },
     revenirAuDebut: () => {
@@ -348,6 +365,12 @@ export const useMagasin = create<Magasin>((set, get) => {
       set({ selection: {}, assets: ASSETS_DEMO, executions: [] });
       remplacerProjet(exempleDemo());
     },
+    // Projet reçu de la salle collaborative (src/etat/serveur.ts) : nouvelle révision pour le lecteur, sans entrée
+    // d'annulation et sans tenir compte du verrou local de scène (ce sont les gestes des autres postes).
+    remplacerProjetDistant: (p, o) => {
+      if (o?.premier) set({ passe: [], futur: [] });
+      remplacerProjet(p);
+    },
   };
 });
 
@@ -373,6 +396,10 @@ export function demarrerBoucle(): () => void {
   }, 250);
   return () => { cancelAnimationFrame(raf); clearInterval(relais); };
 }
+
+// Au chargement, la lecture est posée au début (comme le design) : le moment 1 et sa première étape sont « en cours »,
+// rien ne joue tant qu'on ne lance pas.
+useMagasin.getState().revenirAuDebut();
 
 // Enregistrement automatique du projet en cours (reprise après rechargement).
 useMagasin.subscribe((s, p) => {

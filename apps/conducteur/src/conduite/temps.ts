@@ -49,33 +49,35 @@ export function zoomMolette(pps: number, deltaY: number): number {
   return bornerZoom(pps * Math.exp(-d * 0.006));
 }
 
-/** Le zoom qui fait tenir toute la conduite dans la vue (« TOUT »). */
+/** Le zoom qui fait tenir toute la conduite dans la vue (« TOUT ») : toute la largeur, comme le design. */
 export function zoomPourTout(total: number, largeurVue: number): number {
   if (total <= 0) return bornerZoom(1);
-  return bornerZoom(Math.max(10, largeurVue - 40) / total);
+  return bornerZoom(Math.max(10, largeurVue - 2) / total);
 }
 
-// ── la règle (commun/tete.js : un pas pour qu'une étiquette ait au moins 84 px) ──
-const PAS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200];
+// ── la règle (le design : petites graduations d'au moins 12 px, graduations étiquetées d'au moins 70 px) ──
+const PAS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200, 1800];
+/** Pas des petites graduations (s). */
+export function sousPasRegle(pps: number): number {
+  return PAS.find((s) => s * pps >= 12) ?? 1800;
+}
+/** Pas des graduations étiquetées (s), multiple du petit pas : au zoom par défaut d'un spectacle de 40 min, 02:00. */
 export function pasRegle(pps: number): number {
-  return PAS.find((s) => s * pps >= 84) ?? 1800;
+  const mn = sousPasRegle(pps);
+  return PAS.find((s) => s % mn === 0 && s * pps >= 70) ?? 1800;
 }
 
 export interface Graduation { t: number; x: number; libelle: string; sous: boolean }
 
-/** Les graduations entre les pixels `gauche` et `droite` du contenu (+ une de chaque côté), demi-graduations au-delà de 160 px. */
+/** Les graduations entre les pixels `gauche` et `droite` du contenu (+ une de chaque côté) : étiquetées (MM:SS) et petites. */
 export function graduations(pps: number, gauche: number, droite: number): Graduation[] {
-  const pas = pasRegle(pps);
-  const de = Math.max(0, Math.floor(gauche / pps / pas) - 1);
-  const a = Math.ceil(droite / pps / pas) + 1;
+  const pas = pasRegle(pps), sp = sousPasRegle(pps);
+  const de = Math.max(0, Math.floor(gauche / pps / pas) - 1) * pas;
+  const a = (Math.ceil(droite / pps / pas) + 1) * pas;
   const out: Graduation[] = [];
-  for (let i = de; i <= a; i++) {
-    const t = i * pas;
-    out.push({ t, x: t * pps, libelle: fm(t), sous: false });
-    if (pas * pps >= 160) {
-      const tm = t + pas / 2;
-      out.push({ t: tm, x: tm * pps, libelle: '', sous: true });
-    }
+  for (let t = de, n = 0; t <= a && n < 4000; t += sp, n++) {
+    const pleine = t % pas === 0;
+    out.push({ t, x: t * pps, libelle: pleine ? fm(t) : '', sous: !pleine });
   }
   return out;
 }

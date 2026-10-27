@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dureeEtape, exempleDemo, type Projet } from '@studio-real/modele';
+import { dureeEtape, dureeTotale, exempleDemo, positionsMoments, type Projet } from '@studio-real/modele';
 import { debuts, indiceMomentA, limiteProche, momentEtapeA, planifier } from './planning';
 
 const projetSimple = (n: number): Projet => ({
@@ -85,5 +85,19 @@ describe('retrouver un moment par le temps', () => {
   });
   it('débuts par id', () => {
     expect(debuts(plan)).toEqual({ m0: 0, m1: 110, m2: 220 });
+  });
+});
+
+describe('les positions sont celles du moteur', () => {
+  it('chaque moment commence et finit là où le moteur (positionsMoments) le place', () => {
+    const p = exempleDemo();
+    const plan = planifier(p);
+    const pos = positionsMoments(p);
+    for (const e of plan.evs) {
+      expect(e.S).toBeCloseTo(pos[e.ev.id].debut, 6);
+      expect(e.E).toBeCloseTo(pos[e.ev.id].fin, 6);
+    }
+    for (const g of plan.gates) expect(g.pass).toBeCloseTo(pos[g.ev.id].finPassage, 6);
+    expect(plan.total).toBeCloseTo(dureeTotale(p), 6);
   });
 });

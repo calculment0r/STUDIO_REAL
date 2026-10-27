@@ -1,10 +1,10 @@
 // Validation d'un projet et chargement d'un fichier « studio-real/conducteur@1 » (ou d'un Projet nu).
-import type { Condition, Etape, FichierConducteur, Moment, Passage, Projet, SalleSimulee, Sortie } from './types';
+import type { Condition, Etape, FichierConducteur, Moment, Passage, Projet, SalleSimulee, Sequence, Sortie } from './types';
 import { FORMAT } from './types';
 import { OPERATEURS, estCleCondition } from './conditions';
 import {
-  TY_BOUCLE, TY_GARDE, TY_MEMOIRE, TY_TIRAGE, TYPES_VOTE, comportementBloc, poidsTirage, reglagesMemoire,
-  sortiesBoucle, sortiesGarde,
+  BLOCS_MOTEUR, SORTIES_NOMMEES, TY_BOUCLE, TY_GARDE, TY_MEMOIRE, TY_TIRAGE, TYPES_VOTE, comportementBloc, normaliserNom,
+  poidsTirage, reglagesComedien, reglagesMemoire, reglagesSequence, sortiesBoucle, sortiesGarde, trouverSequence,
 } from './blocs-moteur';
 
 export type NiveauProbleme = 'erreur' | 'avertissement';
@@ -34,7 +34,8 @@ export function validerProjet(p: Projet): Probleme[] {
 
   // Mémoires posées par un bloc Mémoire (ou déclarées dans le projet) : pour repérer les conditions mem: orphelines.
   const memoiresConnues = new Set(Object.keys(p.memoires ?? {}));
-  for (const m of p.ev) for (const st of m.st ?? []) if (st && st.ty === TY_MEMOIRE) memoiresConnues.add(reglagesMemoire(st).nom);
+  for (const m of [...p.ev, ...(Array.isArray(p.sequences) ? p.sequences : [])])
+    for (const st of m?.st ?? []) if (st && st.ty === TY_MEMOIRE) memoiresConnues.add(reglagesMemoire(st).nom);
 
   const idsMoments = new Map<string, number>();
   p.ev.forEach((m, i) => {
@@ -95,7 +96,7 @@ export function validerProjet(p: Projet): Probleme[] {
     for (const [src, outs] of parSource) {
       const st = etapes.get(src);
       const comp = st ? comportementBloc(st.ty) : 'normal';
-      if (comp === 'normal' || comp === 'memoire') {
+      if (comp === 'normal' || comp === 'memoire' || comp === 'figurants') {
         const iSinon = outs.findIndex(o => Array.isArray(o.g) && !o.g.length);
         if (iSinon >= 0 && iSinon < outs.length - 1)
           avt('sinon-pas-dernier', `${nomM} : la sortie sans condition de ${nomE(src)} n’est pas la dernière ; les sorties placées après elle ne seront jamais prises.`, m.id, src);
@@ -119,6 +120,7 @@ export function validerProjet(p: Projet): Probleme[] {
         if (outs.length > 6) avt('tirage-trop-de-sorties', `${nom} : plus de 6 sorties.`, m.id, st.id);
         if (outs.length && poidsTirage(st, outs).every(x => x === 0)) avt('tirage-poids-nuls', `${nom} : tous les poids sont à 0 ; la sortie 1 sera toujours prise.`, m.id, st.id);
       }
+      verifierBlocEvenement(st, outs, nom, m.id);
     }
 
     // Accessibilité et fin du moment.
@@ -153,6 +155,34 @@ export function validerProjet(p: Projet): Probleme[] {
     }
   });
 
+  // Séquences réutilisables.
+  if (p.sequences !== undefined && !Array.isArray(p.sequences)) err('sequences-invalides', 'La liste des séquences (« sequences ») est illisible.');
+  else if (Array.isArray(p.sequences)) {
+    const ids = new Set<string>();
+    for (const q of p.sequences) {
+      if (!q || typeof q.id !== 'string' || !q.id) { err('sequence-sans-id', 'Une séquence n’a pas d’identifiant.'); continue; }
+      const nomS = `Séquence « ${q.nom || q.id} »`;
+      if (ids.has(q.id)) err('sequence-id-double', `${nomS} : l’identifiant « ${q.id} » est déjà utilisé.`);
+      ids.add(q.id);
+      if (!Array.isArray(q.st) || !Array.isArray(q.tr)) { err('sequence-illisible', `${nomS} : étapes (« st ») ou sorties (« tr ») manquantes.`); continue; }
+      const etapesS = new Set(q.st.map(x => x?.id));
+      if (!q.st.length) avt('sequence-vide', `${nomS} : elle ne contient aucune étape.`);
+      else if (!etapesS.has(q.entry)) err('sequence-entree-inconnue', `${nomS} : l’étape d’entrée « ${String(q.entry)} » n’existe pas.`);
+      for (const o of q.tr) {
+        if (!o || typeof o.a !== 'string') { err('sortie-invalide', `${nomS} : une sortie est illisible.`); continue; }
+        if (!etapesS.has(o.a)) err('sortie-source-inconnue', `${nomS} : une sortie part de l’étape « ${o.a} », qui n’existe pas.`);
+        if (o.b && !etapesS.has(o.b)) err('sortie-cible-inconnue', `${nomS} : une sortie vise l’étape « ${o.b} », qui n’existe pas dans la séquence.`);
+        if (Array.isArray(o.g)) o.g.forEach(g => verifierCondition(g, `${nomS}, sortie de « ${o.a} »`, ''));
+      }
+      for (const st of q.st) {
+        if (!st || typeof st.id !== 'string') continue;
+        verifierBlocEvenement(st, q.tr.filter(o => o && o.a === st.id), `${nomS}, ${BLOC[st.ty] ?? 'étape'} « ${st.name || st.id} »`, '');
+        if (comportementBloc(st.ty) === 'sequence' && appelle(p.sequences, st, q.id, 0))
+          avt('sequence-recursive', `${nomS} : elle s’appelle elle-même (directement ou non) ; le lecteur sortira directement.`);
+      }
+    }
+  }
+
   if (p.sens && typeof p.sens === 'object') {
     for (const k of ['aff', 'part', 'calme', 'pen'] as const) {
       const v = p.sens[k];
@@ -161,13 +191,35 @@ export function validerProjet(p: Projet): Probleme[] {
   }
   return out;
 
+  /** Blocs à événements extérieurs, figurants et séquences (moments et séquences). */
+  function verifierBlocEvenement(st: Etape, outs: Sortie[], nom: string, moment: string) {
+    const comp = comportementBloc(st.ty);
+    const a = (n: string) => outs.some(o => normaliserNom(o.nom) === normaliserNom(n));
+    const etape = st.id;
+    if (comp === 'machine' && !a(SORTIES_NOMMEES.sansReponse))
+      avt('machine-sans-secours', `${nom} : pas de sortie « sans réponse » ; sans accusé, la suite partira par « confirmé ».`, moment, etape);
+    else if (comp === 'message' && !a(SORTIES_NOMMEES.nonLu))
+      avt('message-sans-secours', `${nom} : pas de sortie « non lu » ; sans accusé de lecture, la suite partira par « lu ».`, moment, etape);
+    else if (comp === 'signal' && typeof st.params?.signal !== 'string' && typeof st.params?.adresse !== 'string')
+      avt('signal-sans-nom', `${nom} : aucun signal nommé (params.signal ou params.adresse) ; il attend le signal « ${st.id} ».`, moment, etape);
+    else if (comp === 'comedien' && !reglagesComedien(st).mots.length)
+      avt('comedien-sans-mot', `${nom} : aucun mot-clé (params.mots) ; seul le top régie le fera avancer.`, moment, etape);
+    else if (comp === 'sequence') {
+      const r = reglagesSequence(st);
+      if (!trouverSequence(p.sequences, r.sequence))
+        avt('sequence-inconnue', `${nom} : la séquence « ${r.sequence || '(aucune)'} » n’existe pas ; sortie directe.`, moment, etape);
+    }
+  }
+
   function verifierCondition(g: Condition, ou: string, moment: string, etape?: string) {
     if (!g || typeof g !== 'object') { err('condition-illisible', `${ou} : une condition est illisible.`, moment, etape); return; }
-    if (!estCleCondition(g.k)) { err('condition-inconnue', `${ou} : la condition « ${String(g.k)} » est inconnue (t, pres, quorum, prets, bruit, assis, issue, mem:<nom>).`, moment, etape); return; }
+    if (!estCleCondition(g.k)) { err('condition-inconnue', `${ou} : la condition « ${String(g.k)} » est inconnue (t, pres, quorum, prets, bruit, assis, issue, mem:<nom>, sig:<nom>, sigv:<nom>).`, moment, etape); return; }
     if (!OPERATEURS.includes(g.op)) err('condition-operateur', `${ou} : l’opérateur « ${String(g.op)} » est inconnu.`, moment, etape);
     if (g.k === 'issue') {
       if (typeof g.v !== 'string' || !g.v) err('condition-issue', `${ou} : la condition sur l’issue attend une lettre (A, B, T…).`, moment, etape);
       if (g.op !== '=' && g.op !== '≠') err('condition-issue-operateur', `${ou} : l’issue se compare avec = ou ≠.`, moment, etape);
+    } else if (g.k.startsWith('sigv:')) {
+      // valeur libre (nombre ou texte)
     } else if (g.k.startsWith('mem:')) {
       const nom = g.k.slice(4);
       if (!memoiresConnues.has(nom)) avt('memoire-jamais-posee', `${ou} : la mémoire « ${nom} » n’est posée par aucun bloc Mémoire (elle vaudra 0).`, moment, etape);
@@ -177,7 +229,19 @@ export function validerProjet(p: Projet): Probleme[] {
   }
 }
 
-const BLOC: Record<string, string> = { [TY_GARDE]: 'garde-fou', [TY_BOUCLE]: 'boucle', [TY_TIRAGE]: 'tirage', [TY_MEMOIRE]: 'mémoire', f3: 'tirage' };
+const BLOC: Record<string, string> = {
+  ...Object.fromEntries(Object.values(BLOCS_MOTEUR).map(b => [b.ty, b.nom])),
+  [TY_GARDE]: 'garde-fou', [TY_BOUCLE]: 'boucle', [TY_TIRAGE]: 'tirage', [TY_MEMOIRE]: 'mémoire', f3: 'tirage',
+};
+
+/** La séquence appelée par l'étape `st` finit-elle par appeler `cible` ? */
+function appelle(sequences: Sequence[], st: Etape, cible: string, profondeur: number): boolean {
+  if (profondeur > 16) return true;
+  const q = trouverSequence(sequences, reglagesSequence(st).sequence);
+  if (!q) return false;
+  if (q.id === cible) return true;
+  return (q.st ?? []).some(x => x && comportementBloc(x.ty) === 'sequence' && appelle(sequences, x, cible, profondeur + 1));
+}
 
 /** Ne garde que les erreurs. */
 export const erreursSeules = (l: Probleme[]) => l.filter(x => x.niveau === 'erreur');
@@ -247,6 +311,7 @@ export function normaliserProjet(p: Brut): Projet {
   };
   if (typeof p.titre === 'string') out.titre = p.titre;
   if (estObjet(p.memoires)) out.memoires = p.memoires as Projet['memoires'];
+  if (Array.isArray(p.sequences)) out.sequences = (p.sequences as unknown[]).filter(estObjet).map(normaliserSequence);
   return out;
 }
 
@@ -264,6 +329,15 @@ function normaliserMoment(m: Brut, i: number): Moment {
     g: Array.isArray(g.g) ? (g.g as unknown[]).filter(estObjet).map(normaliserCondition) : [],
   };
   return { id, act: Math.max(0, Math.floor(nombre(m.act, 0))), name: texte(m.name, id), entry, st, tr, gate };
+}
+
+function normaliserSequence(q: Brut, i: number): Sequence {
+  const id = texte(q.id, `q${i + 1}`);
+  const st: Etape[] = Array.isArray(q.st) ? (q.st as unknown[]).filter(estObjet).map((e, j) => normaliserEtape(e, j)) : [];
+  const tr: Sortie[] = Array.isArray(q.tr) ? (q.tr as unknown[]).filter(estObjet).map(normaliserSortie) : [];
+  const out: Sequence = { id, nom: texte(q.nom, id), entry: typeof q.entry === 'string' && q.entry ? q.entry : st[0]?.id ?? '', st, tr };
+  if (Array.isArray(q.sorties)) out.sorties = (q.sorties as unknown[]).filter((x): x is string => typeof x === 'string');
+  return out;
 }
 
 function normaliserEtape(e: Brut, j: number): Etape {

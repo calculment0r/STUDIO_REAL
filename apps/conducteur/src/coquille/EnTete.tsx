@@ -1,19 +1,18 @@
-// L'en-tête : marque et titre du projet, fil (acte › moment › étape), vues, modes Écrire / Répéter / Jouer, scène
-// verrouillée, annuler / rétablir, transport (début, lecture, vitesse), horloge MM:SS, retard et état, top régie,
-// aller au moment, pupitre, raccourcis, plein écran, thème. Tous les chiffres qui changent : largeur fixe, tabulaires.
-import { useRef } from 'react';
+// L'en-tête (comme le design) : marque, fil (acte › moment › étape en cours, en accent), vues, modes PRÉPARER / JOUER,
+// scène verrouillée, annuler / rétablir, transport (début, lecture, vitesses ×1 ×20 ×60), horloge MM:SS / total,
+// top régie, recherche, pupitre, raccourcis, plein écran, thème. Tous les chiffres qui changent : largeur fixe, tabulaires.
+// Le retard est affiché dans la barre de la conduite (comme le design).
 import { useMagasin, type ModeConducteur } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
-import { mmss, mmssSigne } from '../theme/format';
+import { mmss } from '../theme/format';
 import { useInterface } from './interface';
 import { situation } from './derive';
-import { IcoAller, IcoDebut, IcoLecture, IcoPause, IcoPleinEcran, IcoPupitre, IcoTheme, IcoVerrou, VUES } from './icones';
+import { IcoDebut, IcoLecture, IcoLoupe, IcoPause, IcoPleinEcran, IcoPupitre, IcoTheme, IcoVerrou, VUES } from './icones';
 import { basculerPleinEcran } from './raccourcis';
 
 const MODES: [ModeConducteur, string, string][] = [
-  ['ecrire', 'ÉCRIRE', 'Écrire et régler, la caméra reste libre'],
-  ['repeter', 'RÉPÉTER', 'Répéter avec la salle simulée'],
-  ['jouer', 'JOUER', 'Représentation : la caméra suit le spectacle'],
+  ['preparer', 'PRÉPARER', 'Écrire, régler et répéter avec la salle simulée : la caméra reste libre'],
+  ['jouer', 'JOUER', 'La caméra suit le spectacle'],
 ];
 
 export function EnTete() {
@@ -29,12 +28,10 @@ export function EnTete() {
   const sig = useMagasin(s => s.signaux)();
   const m = useMagasin.getState();
   const ui = useInterface();
-  const refAller = useRef<HTMLButtonElement>(null);
 
   const sit = situation(projet, lecture, sig);
   const total = prevoir(projet).total;
   const t = lecture?.t ?? 0;
-  const retard = lecture?.retard ?? 0;
 
   const pret = !!lecture?.attenteGo && sit.passageGo !== null;
   const momentCourant = projet.ev[sit.index]?.id;
@@ -50,11 +47,6 @@ export function EnTete() {
     : enLecture ? ['EN LECTURE', 'var(--rec)', true]
     : ['EN PAUSE', 'var(--ink3)', false];
 
-  const ouvrirAller = () => {
-    const r = refAller.current?.getBoundingClientRect();
-    ui.poser({ allerA: !ui.allerA });
-    if (r) document.documentElement.style.setProperty('--menu-aller-x', Math.max(8, r.right - 280) + 'px');
-  };
 
   return (
     <header className="ent">
@@ -62,7 +54,7 @@ export function EnTete() {
         <span className="ent-carre"><span /></span>
         <span className="ent-titres">
           <span className="ent-marque">STUDIO REAL</span>
-          <span className="ent-projet" title={projet.titre ?? 'Sans titre'}>{projet.titre ?? 'Sans titre'}</span>
+          <span className="ent-projet" title={projet.titre ?? 'Sans titre'}>conducteur du spectacle</span>
         </span>
       </div>
       <nav className="ent-fil" aria-label="Où en est-on">
@@ -102,19 +94,15 @@ export function EnTete() {
             <button key={v} className={'seg vit' + (vitesse === v ? ' on' : '')} onClick={() => m.changerVitesse(v)}>×{v}</button>
           ))}
         </div>
-        <div className="horloge">
+        <div className="horloge" title={etat[0] as string}>
           <span className="num t">{mmss(t)}</span>
-          <span className="tot">/ <span className="num">{mmss(total)}</span></span>
-          <span className="ret">
-            <span className="ret-l">RETARD <span className={'num ret-v' + (retard > 30 ? ' fort' : '')}>{mmssSigne(retard)}</span></span>
-            <span className="etat"><span className={'point' + (etat[2] ? ' pulse' : '')} style={{ background: etat[1] as string }} />{etat[0] as string}</span>
-          </span>
+          <span className="tot">/ {mmss(total)}</span>
         </div>
       </div>
 
       <button className={goClasse} onClick={m.top} title="Top régie · touche T">{goTxt}</button>
-      <button ref={refAller} className={'btn-carre si-moyen' + (ui.allerA ? ' on' : '')} onClick={ouvrirAller} title="Aller au moment">
-        <IcoAller />
+      <button className={'btn-carre si-moyen' + (ui.recherche ? ' on' : '')} onClick={() => ui.basculer('recherche')} title="Rechercher · Ctrl+K">
+        <IcoLoupe />
       </button>
       <button className={'btn-carre si-moyen' + (ui.pupitre ? ' on' : '')} onClick={() => ui.basculer('pupitre')} title="Pupitre de représentation · touche P"><IcoPupitre /></button>
       <button className="btn-carre disp-txt si-moyen" onClick={() => ui.basculer('aide')} title="Raccourcis · touche ?">?</button>
@@ -123,31 +111,5 @@ export function EnTete() {
       </button>
       <button className="btn-carre" onClick={m.basculerTheme} title="Thème clair / sombre"><IcoTheme /></button>
     </header>
-  );
-}
-
-/** Menu « aller au moment » : liste des moments, début prévu, clic = la lecture saute à ce moment. */
-export function MenuAller() {
-  const projet = useMagasin(s => s.projet);
-  const courant = useMagasin(s => s.lecture?.moment);
-  const ouvert = useInterface(s => s.allerA);
-  const poser = useInterface(s => s.poser);
-  if (!ouvert) return null;
-  const prev = prevoir(projet);
-  return (
-    <>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 119 }} onPointerDown={() => poser({ allerA: false })} />
-      <div className="menu" style={{ left: 'var(--menu-aller-x, 50%)', top: 52 }} role="menu">
-        <span className="menu-titre">ALLER AU MOMENT</span>
-        {projet.ev.map((ev, i) => (
-          <button key={ev.id} role="menuitem" className={'menu-ligne' + (courant === ev.id ? ' cur' : '')}
-            onClick={() => { useMagasin.getState().allerA(ev.id); poser({ allerA: false }); }}>
-            <span className="num no">{String(i + 1).padStart(2, '0')}</span>
-            <span className="nm">{ev.name}</span>
-            <span className="num tc">{mmss(prev.moments[i]?.debut ?? 0)}</span>
-          </button>
-        ))}
-      </div>
-    </>
   );
 }

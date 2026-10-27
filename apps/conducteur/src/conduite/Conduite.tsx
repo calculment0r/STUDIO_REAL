@@ -1,15 +1,20 @@
 // LA CONDUITE (bas de l'écran, pleine largeur) : actes → moments → passages, puis les pistes.
 // Zoom et défilement façon Premiere : molette = défilement horizontal, Alt (ou Ctrl) + molette = zoom centré sur la souris,
 // barre de zoom à poignées en bas, touches + / − (zoom centré sur la tête), bouton TOUT.
-// Clic (ou glisser) sur la règle ou dans le vide = aller à ce temps ; clic sur un moment = le choisir ; double-clic = l'ouvrir
-// dans la planche ; clic droit = nouveau moment ici, couper ici, nouvel acte à partir d'ici.
+// Clic (ou glisser) sur la règle ou dans le vide = aller à ce temps ; clic sur un moment = le choisir ; double-clic = la
+// planche cadre ce moment ; clic droit = nouveau moment ici, couper ici, nouvel acte à partir d'ici.
+// Outils (comme le design) : SÉLECTION (V) et COUPER (C : un clic sur un moment le coupe à la limite d'étape la plus
+// proche, sur un clip le coupe en deux). Bouton plein écran : la conduite seule. Bouton M : piste muette.
+// Les moments sont placés par le moteur (planifier de @studio-real/modele, via ./planning) : la tête tombe juste.
 //
 // Performance : la lecture ne re-rend rien ici (voir TeteDeLecture) ; le défilement ne change qu'une variable CSS (--cd-x)
 // sur le corps, les rangées et les pistes (memo) ne se redessinent qu'au changement du projet ou du zoom.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as EvPointeur } from 'react';
 import type { Projet } from '@studio-real/modele';
 import { useMagasin, type Magasin } from '../etat/magasin';
-import { limiteProche, momentEtapeA, planifier } from './planning';
+import { nouvelId } from '../etat/ids';
+import { useInterface } from '../coquille/interface';
+import { debuts, limiteProche, momentEtapeA, planifier } from './planning';
 import {
   LARGEUR_ENTETES, PAS_ZOOM, borner, bornerDefilement, bornerZoom, fm, zoomCentre, zoomMolette, zoomPourTout,
 } from './temps';
@@ -18,7 +23,7 @@ import {
   insererMoment, modePassage, nouveauMomentIci, nouvelActeIci, preavisRepere, redimensionnerMoment, reglerPoint, renommerActe,
 } from './edition';
 import { Regle, RangeeActes, RangeeMoments, RangeePassages } from './Rangees';
-import { Pistes, type ActionsPistes } from './Pistes';
+import { Pistes, estMuette, type ActionsPistes } from './Pistes';
 import { ORDRE_TYPES, TYPES_PISTE, couleurPiste } from './types-pistes';
 import { TeteDeLecture } from './TeteDeLecture';
 import { BarreZoom } from './BarreZoom';
@@ -28,16 +33,28 @@ import './conduite.css';
 
 const LBL = LARGEUR_ENTETES;
 
-function Retard({ attenteMesuree }: { attenteMesuree: number }) {
+/** Le retard du design : la durée prévue du spectacle moins la somme des durées prévues des étapes (attentes des
+ *  conditions et du top comprises), plus l'attente du top mesurée pendant la lecture. En accent dès qu'il dépasse 0. */
+function Retard({ prevu }: { prevu: number }) {
   // Ne se re-rend que lorsque la seconde du retard change.
-  const r = useMagasin((s) => (s.lecture ? Math.floor(s.lecture.retard) : null));
-  const v = r ?? attenteMesuree;
+  const r = useMagasin((s) => (s.lecture ? Math.floor(s.lecture.retard) : 0));
+  const v = prevu + r;
   return (
-    <span className="cd-retard" title="Cumul des attentes du top aux passages « go »">
-      RETARD <span data-fort={v > 30 ? '' : undefined}>+{fm(v)}</span>
+    <span className="cd-retard" title="Durée prévue moins la durée des étapes : attentes des conditions et du top">
+      RETARD <span data-fort={v >= 1 ? '' : undefined}>{(v > -1 ? '+' : '−') + fm(Math.abs(v))}</span>
     </span>
   );
 }
+
+type Outil = 'selection' | 'couper';
+const PICTO_OUTIL: Record<Outil, string> = {
+  selection: 'M5 3l12 9-6 1.2L8 19z',
+  couper: 'M6 6l12 12M18 6L6 18M4 4a2 2 0 1 0 4 4 2 2 0 0 0-4-4zM16 16a2 2 0 1 0 4 4 2 2 0 0 0-4-4z',
+};
+const OUTILS: [Outil, string, string][] = [
+  ['selection', 'SÉLECTION', 'Choisir et déplacer · touche V'],
+  ['couper', 'COUPER', 'Couper un moment ou un clip · touche C'],
+];
 
 export function Conduite() {
   const projet = useMagasin((s) => s.projet);
@@ -47,6 +64,11 @@ export function Conduite() {
   const selectionner = useMagasin((s) => s.selectionner);
   const allerA = useMagasin((s) => s.allerA);
   const zoomerConduite = useMagasin((s) => s.zoomerConduite);
+  const cadrerMoment = useMagasin((s) => s.cadrerMoment);
+  const vueUi = useInterface((s) => s.vue);
+  const [outil, setOutil] = useState<Outil>('selection');
+  const outilRef = useRef<Outil>('selection');
+  outilRef.current = outil;
 
   const plan = useMemo(() => planifier(projet), [projet]);
 
@@ -78,7 +100,10 @@ export function Conduite() {
     setDefilementBrut(d);
   }, []);
 
+  /** Vue « TOUT » (comme le design tant qu'on n'a pas zoomé) : elle se réajuste quand la largeur ou la durée change. */
+  const auto = useRef(true);
   const appliquerVue = useCallback((ppsN: number, x: number) => {
+    auto.current = false;
     const p = bornerZoom(ppsN);
     const v = vue.current;
     vue.current = { ...v, pps: p };
@@ -106,7 +131,11 @@ export function Conduite() {
     zoomer(v.pps * k, x >= 0 && x <= v.largeurVue ? x : v.largeurVue / 2);
   }, [zoomer, tTete]);
 
-  const toutVoir = useCallback(() => { const v = vue.current; appliquerVue(zoomPourTout(v.total, v.largeurVue), 0); }, [appliquerVue]);
+  const toutVoir = useCallback(() => {
+    const v = vue.current;
+    appliquerVue(zoomPourTout(v.total, v.largeurVue), 0);
+    auto.current = true;
+  }, [appliquerVue]);
 
   // la taille du corps
   useEffect(() => {
@@ -118,13 +147,11 @@ export function Conduite() {
     return () => ro.disconnect();
   }, []);
 
-  // au premier affichage : toute la conduite (comme le design)
-  const cadre = useRef(false);
+  // au premier affichage, et tant qu'on n'a pas zoomé : toute la conduite sur toute la largeur (comme le design)
   useEffect(() => {
-    if (cadre.current || largeur <= 0) return;
-    cadre.current = true;
+    if (largeur <= 0 || !auto.current) return;
     toutVoir();
-  }, [largeur, toutVoir]);
+  }, [largeur, plan.total, toutVoir]);
 
   // la durée, le zoom ou la largeur changent : le défilement reste dans ses bornes
   useEffect(() => { defiler(defRef.current); }, [plan.total, pps, largeurVue, defiler]);
@@ -172,10 +199,12 @@ export function Conduite() {
       const tg = e.target as HTMLElement | null;
       if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.isContentEditable)) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'v' || e.key === 'V') { setOutil('selection'); return; }
+      if (e.key === 'c' || e.key === 'C') { setOutil('couper'); return; }
       if (!survol.current && !racine.current?.contains(document.activeElement)) return;
       if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomerPas(PAS_ZOOM); }
       else if (e.key === '-' || e.key === '−' || e.key === '_') { e.preventDefault(); zoomerPas(1 / PAS_ZOOM); }
-      else if (e.key === 'Escape') { setMenu(null); setPassage(null); setMenuPiste(false); }
+      else if (e.key === 'Escape') { setMenu(null); setPassage(null); setMenuPiste(false); setOutil('selection'); }
     };
     window.addEventListener('keydown', touche);
     return () => window.removeEventListener('keydown', touche);
@@ -253,14 +282,47 @@ export function Conduite() {
       if (id) selectionner({ piste: id });
     },
     choisir: (sel) => { setPassage(null); selectionner(sel); },
-  }), [modifier, selectionner]);
+    muet: (id) => {
+      modifier((p) => {
+        const tk = p.tracks.find((x) => x.id === id) as (Projet['tracks'][number] & { mute?: boolean }) | undefined;
+        if (tk) tk.mute = !estMuette(tk);
+      }, 'piste muette');
+    },
+    couperClip: (tk, id, clientX) => {
+      if (outilRef.current !== 'couper') return false;
+      const t = Math.round(tempsA(clientX));
+      const r = modifier((p) => {
+        const piste = p.tracks.find((x) => x.id === tk), c = piste?.clips?.find((x) => x.id === id);
+        if (!piste?.clips || !c) return 'Clip introuvable.';
+        const debut = (debuts(planifier(p))[c.ev] ?? 0) + c.off, coupe = t - debut;
+        if (coupe < 2 || coupe > c.dur - 2) return 'Trop près du bord du clip pour le couper.';
+        piste.clips.splice(piste.clips.indexOf(c) + 1, 0, { id: nouvelId(p, 'c'), name: c.name, ev: c.ev, off: c.off + coupe, dur: c.dur - coupe });
+        c.dur = coupe;
+        p.ver++;
+        return 'Clip coupé à ' + fm(t) + '.';
+      }, 'coupe de clip');
+      if (r) dire(r);
+      return true;
+    },
+  }), [modifier, selectionner, tempsA, dire]);
 
-  const choisirMoment = useCallback((id: string) => { setPassage(null); selectionner({ moment: id }); }, [selectionner]);
+  const choisirMoment = useCallback((id: string, clientX?: number) => {
+    setPassage(null);
+    if (outilRef.current === 'couper' && clientX !== undefined) {
+      const r = modifier((p) => couperIci(p, Math.max(0, tempsA(clientX))), 'coupe');
+      if (!r) return;
+      dire(r.message);
+      if (r.ok && r.id) selectionner({ moment: r.id });
+      return;
+    }
+    selectionner({ moment: id });
+  }, [selectionner, modifier, tempsA, dire]);
+  /** Double-clic sur un moment : la planche le cadre. */
   const ouvrirMoment = useCallback((id: string) => {
-    const ev = useMagasin.getState().projet.ev.find((x) => x.id === id);
-    const entree = ev ? (typeof ev.entry === 'string' ? ev.entry : Object.values(ev.entry)[0]) : undefined;
-    selectionner({ moment: id, etape: entree });
-  }, [selectionner]);
+    if (outilRef.current === 'couper') return;
+    if (useInterface.getState().vue === 'tracks') useInterface.getState().poser({ vue: 'both' });
+    cadrerMoment(id);
+  }, [cadrerMoment]);
   const redimensionner = useCallback((id: string, ratio: number) => { modifier((p) => redimensionnerMoment(p, id, ratio), 'durée du moment'); }, [modifier]);
   const momentFin = useCallback(() => {
     const id = modifier(ajouterMomentFin, 'nouveau moment');
@@ -304,14 +366,28 @@ export function Conduite() {
   ] : [];
 
   const gate = passage ? plan.gates.find((g) => g.ev.id === passage) : undefined;
-  const attenteMesuree = Math.round(Object.values(projet.hold).reduce((a, b) => a + (b || 0), 0));
   const surTout = zoomPourTout(plan.total, largeurVue);
+  const seule = vueUi === 'tracks';
 
   return (
-    <section ref={racine} className="cd" tabIndex={0} aria-label="Conduite"
+    <section ref={racine} className="cd" tabIndex={0} aria-label="Conduite" data-outil={outil}
       onPointerEnter={() => { survol.current = true; }} onPointerLeave={() => { survol.current = false; }}>
       <header className="cd-barre">
         <span className="cd-titre">CONDUITE</span>
+        <button className="cd-carre" title={seule ? 'Revenir à la planche et la conduite' : 'Conduite en plein écran'}
+          onClick={() => useInterface.getState().poser({ vue: seule ? 'both' : 'tracks' })}>
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true">
+            <path d={seule ? 'M5 1.5V5H1.5M9 1.5V5h3.5M9 12.5V9h3.5M5 12.5V9H1.5' : 'M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9'} />
+          </svg>
+        </button>
+        <div className="cd-outils" role="group" aria-label="Outils">
+          {OUTILS.map(([k, t, tip]) => (
+            <button key={k} title={tip} data-on={outil === k ? '' : undefined} onClick={() => setOutil(k)}>
+              <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d={PICTO_OUTIL[k]} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              {t}
+            </button>
+          ))}
+        </div>
         <button className="cd-bt" title="Ajouter un moment après le moment choisi" onClick={nouveauMoment}><b>+</b>MOMENT</button>
         <button className="cd-bt" title="Poser une note de régie à la tête de lecture" onClick={nouvelleNote}><b>+</b>NOTE</button>
         <span style={{ position: 'relative', display: 'flex' }}>
@@ -336,7 +412,7 @@ export function Conduite() {
           <button title="Zoomer la conduite · touche +" onClick={() => zoomerPas(PAS_ZOOM)}>+</button>
           <button className="cd-tout" title="Voir toute la conduite" onClick={toutVoir}>TOUT</button>
         </span>
-        <Retard attenteMesuree={attenteMesuree} />
+        <Retard prevu={plan.total - plan.planned} />
       </header>
 
       <div ref={corps} className="cd-corps" style={{ ['--cd-x' as string]: -defilement + 'px' } as CSSProperties}

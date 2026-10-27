@@ -1,6 +1,6 @@
 // Chantier BLOCS : point d'entrée public. Contrat utilisé par PLANCHE (voir apps/conducteur/ARCHITECTURE.md) :
 //   CATALOGUE, trouverBloc(ty), <ApercuBloc ty k t actif params? />, <IconeBloc ty />.
-export { CATALOGUE, FAMILLES, TY_NOUVEAUX, trouverBloc, trouverFamille, valeurReglage, formaterReglage, sortiesExec, rotatifsParDefaut } from './catalogue';
+export { CATALOGUE, FAMILLES, TY_NOUVEAUX, TY_FIGURANTS_IA, trouverBloc, trouverFamille, valeurReglage, formaterReglage, sortiesExec, rotatifsParDefaut } from './catalogue';
 export { ApercuBloc, type ProprietesApercu } from './ApercuBloc';
 export { IconeBloc, type ProprietesIcone } from './IconeBloc';
 export { Galerie } from './Galerie';

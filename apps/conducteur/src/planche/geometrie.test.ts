@@ -173,12 +173,12 @@ describe('édition des sorties et des étapes', () => {
 
 describe('libellés et lecture', () => {
   it('règles lisibles sur les liens', () => {
-    expect(libelleCondition({ k: 'quorum', op: '≥', v: 60 })).toBe('≥ 60 % des votes');
+    expect(libelleCondition({ k: 'quorum', op: '≥', v: 60 })).toBe('60 % des votes reçus');
     expect(libelleCondition({ k: 't', op: '≥', v: 90 })).toBe('après 01:30');
     expect(libelleCondition({ k: 'issue', op: '=', v: 'T' })).toBe('égalité au vote');
     expect(regleSortie({ a: 'x', b: 'y', g: [], mode: 'all' }, 2)).toMatch(/^sinon/);
     expect(regleSortie({ a: 'x', b: 'y', g: [{ k: 'quorum', op: '≥', v: 60 }, { k: 't', op: '≥', v: 90 }], mode: 'any' }, 1))
-      .toBe('≥ 60 % des votes ou après 01:30');
+      .toBe('60 % des votes reçus ou après 01:30');
     expect(fm(61.9)).toBe('01:01');
   });
   it('statuts des étapes et des sorties', () => {

@@ -19,7 +19,14 @@ export interface ActionsPistes {
   ajouter: (type: TypePiste) => void;
   /** choisir la piste, un de ses clips ou une de ses notes (sélection du magasin, pour le panneau de droite) */
   choisir: (sel: { piste: string; clip?: string; note?: string }) => void;
+  /** bouton M : couper (rendre muette) la piste */
+  muet: (piste: string) => void;
+  /** outil COUPER : coupe le clip à l'abscisse du clic ; rend false si l'outil n'est pas actif (le clic suit son cours) */
+  couperClip: (piste: string, clip: string, clientX: number) => boolean;
 }
+
+/** Piste rendue muette par le bouton M (champ facultatif du projet, comme `tk.mute` du design). */
+export const estMuette = (tk: Piste): boolean => !!(tk as Piste & { mute?: boolean }).mute;
 
 interface Apercu { id: string; abs?: number; dur?: number; lead?: number; v?: number }
 
@@ -68,6 +75,7 @@ const PisteRangee = memo(function PisteRangee({ tk, top, h, projet, plan, S, pps
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             e.stopPropagation();
+            if (actions.couperClip(tk.id, c.id, e.clientX)) return;
             actions.choisir({ piste: tk.id, clip: c.id });
             const x0 = e.clientX, a0 = (S[c.ev] ?? 0) + c.off;
             let a = a0;
@@ -127,7 +135,7 @@ const PisteRangee = memo(function PisteRangee({ tk, top, h, projet, plan, S, pps
   }
 
   return (
-    <div className="cd-piste" data-ouverte={ouverte ? '' : undefined} data-sel={pisteChoisie ? '' : undefined} style={style}>
+    <div className="cd-piste" data-ouverte={ouverte ? '' : undefined} data-sel={pisteChoisie ? '' : undefined} data-muet={estMuette(tk) ? '' : undefined} style={style}>
       <div className="cd-piste-voie"
         onDoubleClick={(e) => {
           if (!tk.marks) return;
@@ -141,6 +149,7 @@ const PisteRangee = memo(function PisteRangee({ tk, top, h, projet, plan, S, pps
           <svg width="8" height="8" viewBox="0 0 8 8"><path d="M2 1 L6 4 L2 7" fill="none" stroke="currentColor" strokeWidth="1.3" /></svg>
         </button>
         <span className="cd-piste-nom" title={tk.name} onClick={() => actions.choisir({ piste: tk.id })}>{tk.name}</span>
+        <button className="cd-muet" title="Couper la piste" aria-pressed={estMuette(tk)} onClick={() => actions.muet(tk.id)}>M</button>
       </div>
     </div>
   );

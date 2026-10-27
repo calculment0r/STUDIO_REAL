@@ -5,12 +5,12 @@ import { memoireEnNombre, normaliserNom } from './blocs-moteur';
 
 /** Signaux numériques de la salle lisibles par une condition. */
 export const SIGNAUX_SALLE = ['pres', 'quorum', 'prets', 'bruit', 'assis'] as const;
-/** Clés de condition connues (plus 'mem:<nom>'). */
+/** Clés de condition connues (plus 'mem:<nom>', 'sig:<nom>' et 'sigv:<nom>'). */
 export const CLES_CONDITION = ['t', ...SIGNAUX_SALLE, 'issue'] as const;
 export const OPERATEURS: readonly Condition['op'][] = ['≥', '≤', '=', '≠', '>', '<'];
 
 export const estCleCondition = (k: unknown): boolean =>
-  typeof k === 'string' && ((CLES_CONDITION as readonly string[]).includes(k) || /^mem:.+/.test(k));
+  typeof k === 'string' && ((CLES_CONDITION as readonly string[]).includes(k) || /^(mem|sig|sigv):.+/.test(k));
 
 /** Signaux neutres (aucune salle) : utilisés avant le premier appel à avancer(). */
 export const SIGNAUX_VIDES: Signaux = { pres: 0, quorum: 0, prets: 0, bruit: 72, assis: 0 };
@@ -22,13 +22,22 @@ export interface ContexteCondition {
   /** issue retenue au dernier vote (si le signal n'en donne pas) */
   issue?: string;
   memoires: Record<string, number | string | boolean>;
+  /** réceptions de chaque signal extérieur depuis l'entrée dans l'étape en cours (nom normalisé → nombre) */
+  receptions?: Record<string, number>;
+  /** dernière valeur reçue de chaque signal extérieur (nom normalisé → valeur) */
+  valeursSignaux?: Record<string, number | string | boolean>;
 }
+
+/** Clé d'un signal extérieur : son nom normalisé (casse, accents et espaces ignorés). */
+export const cleSignal = (nom: string): string => normaliserNom(nom);
 
 /** Valeur courante lue par une condition. */
 export function valeurCondition(k: string, ctx: ContexteCondition): number | string | boolean | undefined {
   if (k === 't') return ctx.tEtape;
   if (k === 'issue') return ctx.signaux.issue ?? ctx.issue;
   if (k.startsWith('mem:')) return ctx.memoires[k.slice(4)] ?? 0;
+  if (k.startsWith('sig:')) return ctx.receptions?.[cleSignal(k.slice(4))] ?? 0;
+  if (k.startsWith('sigv:')) return ctx.valeursSignaux?.[cleSignal(k.slice(5))] ?? 0;
   if ((SIGNAUX_SALLE as readonly string[]).includes(k)) return ctx.signaux[k as (typeof SIGNAUX_SALLE)[number]];
   return undefined;
 }

@@ -1,11 +1,11 @@
-// Placement des moments sur la conduite (port de `sched()` du design, conception/conducteur/source/…dc.html).
+// Placement des moments sur la conduite : les positions du moteur (planifier de @studio-real/modele, port de `sched()`).
 // Logique pure, testée dans planning.test.ts.
 //
 // Chaque moment dure le parcours prévu de ses étapes : on suit, depuis l'étape d'entrée, la sortie qui se remplit
 // la première d'après la salle simulée (projet.sens) ; une étape dure au moins sa durée prévue. Entre deux moments,
 // le passage attend que ses conditions soient remplies (pointillés), puis, s'il est « go », l'attente du top régie
 // mesurée pendant la lecture (projet.hold, hachurée).
-import { dureeEtape, type Condition, type Etape, type Moment, type Passage, type Projet, type SalleSimulee, type Sortie } from '@studio-real/modele';
+import { dureeEtape, planifier as planifierModele, type Condition, type Etape, type Moment, type Passage, type Projet, type SalleSimulee, type Sortie } from '@studio-real/modele';
 
 export interface Course { st: Etape; S: number; E: number; tr: Sortie | null; bloque: boolean }
 export interface PlanMoment { ev: Moment; i: number; S: number; E: number; run: Course[] }
@@ -51,59 +51,38 @@ export function franchissement(g: Condition, sens: SalleSimulee, issue: string):
   return 0;
 }
 
-function tempsSortie(tr: Sortie, sens: SalleSimulee, issue: string): number {
-  if (!tr.g.length) return 0;
-  const c = tr.g.map((g) => franchissement(g, sens, issue));
-  return tr.mode === 'any' ? Math.min(...c) : Math.max(...c);
-}
 
 export function entrees(ev: Moment): string[] {
   return typeof ev.entry === 'string' ? [ev.entry] : Object.values(ev.entry);
 }
 
+/**
+ * Le plan de la conduite, tiré du moteur (`planifier` de @studio-real/modele) : les mêmes positions que le lecteur,
+ * pour que la tête de lecture tombe juste sur les moments. On y ajoute ce que la conduite dessine : le passage « go »
+ * où elle s'arrête (premier sans top), et la durée prévue cumulée.
+ */
 export function planifier(p: Projet): Plan {
-  const iss = issueSimulee(p.sens);
-  let T = 0, planned = 0;
-  let pending: PlanPassage | null = null;
+  const pl = planifierModele(p);
   const evs: PlanMoment[] = [], gates: PlanPassage[] = [];
-  p.ev.forEach((ev, i) => {
-    const S0 = T, run: Course[] = [];
-    let sid: string | undefined = typeof ev.entry === 'string' ? ev.entry : (ev.entry[iss] ?? Object.values(ev.entry)[0]);
-    const vu = new Set<string>();
-    while (sid && !vu.has(sid)) {
-      vu.add(sid);
-      const st = ev.st.find((x) => x.id === sid);
-      if (!st) break;
-      const d = dureeEtape(st);
-      planned += d;
-      const outs = ev.tr.filter((x) => x.a === sid);
-      let tr: Sortie | null = null, c = 0;
-      if (outs.length) {
-        let bc = 1e12;
-        for (const o of outs) { const cc = tempsSortie(o, p.sens, iss); if (cc < bc) { bc = cc; tr = o; } }
-        c = bc;
-      }
-      const bloque = c >= 1e8;
-      const ex = bloque ? d + 600 : Math.max(d, c);
-      run.push({ st, S: T, E: T + ex, tr, bloque });
-      T += ex;
-      sid = tr ? tr.b || undefined : undefined;
+  let planned = 0, pending = false;
+  pl.moments.forEach((mp, i) => {
+    const ev = p.ev[i];
+    const run: Course[] = [];
+    for (const e of mp.etapes) {
+      const st = ev.st.find((x) => x.id === e.id);
+      if (!st) continue;
+      planned += dureeEtape(st);
+      run.push({ st, S: e.debut, E: e.fin, tr: e.sortie, bloque: e.bloque });
     }
-    if (!run.length) T += 10;
-    evs.push({ ev, i, S: S0, E: T, run });
-    if (ev.gate && i < p.ev.length - 1) {
-      const g = ev.gate;
-      const cc = g.g.length ? Math.max(...g.g.map((x) => franchissement(x, p.sens, iss))) : 0;
-      const ready = T + Math.min(cc, 600);
-      const hold = g.mode === 'go' ? (p.hold[ev.id] ?? 0) : 0;
+    evs.push({ ev, i, S: mp.debut, E: mp.fin, run });
+    if (mp.passage) {
+      const g: Passage = ev.gate ?? { mode: 'auto', g: [] };
       const pend = g.mode === 'go' && !p.go[ev.id] && !pending;
-      const gg: PlanPassage = { ev, i, g, S: T, ready, pass: ready + hold, hold, pend };
-      if (pend) pending = gg;
-      gates.push(gg);
-      T = gg.pass;
+      if (pend) pending = true;
+      gates.push({ ev, i, g, S: mp.passage.debut, ready: mp.passage.pret, pass: mp.passage.fin, hold: mp.passage.attente, pend });
     }
   });
-  return { evs, gates, total: T, planned, issue: iss };
+  return { evs, gates, total: pl.total, planned, issue: pl.issue };
 }
 
 /** Index du moment qui joue à l'instant t (le dernier commencé ; le premier avant 0). -1 si aucun moment. */

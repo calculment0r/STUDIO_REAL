@@ -22,7 +22,7 @@ Application web (Vite + React 19 + TypeScript + zustand) qui reproduit **fidèle
 - **Format** : `@studio-real/modele` → `types.ts` (ne pas le modifier sans le dire dans son rapport ; un ajout de champ optionnel est permis).
 - **Moteur** : `@studio-real/modele` → `moteur.ts` (signatures). Le chantier MODÈLE exporte `creerLecteur` et `signauxSalle` depuis `index.ts`.
 - **Magasin** (`src/etat/magasin.ts`, chantier COQUILLE) : `useMagasin` (zustand) expose au minimum
-  `projet`, `selection: { moment?: string; etape?: string }`, `mode: 'ecrire' | 'repeter' | 'jouer'`,
+  `projet`, `selection: { moment?: string; etape?: string }` (étendue : `sortie`, `passage`, `acte`, `piste`…), `mode: 'preparer' | 'jouer'` (les modes du design ; `changerMode` accepte encore 'ecrire' / 'repeter', ramenés à 'preparer'),
   `lecture: EtatLecture | null`, `zoomPlanche`, `zoomConduite`, et les actions `selectionner`, `modifierProjet(fn)`,
   `lancer()`, `pause()`, `top()`, `allerA()`. CONDUITE et PLANCHE lisent et appellent ces actions, rien d'autre.
 - **Blocs** (chantier BLOCS) : `src/blocs/index.ts` exporte `CATALOGUE` (familles, blocs, réglages, sorties nommées) et

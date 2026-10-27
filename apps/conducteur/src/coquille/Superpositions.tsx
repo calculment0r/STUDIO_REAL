@@ -106,7 +106,8 @@ export function Pupitre() {
 const RACCOURCIS: [string, string][] = [
   ['Espace', 'Lecture / pause'], ['T', 'Top régie'], ['P', 'Pupitre de représentation'], ['Ctrl + Espace', 'Tiroir des assets'],
   ['Ctrl + Z', 'Annuler'], ['Ctrl + Maj + Z', 'Rétablir'], ['M', 'Nouveau moment'], ['K', 'Note de régie à la tête de lecture'],
-  ['+ / −', 'Zoom de la conduite'], ['F', 'Plein écran (sur la planche : recadrer)'], ['Échap', 'Fermer / désélectionner'], ['?', 'Raccourcis'],
+  ['+ / −', 'Zoom de la conduite'], ['F', 'Plein écran (sur la planche : recadrer)'], ['V / C', 'Outils de la conduite : sélection / couper'], ['Ctrl + K', 'Rechercher'],
+  ['Échap', 'Fermer / désélectionner'], ['?', 'Raccourcis'],
 ];
 
 export function Aide() {

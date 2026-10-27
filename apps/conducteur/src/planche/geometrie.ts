@@ -3,6 +3,7 @@
 // (conception/conducteur/source/Studio Real Conducteur.dc.html). Testé dans geometrie.test.ts.
 import type { Condition, Etape, Moment, Projet, Sortie } from '@studio-real/modele';
 import { dureeEtape } from '@studio-real/modele';
+import { nouvelId } from '../etat/ids';
 
 // ── Constantes du monde (pixels du monde, zoom 1) ─────────────────────────────────────────────
 export const LARGEUR_BLOC = 240;
@@ -235,9 +236,7 @@ export function supprimerEtape(m: Moment, id: string): boolean {
 export function creerEtape(p: Projet, momentId: string, fx: number, x: number, y: number, ty = 'k:passage', nom = 'Nouvelle étape'): string | null {
   const m = p.ev.find(e => e.id === momentId);
   if (!m) return null;
-  let id = 'st' + p.nid;
-  while (m.st.some(e => e.id === id)) id = 'st' + (++p.nid);
-  p.nid++;
+  const id = nouvelId(p, 'st');
   m.st.push({ id, name: nom, ty, ...grilleDepuisPoint(fx, x, y), k: [3, 50, 50] });
   return id;
 }
@@ -253,9 +252,10 @@ export function libelleCondition(g: Condition): string {
   const v = g.v, op = g.op;
   switch (g.k) {
     case 't': return op === '≥' || op === '>' ? 'après ' + fm(+v) : op + ' ' + fm(+v);
-    case 'pres': return `${op} ${v} présents`;
-    case 'quorum': return `${op} ${v} % des votes`;
-    case 'prets': return `${op} ${v} % des téléphones prêts`;
+    // phrases du design (glab) pour l'opérateur habituel ; sinon l'opérateur est écrit
+    case 'pres': return op === '≥' ? `au moins ${v} spectateurs assis` : `${op} ${v} spectateurs assis`;
+    case 'quorum': return op === '≥' ? `${v} % des votes reçus` : `${op} ${v} % des votes reçus`;
+    case 'prets': return op === '≥' ? `${v} % des téléphones prêts` : `${op} ${v} % des téléphones prêts`;
     case 'bruit': return op === '≤' || op === '<' ? `salle calme · ${op} ${v} dB` : `${op} ${v} dB`;
     case 'assis': return `${op} ${v} % du public assis`;
     case 'issue': {
@@ -274,7 +274,7 @@ export function regleSortie(s: Sortie, nbSoeurs: number): string {
   return s.g.map(libelleCondition).join(s.mode === 'any' ? ' ou ' : ' et ');
 }
 
-// ── États de lecture (mode Jouer / Répéter) ─────────────────────────────────────────────────────
+// ── États de lecture (Préparer et Jouer) ─────────────────────────────────────────────────────
 export type StatutEtape = 'neutre' | 'joue' | 'actif' | 'avenir' | 'ignore';
 
 export interface LectureMinimale {

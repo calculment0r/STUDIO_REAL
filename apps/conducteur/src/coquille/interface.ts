@@ -8,17 +8,19 @@ interface Interface {
   vue: Vue;
   largeurPanneau: number;
   hauteurConduite: number;
-  /** Réglages ouvert, Avancé fermé, Salle simulée ouverte (elle n'existe qu'en Répéter), Versions fermé. */
+  /** Réglages ouvert, Avancé fermé, Salle simulée fermée, Versions fermé (comme le design). */
   acc: Accordeons;
   tiroir: boolean;
   pupitre: boolean;
   aide: boolean;
   allerA: boolean;
+  /** Recherche (loupe, Ctrl+K). */
+  recherche: boolean;
   pleinEcran: boolean;
   /** Alertes de sécurité déjà accusées (id du repère). */
   accuses: string[];
   poser: (p: Partial<Omit<Interface, 'poser' | 'basculer'>>) => void;
-  basculer: (k: 'tiroir' | 'pupitre' | 'aide' | 'allerA') => void;
+  basculer: (k: 'tiroir' | 'pupitre' | 'aide' | 'allerA' | 'recherche') => void;
   basculerAcc: (k: keyof Accordeons) => void;
 }
 
@@ -29,11 +31,12 @@ export const useInterface = create<Interface>((set, get) => ({
   vue: 'both',
   largeurPanneau: 300,
   hauteurConduite: hauteurInitiale(),
-  acc: { r: true, a: false, s: true, v: false },
+  acc: { r: true, a: false, s: false, v: false },
   tiroir: false,
   pupitre: false,
   aide: false,
   allerA: false,
+  recherche: false,
   pleinEcran: false,
   accuses: [],
   poser: (p) => set(p),

@@ -2,9 +2,14 @@
 // Planche maison (HTML + SVG) : un calque « monde » transformé (translate + scale) porte cadres, blocs, liens et ronds ;
 // le panoramique et le zoom ne changent que ce transform (et --z), sans re-rendre les moments.
 // Zoom sémantique : < 50 % vue d'ensemble · 50–100 % étapes · > 100 % réglages. En mode Jouer, la caméra suit l'étape en cours.
+// En mode Préparer, un clic sur une étape y amène la tête de lecture (comme le design). Double-clic dans un cadre : une
+// étape ; clic droit : nouvelle étape ici, un bloc de la bibliothèque, nouvelle sortie depuis une étape. « + BLOC » : la
+// bibliothèque. Sorties et passages choisis passent par la sélection du magasin (le panneau de droite les montre).
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as RKeyboardEvent, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from 'react';
 import type { EtatLecture, Projet } from '@studio-real/modele';
 import { useMagasin } from '../etat/magasin';
+import { useInterface } from '../coquille/interface';
+import { nouveauMoment } from '../coquille/raccourcis';
 import {
   ajouterSortie, appliquerProvisoire, bornerZoom, cadreAuPoint, cadrer, cameraProche, cheminLien, creerEtape, deplacerSortie,
   ecranVersMonde, entreesDe, etapeDEntree, etapeDeFin, intersecte, niveauZoom, placerMoments, pointSurLien, rapprocher,
@@ -12,7 +17,7 @@ import {
   type Camera, type DecalageProvisoire, type Niveau, type Point, type Rect,
 } from './geometrie';
 import { MomentPlanche, type ApiPlanche, type RotatifProvisoire } from './MomentPlanche';
-import type { ThemePlanche } from './pont-blocs';
+import { bibliotheque, type EntreeBibliotheque, type ThemePlanche } from './pont-blocs';
 import { teinte } from './styles';
 import './planche.css';
 
@@ -28,6 +33,10 @@ type Geste =
 
 interface LienEnCours { moment: string; a: string; sx: number; sy: number; mx: number; my: number }
 interface SortieChoisie { moment: string; i: number }
+/** Menu du clic droit : position à l'écran (dans la boîte) et point du monde visé ; moment et étape sous le pointeur. */
+interface MenuPlanche { x: number; y: number; wx: number; wy: number; moment: string | null; etape: string | null }
+/** Bibliothèque ouverte : où poser le bloc (moment, point du monde) et, s'il y a lieu, l'étape d'où part la sortie. */
+interface Bibliotheque { x: number; y: number; moment: string | null; wx: number | null; wy: number | null; depuis: string | null }
 
 const LIBELLE_NIVEAU: [string, Niveau][] = [['VUE D’ENSEMBLE', 'loin'], ['ÉTAPES', 'moyen'], ['RÉGLAGES', 'pres']];
 
@@ -36,12 +45,17 @@ export function Planche() {
   const selection = useMagasin(s => s.selection);
   const mode = useMagasin(s => s.mode);
   const lecture = useMagasin(s => s.lecture);
+  const enLecture = useMagasin(s => s.enLecture);
+  const verrou = useMagasin(s => s.verrou);
+  const cadrage = useMagasin(s => s.cadrage);
   const themeMagasin = useMagasin(s => (s as { theme?: string }).theme);
   const selectionner = useMagasin(s => s.selectionner);
   const modifierProjet = useMagasin(s => s.modifierProjet);
   const zoomerPlanche = useMagasin(s => s.zoomerPlanche);
+  const vueUi = useInterface(s => s.vue);
   const theme: ThemePlanche = themeMagasin === 'clair' ? 'clair' : 'sombre';
-  const editable = mode !== 'jouer';
+  // Comme le design : on modifie dans les deux modes ; seul le verrou « scène » fige la planche.
+  const editable = !verrou;
 
   const refBoite = useRef<HTMLDivElement>(null);
   const [taille, setTaille] = useState({ l: 0, h: 0 });
@@ -49,7 +63,10 @@ export function Planche() {
   const [suivre, setSuivre] = useState(true);
   const [prov, setProv] = useState<DecalageProvisoire | null>(null);
   const [lien, setLien] = useState<LienEnCours | null>(null);
-  const [sortieSel, setSortieSel] = useState<SortieChoisie | null>(null);
+  // La sortie choisie vient de la sélection du magasin ({ moment, sortie }) : le panneau de droite la montre.
+  const sortieSel: SortieChoisie | null = selection.moment && selection.sortie !== undefined ? { moment: selection.moment, i: selection.sortie } : null;
+  const [menu, setMenu] = useState<MenuPlanche | null>(null);
+  const [biblio, setBiblio] = useState<Bibliotheque | null>(null);
   const [rotatif, setRotatif] = useState<(RotatifProvisoire & { moment: string }) | null>(null);
   const [pan, setPan] = useState(false);
   const [message, setMessage] = useState('');
@@ -73,7 +90,8 @@ export function Planche() {
     window.clearTimeout(minuterieMessage.current);
     minuterieMessage.current = window.setTimeout(() => setMessage(''), 2600);
   }, []);
-  const choisir = useCallback((s: { moment?: string; etape?: string }) => { selectionInterne.current = true; selectionner(s); }, [selectionner]);
+  const choisir = useCallback((s: { moment?: string; etape?: string; sortie?: number; passage?: boolean }) => { selectionInterne.current = true; selectionner(s); }, [selectionner]);
+  const setSortieSel = useCallback((s: SortieChoisie | null) => { if (s) choisir({ moment: s.moment, sortie: s.i }); }, [choisir]);
   const modifierMoment = useCallback((id: string, fn: (p: Projet, m: Projet['ev'][number]) => void) => {
     modifierProjet(p => { const m = p.ev.find(e => e.id === id); if (m) fn(p, m); });
   }, [modifierProjet]);
@@ -151,6 +169,17 @@ export function Planche() {
     } else setCam(cadrer(f.r, T.l, T.h));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection.moment, selection.etape]);
+
+  // ── Demande de cadrage (double-clic sur un moment de la conduite, recherche) ──
+  useEffect(() => {
+    if (!cadrage) return;
+    const { taille: T, parId: P } = etat.current;
+    const f = P.get(cadrage.moment);
+    if (!f || T.l < 50) return;
+    selectionInterne.current = false;
+    setSuivre(false);
+    setCam(cadrer(f.r, T.l, T.h));
+  }, [cadrage]);
 
   // ── Mode Jouer : la caméra suit l'étape en cours et cadre le moment ──
   useEffect(() => { if (mode === 'jouer') setSuivre(true); }, [mode]);
@@ -250,7 +279,6 @@ export function Planche() {
           // clic dans le vide : choisir le moment sous le pointeur, désélectionner l'étape et la sortie
           const w = ecranVersMonde(c, g.sx, g.sy);
           const f = F.find(x => w.x >= x.r.x && w.x <= x.r.x + x.r.w && w.y >= x.r.y && w.y <= x.r.y + x.r.h);
-          setSortieSel(null);
           choisir({ moment: f ? f.moment.id : etat.current.selection.moment });
         }
         return;
@@ -280,7 +308,7 @@ export function Planche() {
           if (m?.tr.some(s => s.a === lk.a && s.b === b)) { dire('Cette sortie existe déjà.'); return; }
           let index = -1;
           modifierMoment(mo, (_p, mm) => { if (ajouterSortie(mm, lk.a, b)) index = mm.tr.length - 1; });
-          if (index >= 0) { setSortieSel({ moment: mo, i: index }); choisir({ moment: mo, etape: lk.a }); dire('Sortie créée. Règle sa condition dans le panneau.'); }
+          if (index >= 0) { setSortieSel({ moment: mo, i: index }); dire('Sortie créée. Règle sa condition dans le panneau.'); }
           return;
         }
         // lâché dans le vide : nouvelle étape reliée, posée au point de lâcher
@@ -304,7 +332,7 @@ export function Planche() {
       window.removeEventListener('pointerup', lacher);
       window.removeEventListener('pointercancel', lacher);
     };
-  }, [choisir, dire, modifierMoment, relatif]);
+  }, [choisir, dire, modifierMoment, relatif, setSortieSel]);
 
   // ── API stable passée aux moments ──
   const api = useMemo<ApiPlanche>(() => ({
@@ -312,16 +340,21 @@ export function Planche() {
       if (e.button !== 0) return;
       e.stopPropagation();
       refBoite.current?.focus({ preventScroll: true });
-      setSortieSel(null);
+      setMenu(null);
       const s = etat.current.selection;
-      if (s.moment !== moment || s.etape !== etape) choisir({ moment, etape });
+      if (s.moment !== moment || s.etape !== etape) {
+        selectionInterne.current = true;
+        // Préparer : la tête de lecture va à l'étape (cue), comme le design. Sinon : on la choisit seulement.
+        if (useMagasin.getState().mode !== 'jouer') useMagasin.getState().allerA(moment, etape);
+        else choisir({ moment, etape });
+      }
       geste.current = { type: 'etape', moment, etape, x0: e.clientX, y0: e.clientY, bouge: false, poignee };
     },
     saisirSortie: (e, moment, etape, x, y) => {
       if (e.button !== 0) return;
       e.stopPropagation();
       refBoite.current?.focus({ preventScroll: true });
-      if (!etat.current.editable) { dire('Mode Jouer : la planche est en lecture seule.'); return; }
+      if (!etat.current.editable) { dire('Mode scène : la planche est verrouillée.'); return; }
       geste.current = { type: 'lien' };
       setLien({ moment, a: etape, sx: x, sy: y, mx: x, my: y });
     },
@@ -330,9 +363,6 @@ export function Planche() {
       e.stopPropagation();
       refBoite.current?.focus({ preventScroll: true });
       setSortieSel({ moment, i: index });
-      const m = etat.current.projet.ev.find(x => x.id === moment);
-      const s = m?.tr[index];
-      if (s) choisir({ moment, etape: s.a });
     },
     deplacerSortie: (moment, index, sens) => {
       if (!etat.current.editable) return;
@@ -346,11 +376,12 @@ export function Planche() {
       geste.current = { type: 'rotatif', moment, etape, i, v0, y0: e.clientY };
       setRotatif({ moment, etape, i, v: v0 });
     },
-  }), [choisir, dire, modifierMoment]);
+  }), [choisir, dire, modifierMoment, setSortieSel]);
 
   // ── Fond de la planche : panoramique, pincement, clic ──
   const surFond = (e: RPointerEvent<HTMLDivElement>) => {
     refBoite.current?.focus({ preventScroll: true });
+    if (e.button !== 2) { setMenu(null); setBiblio(null); }
     pointeurs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointeurs.current.size >= 2) {
       const pts = [...pointeurs.current.values()];
@@ -368,7 +399,7 @@ export function Planche() {
 
   const surDoubleClic = (e: RMouseEvent<HTMLDivElement>) => {
     if ((e.target as Element).closest('[data-ui],[data-etape]')) return;
-    if (!editable) { dire('Mode Jouer : la planche est en lecture seule.'); return; }
+    if (!editable) { dire('Mode scène : la planche est verrouillée.'); return; }
     const p = relatif(e.clientX, e.clientY), w = ecranVersMonde(cam, p.x, p.y);
     const f = cadreAuPoint(cadres, w.x, w.y);
     if (!f) return;
@@ -377,11 +408,94 @@ export function Planche() {
     if (id) { choisir({ moment: f.moment.id, etape: id }); dire(`Étape ajoutée dans « ${f.moment.name} ». Relie-la pour qu’elle soit jouée.`); }
   };
 
+  // ── Clic droit : menu ; bibliothèque de blocs ──
+  const surMenu = (e: RMouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if ((e.target as Element).closest('[data-ui]:not([data-etape])')) return;
+    const p = relatif(e.clientX, e.clientY), w = ecranVersMonde(cam, p.x, p.y);
+    const el = (e.target as Element).closest('[data-etape]') as HTMLElement | null;
+    const f = el?.dataset.moment ? parId.get(el.dataset.moment) ?? null : cadreAuPoint(cadres, w.x, w.y);
+    setBiblio(null);
+    setMenu({ x: p.x, y: p.y, wx: w.x, wy: w.y, moment: f ? f.moment.id : null, etape: el?.dataset.etape ?? null });
+  };
+
+  /** Crée une étape (type et rotatifs donnés) dans le moment, au point du monde ; la relie depuis `depuis` s'il y a lieu. */
+  const poserEtape = (moment: string, wx: number, wy: number, b: EntreeBibliotheque | null, depuis: string | null) => {
+    if (!editable) { dire('Mode scène : la planche est verrouillée.'); return; }
+    const f = parId.get(moment);
+    if (!f) return;
+    let id: string | null = null;
+    modifierMoment(moment, (pp, m) => {
+      id = creerEtape(pp, m.id, f.fx, wx, wy, b?.ty, b?.nom);
+      const st = id ? m.st.find(x => x.id === id) : undefined;
+      if (st && b) st.k = [...b.k];
+      if (id && depuis) ajouterSortie(m, depuis, id);
+    });
+    if (id) {
+      choisir({ moment, etape: id });
+      const de = depuis ? f.moment.st.find(x => x.id === depuis)?.name : null;
+      dire(de ? `Étape créée, reliée depuis « ${de} ».` : `Étape ajoutée dans « ${f.moment.name} ». Relie-la pour qu’elle soit jouée.`);
+    }
+  };
+
+  /** Point libre à droite d'une étape (nouvelle sortie depuis elle), ou à droite du moment. */
+  const pointLibre = (moment: string, depuis: string | null): Point | null => {
+    const f = parId.get(moment);
+    if (!f) return null;
+    const p = depuis ? f.P[depuis] : undefined;
+    if (p) {
+      const pris = (x: number, y: number) => Object.values(f.P).some(q => Math.abs(q.x - x) < LARGEUR_BLOC && Math.abs(q.y - y) < 120);
+      let x = p.x + LARGEUR_BLOC + 160, y = p.y;
+      while (pris(x, y) && y < p.y + 2000) y += 320;
+      return { x, y };
+    }
+    const xs = Object.values(f.P);
+    if (!xs.length) return { x: f.r.x + 60, y: f.r.y + 100 };
+    const der = xs.reduce((a, b) => (b.x > a.x ? b : a));
+    return { x: der.x + LARGEUR_BLOC + 160, y: der.y };
+  };
+
+  const commandesMenu = (mn: MenuPlanche): { n: string; d: string; go: () => void }[] => {
+    const f = mn.moment ? parId.get(mn.moment) : undefined;
+    if (!f) return [{ n: 'Nouveau moment', d: 'après le moment choisi · M', go: () => nouveauMoment() }];
+    const m = f.moment, x = mn.wx - LARGEUR_BLOC / 2, y = mn.wy - Y_ENTREE;
+    if (mn.etape) {
+      const st = m.st.find(s => s.id === mn.etape);
+      if (!st) return [];
+      const r: { n: string; d: string; go: () => void }[] = [
+        { n: `Nouvelle sortie depuis « ${st.name} »`, d: 'vers une nouvelle étape', go: () => { const q = pointLibre(m.id, st.id); if (q) poserEtape(m.id, q.x, q.y, null, st.id); } },
+        { n: 'Nouvelle sortie vers un bloc…', d: 'choisir le bloc dans la bibliothèque', go: () => { const q = pointLibre(m.id, st.id); setBiblio({ x: mn.x, y: mn.y, moment: m.id, wx: q?.x ?? null, wy: q?.y ?? null, depuis: st.id }); } },
+      ];
+      if (!entreesDe(m).includes(st.id)) r.push({ n: 'Supprimer l’étape', d: 'et ses sorties · Suppr', go: () => { let ok = false; modifierMoment(m.id, (_p, mm) => { ok = supprimerEtape(mm, st.id); }); if (ok) { choisir({ moment: m.id }); dire('Étape supprimée.'); } } });
+      return r;
+    }
+    const sel = selection.moment === m.id && selection.etape ? m.st.find(s => s.id === selection.etape) : undefined;
+    const sources = [...(sel ? [sel] : []), ...m.st.filter(s => s !== sel)].slice(0, 5);
+    return [
+      { n: 'Nouvelle étape ici', d: 'dans « ' + m.name + ' » · double-clic', go: () => poserEtape(m.id, x, y, null, null) },
+      { n: 'Un bloc ici…', d: 'choisir dans la bibliothèque', go: () => setBiblio({ x: mn.x, y: mn.y, moment: m.id, wx: x, wy: y, depuis: null }) },
+      ...sources.map(s => ({ n: `Nouvelle sortie depuis « ${s.name} »`, d: 'vers une nouvelle étape ici', go: () => poserEtape(m.id, x, y, null, s.id) })),
+    ];
+  };
+
+  const ouvrirBibliotheque = (x: number, y: number) => {
+    setMenu(null);
+    const mo = selection.moment ?? lecture?.moment ?? cadres[0]?.moment.id ?? null;
+    setBiblio(b => (b ? null : { x, y, moment: mo, wx: null, wy: null, depuis: selection.moment === mo ? selection.etape ?? null : null }));
+  };
+  const choisirBloc = (b: EntreeBibliotheque) => {
+    const bi = biblio;
+    setBiblio(null);
+    if (!bi?.moment) { dire('Choisis d’abord un moment.'); return; }
+    const q = bi.wx !== null && bi.wy !== null ? { x: bi.wx, y: bi.wy } : pointLibre(bi.moment, bi.depuis);
+    if (q) poserEtape(bi.moment, q.x, q.y, b, bi.depuis);
+  };
+
   const supprimer = () => {
     if (!editable) return;
     if (sortieSel) {
       modifierMoment(sortieSel.moment, (_p, m) => { m.tr.splice(sortieSel.i, 1); });
-      setSortieSel(null);
+      choisir({ moment: sortieSel.moment });
       dire('Sortie supprimée.');
       return;
     }
@@ -417,7 +531,11 @@ export function Planche() {
     if (e.key === 'Delete' || e.key === 'Backspace') supprimer();
     else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && sortieSel) api.deplacerSortie(sortieSel.moment, sortieSel.i, e.key === 'ArrowUp' ? -1 : 1);
     else if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) recadrer();
-    else if (e.key === 'Escape') { if (lien) { geste.current = null; setLien(null); } else setSortieSel(null); }
+    else if (e.key === 'Escape') {
+      if (menu || biblio) { setMenu(null); setBiblio(null); }
+      else if (lien) { geste.current = null; setLien(null); }
+      else if (sortieSel) choisir({ moment: sortieSel.moment });
+    }
     else fait = false;
     if (fait) { e.preventDefault(); e.stopPropagation(); }
   };
@@ -461,7 +579,7 @@ export function Planche() {
   return (
     <div ref={refBoite} className={'planche' + (pan ? ' planche--pan' : '')} style={styleBoite} tabIndex={0}
       aria-label="Planche du moment" onPointerDown={surFond} onDoubleClick={surDoubleClic} onKeyDown={surTouche}
-      onContextMenu={e => e.preventDefault()}>
+      onContextMenu={surMenu}>
       <div className="planche-grille" style={{ backgroundSize: `${24 * cam.z}px ${24 * cam.z}px`, backgroundPosition: `${cam.px}px ${cam.py}px` }} />
 
       <div className="planche-monde" style={styleMonde}>
@@ -474,7 +592,7 @@ export function Planche() {
         {passages.map(g => (
           <div key={'p' + g.i} className="planche-ecran" style={{ left: g.mil.x, top: g.mil.y, zIndex: 3 }}>
             <div className="planche-passage" data-ui="1" title={g.go ? 'Passage : attend le top régie' : 'Passage : enchaîne automatiquement'}
-              onPointerDown={e => { e.stopPropagation(); choisir({ moment: cadres[g.i].moment.id }); }}>
+              onPointerDown={e => { e.stopPropagation(); choisir({ moment: cadres[g.i].moment.id, passage: true }); }}>
               <span className={'planche-passage__losange' + (g.ici ? ' planche-pulse' : '')}
                 style={{ background: g.passe ? (g.go ? 'var(--ort)' : 'var(--gt)') : 'var(--bg)', boxShadow: `inset 0 0 0 1.5px ${g.go ? 'var(--ort)' : 'var(--gt)'}` }} />
               {niveau !== 'loin' && <span className="planche-micro" style={{ color: 'var(--ink2)', whiteSpace: 'nowrap', background: 'var(--bg)', padding: '3px 5px', borderRadius: 4 }}>P{g.i + 1} · {g.go ? 'top régie' : 'auto'}</span>}
@@ -518,12 +636,59 @@ export function Planche() {
           <span className="planche-zoom" title="Molette ou Ctrl + molette pour zoomer, deux doigts pour se déplacer">{Math.round(cam.z * 100)}%</span>
           <button type="button" className="planche-btn" title="Zoomer la planche" onClick={() => zoomerDe(1.2)}>+</button>
         </div>
-        <div className="planche-groupe">
-          {mode === 'jouer'
-            ? <button type="button" className={'planche-seg' + (suivre ? ' planche-seg--on' : '')} title="La caméra suit l’étape en cours · F" onClick={() => setSuivre(true)}>SUIVRE</button>
-            : <button type="button" className="planche-seg" title="Cadrer le moment sélectionné · F" onClick={recadrer}>CADRER</button>}
-        </div>
+        <button type="button" className="planche-carre" title={vueUi === 'board' ? 'Revenir à la planche et la conduite' : 'Planche en plein écran'}
+          onClick={() => useInterface.getState().poser({ vue: vueUi === 'board' ? 'both' : 'board' })}>
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true">
+            <path d={vueUi === 'board' ? 'M5 1.5V5H1.5M9 1.5V5h3.5M9 12.5V9h3.5M5 12.5V9H1.5' : 'M1.5 5V1.5H5M9 1.5h3.5V5M12.5 9v3.5H9M5 12.5H1.5V9'} />
+          </svg>
+        </button>
+        <button type="button" className="planche-bloc-btn" title="Bibliothèque de blocs · double-clic ou clic droit sur la planche"
+          onClick={e => { const r = e.currentTarget.getBoundingClientRect(), q = relatif(r.left, r.bottom + 6); ouvrirBibliotheque(q.x, q.y); }}>
+          <span>+</span>BLOC
+        </button>
       </div>
+
+      {/* Mode Jouer : la caméra suit (ou le suivi est en pause) */}
+      {mode === 'jouer' && !suivre && (
+        <button type="button" className="planche-suivi" data-ui="1" onPointerDown={e => e.stopPropagation()} onClick={() => setSuivre(true)}>
+          <span className="planche-point" style={{ width: 6, height: 6, background: 'var(--ort)' }} />SUIVI EN PAUSE · REPRENDRE (F)
+        </button>
+      )}
+      {mode === 'jouer' && suivre && enLecture && (
+        <span className="planche-suivi planche-suivi--on">
+          <span className="planche-point planche-pulse" style={{ width: 6, height: 6, background: 'var(--gt)' }} />LA CAMÉRA SUIT LE SPECTACLE
+        </span>
+      )}
+
+      {/* Légende */}
+      {taille.h >= 300 && (
+        <div className="planche-legende" aria-hidden="true">
+          <span><i style={{ background: 'var(--ort)' }} />EN COURS</span>
+          <span><i style={{ background: 'var(--gt)' }} />JOUÉ</span>
+          <span><i className="tirets" />NON CHOISI</span>
+          {taille.l >= 900 && <span className="aide">CLIC MILIEU : DÉPLACER · GLISSER : SÉLECTIONNER · DOUBLE-CLIC : AJOUTER</span>}
+        </div>
+      )}
+
+      {/* Menu du clic droit */}
+      {menu && (
+        <div className="planche-menu" data-ui="1" style={{ left: Math.min(menu.x, taille.l - 270), top: Math.min(menu.y, Math.max(8, taille.h - 230)) }}
+          onPointerDown={e => e.stopPropagation()} onDoubleClick={e => e.stopPropagation()} onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}>
+          <span className="planche-menu__tete">{menu.etape ? 'ÉTAPE' : menu.moment ? 'MOMENT · ' + (parId.get(menu.moment)?.moment.name ?? '') : 'PLANCHE'}</span>
+          {commandesMenu(menu).map((c, k) => (
+            <button key={k} type="button" className="planche-menu__item" onClick={() => { setMenu(null); c.go(); }}>
+              <span className="n">{c.n}</span><span className="d">{c.d}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Bibliothèque de blocs */}
+      {biblio && (
+        <Biblio theme={theme} x={Math.min(biblio.x, taille.l - 300)} y={Math.min(biblio.y, Math.max(8, taille.h - 360))}
+          titre={biblio.depuis ? 'SORTIE VERS UN BLOC' : biblio.moment ? 'BLOC DANS « ' + (parId.get(biblio.moment)?.moment.name ?? '') + ' »' : 'BLOC'}
+          onChoisir={choisirBloc} onFermer={() => setBiblio(null)} />
+      )}
 
       {/* Mini-carte */}
       {mini && taille.h >= 300 && niveau !== 'loin' && (
@@ -546,12 +711,44 @@ export function Planche() {
         </div>
       )}
 
-      {lecture?.bloque && mode !== 'ecrire' && (
+      {lecture?.bloque && enLecture && (
         <div className="planche-bandeau planche-micro" style={{ bottom: message ? 52 : 14, color: 'var(--ort)', boxShadow: `inset 0 0 0 1px ${teinte('var(--ort)', 60)}` }}>
           ÉTAPE BLOQUÉE · AUCUNE SORTIE REMPLIE · TOP RÉGIE POUR FORCER
         </div>
       )}
       {message && <div className="planche-bandeau" style={{ fontSize: 12 }}>{message}</div>}
+    </div>
+  );
+}
+
+/** Bibliothèque de blocs (familles du catalogue), avec un filtre. */
+function Biblio({ theme, x, y, titre, onChoisir, onFermer }: { theme: ThemePlanche; x: number; y: number; titre: string; onChoisir: (b: EntreeBibliotheque) => void; onFermer: () => void }) {
+  const [q, setQ] = useState('');
+  const familles = useMemo(() => bibliotheque(theme), [theme]);
+  const qq = q.toLowerCase().trim();
+  return (
+    <div className="planche-menu planche-biblio" data-ui="1" style={{ left: x, top: y }}
+      onPointerDown={e => e.stopPropagation()} onDoubleClick={e => e.stopPropagation()} onWheel={e => e.stopPropagation()}
+      onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}>
+      <span className="planche-menu__tete">{titre}</span>
+      <input autoFocus value={q} placeholder="Chercher un bloc…" onChange={e => setQ(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Escape') onFermer(); e.stopPropagation(); }} />
+      <div className="planche-biblio__liste" data-scroll="1">
+        {familles.map(f => {
+          const bs = qq ? f.blocs.filter(b => (b.nom + ' ' + f.nom).toLowerCase().includes(qq)) : f.blocs;
+          if (!bs.length) return null;
+          return (
+            <div key={f.id}>
+              <span className="planche-biblio__fam" style={{ color: f.couleur }}>{f.nom.toUpperCase()}</span>
+              {bs.map(b => (
+                <button key={b.ty} type="button" className="planche-menu__item planche-menu__item--ligne" onClick={() => onChoisir(b)}>
+                  <span className="planche-point" style={{ background: b.couleur }} /><span className="n">{b.nom}</span>
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
