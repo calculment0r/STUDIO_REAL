@@ -3,6 +3,7 @@
 // et il refiltre tout texte (humain ou figurant) avant diffusion : aucune voie de contournement.
 
 import { Fenetre } from './util.mjs';
+import { FluxAsr } from './asr-flux.mjs';
 
 const ROLES = new Set(['chat', 'regie', 'comedien', 'telephone']);
 const COULEURS_HUMAINS = ['--cy', '--or', '--grn2', '--amb', '--coral-3', '--ink2', '--coral-2'];
@@ -11,9 +12,10 @@ const CHAMPS_PUBLICS = ['t', 'id', 'pseudo', 'couleur', 'texte', 'ts'];
 function hache(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 export class Jeu {
-  constructor({ moderateur, journal, banques, etatInitial = {}, jetonRegie = null }) {
+  constructor({ moderateur, journal, banques, etatInitial = {}, jetonRegie = null, asrUrl = null }) {
     this.moderateur = moderateur; this.journal = journal; this.banques = banques;
     this.jetonRegie = jetonRegie;
+    this.asrUrl = asrUrl;              // service Whisper : le micro du comédien arrive en binaire sur /ws
     this.clients = new Map();          // ws → client
     this.historique = [];              // chats complets (200 derniers)
     this.vus = new Map();              // clé client → Set(cseq)
@@ -33,7 +35,22 @@ export class Jeu {
     this.clients.set(ws, c);
     return c;
   }
-  retirer(ws) { this.clients.delete(ws); }
+  retirer(ws) { this.clients.get(ws)?.flux?.fermer(); this.clients.delete(ws); }
+
+  /** Audio brut du micro du comédien (PCM 16 bits, mono, 16 kHz) → transcription Whisper côté serveur. */
+  recevoirAudio(c, buf) {
+    if (c.role !== 'comedien' || !this.asrUrl) return;
+    c.flux ||= new FluxAsr({
+      url: this.asrUrl,
+      onAsr: (m) => this._asr(c, m),
+      journal: (e) => this.journal.ecrire(e),
+      onEtat: (etat, detail) => {
+        this.envoyer(c, { t: 'asr.etat', etat, detail });
+        if (etat === 'erreur') this.journalRegie('transcription Whisper en erreur : ' + (detail || ''));
+      },
+    });
+    c.flux.pousser(buf);
+  }
 
   envoyer(c, obj) { if (c.ws.readyState === 1) { try { c.ws.send(JSON.stringify(obj)); } catch { /* rien */ } } }
   versRole(role, obj) { const s = JSON.stringify(obj); for (const c of this.clients.values()) if (c.role === role && c.ws.readyState === 1) { try { c.ws.send(s); } catch { /* rien */ } } }
@@ -152,7 +169,8 @@ export class Jeu {
     c.cle = `${role}:${c.pseudo}`;
     this.journal.ecrire({ e: 'hello', role, pseudo: c.pseudo, tc: m.tc });
     const historique = this.historique.slice(-30).map((x) => this.vue(x, role));
-    this.envoyer(c, { t: 'welcome', ts: Date.now(), etat: this.etatPour(role), historique, ...(role === 'telephone' ? { pseudo: c.pseudo } : {}) });
+    this.envoyer(c, { t: 'welcome', ts: Date.now(), etat: this.etatPour(role), historique, ...(role === 'telephone' ? { pseudo: c.pseudo } : {}),
+      ...(role === 'comedien' ? { asr_serveur: !!this.asrUrl } : {}) });
   }
 
   _asr(c, m) {

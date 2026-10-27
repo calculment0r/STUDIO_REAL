@@ -16,6 +16,15 @@ const ws = connecter({
     if (m.t === 'welcome') {
       chat.historique(m.historique);
       majMarquage(m.etat && m.etat.marquage);
+      asrServeur = !!m.asr_serveur && new URLSearchParams(location.search).get('asr') !== 'navigateur';
+      majModeAsr();
+    } else if (m.t === 'asr' && asrServeur) {
+      // transcription Whisper renvoyée par le serveur
+      if (m.kind === 'final') montrerFinal(m.texte); else $('partiel').textContent = m.texte;
+    } else if (m.t === 'asr.etat') {
+      if (m.etat === 'voix') $('micEtat').classList.add('voix');
+      else if (m.etat === 'silence') $('micEtat').classList.remove('voix');
+      else if (m.etat === 'erreur') alerter('Transcription en panne', 'Le service Whisper ne répond pas (' + (m.detail || '') + '). Le champ « dire au chat » reste utilisable.');
     } else if (m.t === 'chat') {
       chat.ajouter(m);
       if (m.origine) majMarquage('discret');      // origine reçue = le serveur est en mode discret
@@ -73,6 +82,8 @@ let essais = 0;          // erreurs consécutives (backoff)
 let derniereErreur = null;
 let partielPrec = '';
 let partielT = 0;        // heure client du dernier partiel de la phrase en cours (~ fin de la voix)
+let minuteurSilence = null;
+const SILENCE_MS = 1100; // fin de phrase décidée par nous : 1,1 s sans nouveau mot
 let minuteurVoix = null;
 let minuteurRelance = null;
 
@@ -87,32 +98,38 @@ function lancer() {
 
   rec.onstart = () => { etatMic('ecoute', 'le micro écoute'); alerter(null); };
 
+  // Une session de reconnaissance = une phrase. Safari découpe la phrase en plusieurs résultats et
+  // n'en marque « final » que tard (5 à 7 s mesurés le 27/10) : on recolle TOUS les résultats de la
+  // session, et c'est nous qui finalisons après SILENCE_MS sans nouveau mot, puis on relance l'écoute.
+  const session = rec;
+  let envoye = false;
+  const finaliser = () => {
+    if (envoye || session !== rec) return;
+    const txt = partielPrec.trim();
+    if (!txt) return;
+    envoye = true;
+    const tc = Date.now();
+    ws.asr('final', txt, tc, partielT || tc);   // tFinPhrase : dernier partiel vu pour cette phrase
+    montrerFinal(txt);
+    partielPrec = ''; partielT = 0; $('partiel').textContent = '';
+    try { session.stop(); } catch (e) { /* déjà arrêtée : onend relance */ }
+  };
   rec.onresult = (e) => {
+    if (envoye || session !== rec) return;
     essais = 0; derniereErreur = null;
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const r = e.results[i];
-      const txt = r[0].transcript.trim();
-      if (r.isFinal) {
-        if (txt) {
-          const tc = Date.now();
-          ws.asr('final', txt, tc, partielT || tc);   // tFinPhrase : dernier partiel vu pour cette phrase
-          montrerFinal(txt);
-        }
-        partielPrec = ''; partielT = 0;
-      } else {
-        interim += r[0].transcript;
-      }
-    }
-    interim = interim.trim();
-    if (interim && interim !== partielPrec) {
-      partielPrec = interim; partielT = Date.now();
-      ws.asr('partial', interim, partielT);
-      $('partiel').textContent = interim;
+    const tout = Array.from(e.results, (r) => r[0].transcript).join(' ').replace(/\s+/g, ' ').trim();
+    const toutFinal = e.results.length > 0 && Array.from(e.results).every((r) => r.isFinal);
+    if (tout && tout !== partielPrec) {
+      partielPrec = tout; partielT = Date.now();
+      ws.asr('partial', tout, partielT);
+      $('partiel').textContent = tout;
       $('micEtat').classList.add('voix');
       clearTimeout(minuteurVoix);
       minuteurVoix = setTimeout(() => $('micEtat').classList.remove('voix'), 500);
     }
+    clearTimeout(minuteurSilence);
+    if (toutFinal) finaliser();
+    else minuteurSilence = setTimeout(finaliser, SILENCE_MS);
   };
 
   rec.onerror = (e) => {
@@ -142,6 +159,10 @@ function lancer() {
   };
 
   rec.onend = () => {
+    clearTimeout(minuteurSilence);
+    // phrase en cours non finalisée (coupure de Safari) : on l'envoie quand même
+    if (partielPrec.trim()) { const tc = Date.now(); ws.asr('final', partielPrec.trim(), tc, partielT || tc); montrerFinal(partielPrec.trim()); }
+    partielPrec = ''; partielT = 0;
     rec = null;
     $('micEtat').classList.remove('voix');
     if (!voulu) {
@@ -182,15 +203,80 @@ function basculer() {
   majBouton();
 }
 
-if (!SR) {
-  bouton.disabled = true;
-  etatMic('erreur', 'reconnaissance vocale absente');
-  alerter('Ouvrir dans Chrome sur ordinateur', "Ce navigateur n'a pas la reconnaissance vocale (Web Speech API). Le champ « dire au chat » reste utilisable.");
-} else if (!window.isSecureContext) {
+// ---------- transcription côté serveur (Whisper sur un DGX) ----------
+// Le micro part en brut vers le serveur : PCM 16 bits, mono, 16 kHz, trames de 100 ms. Le serveur découpe les
+// phrases au silence et renvoie partiels et finals. Bien plus juste et plus rapide que la reconnaissance de Safari.
+let asrServeur = false;
+let flux = null;            // { ctx, source, proc, stream }
+
+function majModeAsr() {
+  $('modeAsr').textContent = asrServeur ? 'Whisper (serveur)' : 'reconnaissance du navigateur';
+  if (asrServeur && !window.isSecureContext) bouton.disabled = true;
+  else if (asrServeur) { bouton.disabled = false; alerter(null); }
+}
+
+async function demarrerFlux() {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) { /* rien */ }
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx();                       // créé dans le geste (clic) : obligatoire sur iPhone
+  etatMic('demarrage', 'démarrage du micro…');
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: false, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    ctx.close();
+    etatMic('erreur', 'micro refusé');
+    alerter('Micro refusé', "Autorise le micro pour ce site, puis relance. (" + (e.name || e) + ')');
+    return false;
+  }
+  await ctx.resume();
+  const source = ctx.createMediaStreamSource(stream);
+  const proc = ctx.createScriptProcessor(4096, 1, 1);
+  const ratio = ctx.sampleRate / 16000;
+  let acc = new Int16Array(1600); let n = 0; let pos = 0;   // pos : position fractionnaire dans l'entrée
+  proc.onaudioprocess = (ev) => {
+    const ent = ev.inputBuffer.getChannelData(0);
+    // décimation par moyenne de la fenêtre (anti-repliement simple) vers 16 kHz
+    for (; pos < ent.length; pos += ratio) {
+      const a = Math.floor(pos); const b = Math.min(ent.length, Math.floor(pos + ratio)) || a + 1;
+      let s = 0; for (let k = a; k < b; k++) s += ent[k];
+      const v = Math.max(-1, Math.min(1, s / Math.max(1, b - a)));
+      acc[n++] = v * 32767;
+      if (n === acc.length) { ws.audio(acc.buffer); acc = new Int16Array(1600); n = 0; }
+    }
+    pos -= ent.length;
+  };
+  source.connect(proc);
+  proc.connect(ctx.destination);                // nécessaire pour que le traitement tourne (sortie silencieuse)
+  flux = { ctx, source, proc, stream };
+  etatMic('ecoute', 'le micro écoute (Whisper)');
+  return true;
+}
+
+function arreterFlux() {
+  if (!flux) return;
+  try { flux.proc.disconnect(); flux.source.disconnect(); } catch (e) { /* rien */ }
+  flux.stream.getTracks().forEach((t) => t.stop());
+  flux.ctx.close();
+  flux = null;
+  etatMic('arrete', 'micro arrêté');
+  $('micEtat').classList.remove('voix');
+}
+
+async function basculerFlux() {
+  if (flux) { arreterFlux(); voulu = false; }
+  else { voulu = await demarrerFlux(); }
+  majBouton();
+}
+
+bouton.addEventListener('click', () => (asrServeur ? basculerFlux() : basculer()));
+if (!window.isSecureContext) {
   bouton.disabled = true;
   etatMic('erreur', 'contexte non sécurisé');
-  alerter('Contexte non sécurisé', 'Le micro exige https ou http://localhost. Ouvre http://localhost:8787 sur la machine du serveur (ou via un tunnel ssh), ou passe par https avec « tailscale serve ». Le champ « dire au chat » reste utilisable.');
-} else {
-  bouton.addEventListener('click', basculer);
+  alerter('Contexte non sécurisé', 'Le micro exige https ou http://localhost. Le champ « dire au chat » reste utilisable.');
+} else if (!SR) {
+  // sans reconnaissance du navigateur, le bouton ne sert que si le serveur fait la transcription (annoncé par welcome)
+  bouton.disabled = true;
+  etatMic('arrete', 'en attente du serveur…');
 }
-window.addEventListener('pagehide', () => { voulu = false; if (rec) { try { rec.abort(); } catch (e) { /* rien */ } } });
+window.addEventListener('pagehide', () => { voulu = false; arreterFlux(); if (rec) { try { rec.abort(); } catch (e) { /* rien */ } } });

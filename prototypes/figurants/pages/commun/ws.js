@@ -114,7 +114,9 @@ export function connecter(opts) {
 
     ws.onopen = () => {
       essai = 0;
-      brut({ t: 'hello', role, pseudo: pseudo || undefined, tc: Date.now() });
+      // jeton de régie éventuel (?jeton=… dans l'adresse), exigé quand le serveur est lancé avec JETON_REGIE
+      const jeton = new URLSearchParams(location.search).get('jeton') || undefined;
+      brut({ t: 'hello', role, pseudo: pseudo || undefined, jeton, tc: Date.now() });
       changerEtat('ouvert');
       vider();
       ping();
@@ -173,6 +175,8 @@ export function connecter(opts) {
       if (tFinPhrase) m.tFinPhrase = tFinPhrase;
       return envoyer(m, kind === 'final');
     },
+    /** son brut du micro (PCM 16 bits, 16 kHz) : trame binaire, perdue si la connexion est coupée */
+    audio(buf) { if (ouvert()) { try { ws.send(buf); } catch (e) { /* rien */ } } },
     setPseudo(p) {
       pseudo = p;
       if (ouvert()) brut({ t: 'hello', role, pseudo, tc: Date.now() });

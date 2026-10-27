@@ -386,10 +386,11 @@ export class Orchestrateur {
     this.enonce = null;
   }
 
-  /** Ce qui a été dit avant ; `sauf` (la phrase à laquelle on réagit) est retirée, elle est donnée à part. */
-  texteTranscription(sauf = '') {
-    const parts = this.transcription.map((x) => x.texte).filter((t) => t !== sauf);
-    if (this.enonce?.partiel && this.enonce.partiel !== sauf) parts.push(this.enonce.partiel);
+  /** Ce qui a été dit avant ; les phrases de `sauf` (celles auxquelles on réagit) sont retirées, elles sont données à part. */
+  texteTranscription(sauf = []) {
+    const exclues = new Set([].concat(sauf));
+    const parts = this.transcription.map((x) => x.texte).filter((t) => !exclues.has(t));
+    if (this.enonce?.partiel && !exclues.has(this.enonce.partiel)) parts.push(this.enonce.partiel);
     return parts.join(' … ').slice(-500);
   }
 
@@ -469,13 +470,18 @@ export class Orchestrateur {
     const angles = souffleur ? melanger(ANGLES_SOUFFLEUR) : (req.evenement === 'question_au_chat' ? ['reponse_question', ...melanger(ANGLES)] : (req.evenement === 'relance' ? ['question', 'conseil', 'encouragement'] : melanger(ANGLES)));
     const aEcrire = personas.map((p, i) => ({ persona: p, angle: angles[i % angles.length] }));
     const seg = this.segmentCourant();
-    const dernierePhrase = req.texte || this.transcription.at(-1)?.texte || '';
+    let dernierePhrase = req.texte || this.transcription.at(-1)?.texte || '';
+    // La transcription découpe au silence : une phrase courte (« vous en pensez quoi ? ») n'a de sens qu'avec
+    // ce qui précède. On y recolle les phrases des 8 dernières secondes.
+    const recentes = dernierePhrase.split(/\s+/).length < 8
+      ? this.transcription.filter((x) => x.ts >= (req.tAsr || Date.now()) - 8000 && x.texte !== dernierePhrase) : [];
+    if (recentes.length) dernierePhrase = [...recentes.map((x) => x.texte), dernierePhrase].join(' ');
     const base = {
       type: souffleur ? 'souffleur' : 'n2', segment: seg, humeur: this.etat.humeur,
       // Anthropic : tous les personas du segment (préfixe système identique, donc en cache) ;
       // Ollama : seulement ceux de l'appel, un petit modèle se perd dans 19 fiches
       distribution: f.nom === 'ollama' ? personas : this.personasActifs(),
-      transcription: this.texteTranscription(dernierePhrase), dernierePhrase, evenement: req.evenement,
+      transcription: this.texteTranscription(recentes.length ? recentes.map((x) => x.texte) : [dernierePhrase]), dernierePhrase, evenement: req.evenement,
       chatReel: this.jeu.chatHumainsRecents(12), dejaDit: this.histoFig.slice(-20).map((x) => x.texte), intention: req.intention,
     };
     this.n2EnCours++;

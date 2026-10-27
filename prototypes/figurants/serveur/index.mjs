@@ -32,6 +32,8 @@ const CONFIG = {
   jetonRegie: env.JETON_REGIE || null,
   // Mode spectacle : modèles gardés en mémoire en permanence, chauffe de toutes les machines au démarrage.
   spectacle: ['1', 'oui', 'true'].includes(String(env.MODE_SPECTACLE || '').toLowerCase()),
+  // Service Whisper (asr/serveur_asr.py) : si défini, le micro du comédien est transcrit côté serveur
+  asrUrl: env.ASR_URL || null,
 };
 // Machines Ollama, dans l'ordre de préférence : OLLAMA_MACHINES="3090=http://100.74.134.89:11434#qwen3:8b,dgx2=http://localhost:11434"
 // (« #modele » facultatif, sinon MODELE_OLLAMA). Sans cette variable : une seule machine, OLLAMA_URL.
@@ -48,7 +50,7 @@ const fournisseurs = {
   ollama: new GroupeOllama(CONFIG.machines.map((m) => new FournisseurOllama({ ...m, keepAlive: CONFIG.spectacle ? -1 : '30m' }))),
   anthropic: new FournisseurAnthropic({ budgetUsd: CONFIG.budgetUsd }),
 };
-const jeu = new Jeu({ moderateur, journal, banques, jetonRegie: CONFIG.jetonRegie, etatInitial: { fournisseur: CONFIG.fournisseur, densite: CONFIG.densite } });
+const jeu = new Jeu({ moderateur, journal, banques, jetonRegie: CONFIG.jetonRegie, asrUrl: CONFIG.asrUrl, etatInitial: { fournisseur: CONFIG.fournisseur, densite: CONFIG.densite } });
 const orch = new Orchestrateur({ banques, moderateur, journal, jeu, fournisseurs,
   config: { acceleration: CONFIG.acceleration, maxAppelsMin: CONFIG.maxAppelsMin, ollamaMode: CONFIG.ollamaMode,
     // en spectacle, nos machines d'abord (3090 › dgx2 › dgx1), Haiku en secours ; en répétition, Haiku d'abord s'il a une clé
@@ -122,7 +124,7 @@ wss.on('connection', (ws, req) => {
   const c = jeu.ajouter(ws, req.socket.remoteAddress);
   ws.vivant = true;
   ws.on('pong', () => { ws.vivant = true; });
-  ws.on('message', (data) => jeu.recevoir(c, data.toString()));
+  ws.on('message', (data, binaire) => (binaire ? jeu.recevoirAudio(c, data) : jeu.recevoir(c, data.toString())));
   ws.on('close', () => jeu.retirer(ws));
   ws.on('error', () => {});
 });

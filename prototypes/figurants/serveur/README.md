@@ -22,9 +22,27 @@ Depuis un PC sans Ollama local : `ssh -N -L 11434:localhost:11434 dgx2` dans un 
 | `DENSITE`, `ACCELERATION` | `normal`, `2` | densité au démarrage ; accélération de la frappe simulée (1 à 3) |
 | `BUDGET_USD`, `MAX_APPELS_MIN` | `5`, `30` | plafonds Anthropic (coût cumulé) et appels LLM par minute |
 | `JOURNAUX_DIR`, `BANQUES_DIR` | `serveur/journaux`, `../banques` | journal JSONL du jour ; banques |
-| `JETON_REGIE` | absent | si défini, `hello` régie doit porter `jeton` (hors protocole, facultatif) |
+| `JETON_REGIE` | absent | si défini, la régie doit être ouverte avec `?jeton=…` (obligatoire dès que le serveur est exposé sur Internet) |
+| `ASR_URL` | absent | service Whisper (`../asr/serveur_asr.py`) : le micro du comédien est envoyé brut au serveur et transcrit par Whisper (sinon : reconnaissance du navigateur) |
 | `OLLAMA_MACHINES` | absent (= `OLLAMA_URL` seule) | plusieurs machines dans l'ordre de bascule : `nom=url[#modele],…` |
 | `MODE_SPECTACLE` | absent | `1` : modèles gardés en mémoire en permanence (`keep_alive -1`), chauffe de toutes les machines au démarrage, ordre `auto` = nos machines puis Haiku |
+
+### Transcription par Whisper (recommandée)
+
+La reconnaissance vocale de Safari sur iPhone est lente et approximative. Mesuré le 27/10 : 5 à 7 s avant la fin de la phrase,
+et des erreurs comme « ministère des transition ». La page comédien envoie donc le micro brut, en PCM 16 kHz par trames de
+100 ms. `asr-flux.mjs` découpe les phrases au silence (700 ms) et les fait transcrire par Whisper large-v3-turbo sur le GPU
+d'un DGX. Le même jour, sur dgx2 : 8,4 s de parole transcrites en 190 ms sans faute, phrase finalisée 0,5 s après la fin
+de la voix, première réplique IA 1,2 à 1,5 s après.
+
+```
+# sur dgx2 (environnement existant avec torch CUDA + transformers ; modèle déjà en cache ; rien à installer)
+/home/dgx/kimodo/.venv/bin/python serveur_asr.py --port 8795
+# sur la machine du serveur : tunnel puis ASR_URL
+ssh -N -L 8795:localhost:8795 dgx2
+ASR_URL=http://localhost:8795 node index.mjs
+```
+Test sans téléphone : `node test-micro-serveur.mjs <phrase.wav 16 kHz mono> ws://localhost:8787/ws <jeton>`.
 
 ### Mode spectacle (les soirs de représentation, les 3 machines sont réservées au spectacle)
 
