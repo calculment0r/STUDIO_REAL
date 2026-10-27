@@ -21,6 +21,7 @@ export function creerChat(el, opts = {}) {
     t.textContent = m.texte || '';
     d.append(p, t);
     if (signe && m.origine && m.origine !== 'humain') d.classList.add('lg-fig');
+    if (m.grand) d.classList.add('lg-grand');      // commentaire d'un spectateur : plus gros que ceux des figurants
     return d;
   }
 

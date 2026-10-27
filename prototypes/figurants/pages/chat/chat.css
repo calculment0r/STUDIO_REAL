@@ -19,3 +19,7 @@ body.ch { overflow: hidden; }
 }
 /* ?fond=libre (incrustation) : la page entière transparente, html compris (le thème lui donne --bg) */
 html:has(body.ch.fond-libre), body.ch.fond-libre, body.ch.fond-libre .ch-flux { background: transparent; }
+
+/* commentaires des spectateurs (m.grand) : nettement plus gros que ceux des figurants IA */
+.ch-flux .lg.lg-grand { font-size: 1.5em; padding: .32em .1em; }
+.ch-flux .lg.lg-grand .lg-t { font-weight: 600; color: var(--ink); }

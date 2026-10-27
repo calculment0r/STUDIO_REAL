@@ -2,18 +2,20 @@
 // diffusion des `chat` avec retrait des champs secrets selon le rôle. C'est le SEUL endroit qui diffuse un `chat`,
 // et il refiltre tout texte (humain ou figurant) avant diffusion : aucune voie de contournement.
 
+import fs from 'node:fs';
 import { Fenetre } from './util.mjs';
 import { FluxAsr } from './asr-flux.mjs';
 
 const ROLES = new Set(['chat', 'regie', 'comedien', 'telephone']);
 const COULEURS_HUMAINS = ['--cy', '--or', '--grn2', '--amb', '--coral-3', '--ink2', '--coral-2'];
-const CHAMPS_PUBLICS = ['t', 'id', 'pseudo', 'couleur', 'texte', 'ts'];
+const CHAMPS_PUBLICS = ['t', 'id', 'pseudo', 'couleur', 'texte', 'ts', 'grand'];   // grand : commentaire d'un spectateur (plus gros à l'écran)
 
 function hache(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 export class Jeu {
-  constructor({ moderateur, journal, banques, etatInitial = {}, jetonRegie = null, asrUrl = null }) {
+  constructor({ moderateur, journal, banques, etatInitial = {}, jetonRegie = null, asrUrl = null, fichierPropositions = null }) {
     this.moderateur = moderateur; this.journal = journal; this.banques = banques;
+    this.fichierPropositions = fichierPropositions;   // propositions.json : phrases et émojis à toucher, par segment (relu à chaque changement)
     this.jetonRegie = jetonRegie;
     this.asrUrl = asrUrl;              // service Whisper : le micro du comédien arrive en binaire sur /ws
     this.clients = new Map();          // ws → client
@@ -88,6 +90,15 @@ export class Jeu {
     return o;
   }
 
+  /** Phrases et émojis proposés aux téléphones pour le segment courant (fichier relu à chaque appel : modifiable en direct). */
+  propositions() {
+    const seg = this.etat.segment;
+    let p = null;
+    try { p = JSON.parse(fs.readFileSync(this.fichierPropositions, 'utf8'))?.segments?.[seg] ?? null; } catch { /* pas de fichier */ }
+    const textes = (l, n) => (Array.isArray(l) ? l : []).filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim().slice(0, n));
+    return { t: 'props', segment: seg, titre: this.banques.segments?.[seg]?.titre ?? '', phrases: textes(p?.phrases, 120), emojis: textes(p?.emojis, 16) };
+  }
+
   // ------------------------------------------------------------------ diffusion
 
   /**
@@ -99,7 +110,7 @@ export class Jeu {
     if (!v.ok) return null;
     const ts = Date.now();
     const m = { t: 'chat', id: `${this.prefixe}-${++this.seq}`, pseudo: item.pseudo, couleur: item.couleur, texte: v.texte, ts,
-      origine: item.origine, pid: item.pid ?? null, ref: item.ref ?? null, lat: item.lat || {} };
+      origine: item.origine, pid: item.pid ?? null, ref: item.ref ?? null, lat: item.lat || {}, ...(item.origine === 'humain' ? { grand: true } : {}) };
     this.historique.push(m); if (this.historique.length > 200) this.historique.shift();
     this.affichages.push({ ts, fig: item.origine !== 'humain' });
     for (const c of this.clients.values()) if (c.role) this.envoyer(c, this.vue(m, c.role));
@@ -176,6 +187,7 @@ export class Jeu {
     const historique = this.historique.slice(-30).map((x) => this.vue(x, role));
     this.envoyer(c, { t: 'welcome', ts: Date.now(), etat: this.etatPour(role), historique, ...(role === 'telephone' ? { pseudo: c.pseudo } : {}),
       ...(role === 'comedien' ? { asr_serveur: !!this.asrUrl } : {}) });
+    if (role === 'telephone') this.envoyer(c, this.propositions());
   }
 
   _asr(c, m) {
@@ -227,6 +239,7 @@ export class Jeu {
     if (m.cmd && 'coupe' in m.cmd && !m.cmd.coupe) this.journalRegie('COUPE levée');
     else if (!(m.cmd && 'coupe' in m.cmd)) this.journalRegie(`commande : ${resume}`);
     this.versRegie({ t: 'etat', ts: Date.now(), etat: this.etatPour('regie') });   // extension : état à jour pour la régie
+    if (m.cmd && 'segment' in m.cmd) this.versRole('telephone', this.propositions());   // nouvelles phrases sur les téléphones
   }
 
   _valide(c, m) {

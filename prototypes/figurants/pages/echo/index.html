@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr" data-theme="dark" data-appareil="mobile">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="color-scheme" content="dark">
+<title>ÉCHO</title>
+<!-- Téléphone du SPECTATEUR d'Écho : pseudo, puis un fil de commentaires proposés (selon la séquence) à toucher pour
+     les envoyer à l'écran, et des émojis. Rôle `telephone` du serveur figurants (PROTOCOLE.md, message `props`). -->
+<link rel="stylesheet" href="../../../../packages/theme/theme.css">
+<script src="../../../../packages/theme/venus.js" defer></script>
+<link rel="stylesheet" href="../commun/commun.css">
+<link rel="stylesheet" href="echo.css">
+</head>
+<body class="ec">
+  <div class="ec-app" id="app">
+
+    <form class="ec-login" id="login" autocomplete="off">
+      <span class="et">Studio Real · spectacle</span>
+      <h1>ÉCHO</h1>
+      <label class="ec-label" for="pseudo">Ton pseudo</label>
+      <input class="champ ec-pseudo" id="pseudo" type="text" minlength="2" maxlength="20"
+             autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" placeholder="@pseudo">
+      <button class="bt go ec-entrer" type="submit">Entrer</button>
+      <p class="ec-note" id="loginNote" role="alert"></p>
+    </form>
+
+    <div class="ec-vue" id="vue" hidden>
+      <header class="ec-haut">
+        <span class="ec-moi" id="moi"></span>
+        <span class="ws-pill" id="ws" data-etat="connexion"><i></i><span id="wsTxt">connexion…</span></span>
+      </header>
+      <div class="ec-titre" id="titre"></div>
+      <div class="ec-fil" id="fil" aria-label="Commentaires à envoyer"></div>
+      <div class="ec-vide" id="vide" hidden>Regarde la scène…</div>
+      <div class="ec-envoye" id="envoye" aria-live="polite"></div>
+      <nav class="ec-emojis" id="emojis" aria-label="Émojis"></nav>
+    </div>
+  </div>
+  <script type="module" src="echo.js"></script>
+</body>
+</html>

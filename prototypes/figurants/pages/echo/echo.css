@@ -1,0 +1,67 @@
+/* Téléphone du spectateur d'Écho, thème STUDIO REAL sombre. Une main, cibles de 48 px au moins. Jetons seulement. */
+html, body.ec {
+  overflow: hidden; overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+.ec-app {
+  position: fixed; inset: 0; height: 100dvh;
+  display: flex; flex-direction: column; background: var(--bg);
+  padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+}
+.ec .et, .ec .ws-pill { font-size: 10px; }
+
+/* ---------- pseudo ---------- */
+.ec-login { margin: auto 0; padding: var(--s6) 22px; display: flex; flex-direction: column; gap: 14px; }
+.ec-login .et { color: var(--ort); letter-spacing: .2em; }
+.ec-login h1 { margin: 0 0 10px; font-family: var(--f-disp); font-weight: 700; font-size: 46px; letter-spacing: .14em; line-height: 1; color: var(--ort); }
+.ec-label { font-family: var(--f-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink2); }
+.ec-pseudo { min-height: 56px; font-size: 18px; padding: 0 16px; border-radius: var(--nl-12); }
+.ec-entrer { min-height: 56px; font-size: 13px; border-radius: var(--nl-12); }
+.ec-note { margin: 0; min-height: 1.4em; font-size: 15px; color: var(--ort); }
+
+/* ---------- fil ---------- */
+.ec-vue { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ec-haut {
+  flex: none; display: flex; align-items: center; gap: var(--s3);
+  padding: calc(8px + env(safe-area-inset-top)) 14px 8px 16px;
+  box-shadow: inset 0 -1px 0 var(--filet-12);
+}
+.ec-moi { flex: 1; min-width: 0; font-weight: 600; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ec-titre { flex: none; padding: 10px 16px 4px; font-family: var(--f-mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--ort); min-height: 1.2em; }
+.ec-fil {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 6px 12px 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.ec-carte {
+  flex: none; text-align: left; width: 100%;
+  font: inherit; font-size: 17px; line-height: 1.35; color: var(--ink);
+  padding: 14px 16px; border-radius: var(--nl-12);
+  background: var(--tile); box-shadow: inset 0 0 0 1px var(--filet-14);
+  transition: transform .22s ease, opacity .22s ease, max-height .3s ease .1s, padding .3s ease .1s, margin .3s ease .1s;
+  max-height: 200px; overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+.ec-carte:active { background: var(--tile2); box-shadow: inset 0 0 0 1px var(--ort); }
+.ec-carte.partie { transform: translateX(110%); opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; margin: -4px 0; pointer-events: none; }
+.ec-carte.arrive { animation: ec-arrive .35s ease both; }
+@keyframes ec-arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.ec-vide { flex: 1; display: grid; place-items: center; color: var(--ink3); font-size: 16px; }
+.ec-envoye {
+  flex: none; min-height: 0; padding: 0 16px; font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; color: var(--cy);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 18px; line-height: 18px;
+}
+
+/* ---------- émojis ---------- */
+.ec-emojis {
+  flex: none; display: flex; gap: 6px; overflow-x: auto; justify-content: space-between;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  background: var(--tile); box-shadow: inset 0 1px 0 var(--filet-12);
+}
+.ec-emoji {
+  flex: 1 0 48px; min-height: 56px; font-size: 28px; line-height: 1;
+  border-radius: var(--nl-12); background: var(--bg); box-shadow: inset 0 0 0 1px var(--filet-14);
+  user-select: none; -webkit-user-select: none;
+}
+.ec-emoji:active { transform: scale(.9); background: var(--tile2); }

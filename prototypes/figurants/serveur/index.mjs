@@ -50,7 +50,7 @@ const fournisseurs = {
   ollama: new GroupeOllama(CONFIG.machines.map((m) => new FournisseurOllama({ ...m, keepAlive: CONFIG.spectacle ? -1 : '30m' }))),
   anthropic: new FournisseurAnthropic({ budgetUsd: CONFIG.budgetUsd }),
 };
-const jeu = new Jeu({ moderateur, journal, banques, jetonRegie: CONFIG.jetonRegie, asrUrl: CONFIG.asrUrl, etatInitial: { fournisseur: CONFIG.fournisseur, densite: CONFIG.densite } });
+const jeu = new Jeu({ moderateur, journal, banques, jetonRegie: CONFIG.jetonRegie, asrUrl: CONFIG.asrUrl, fichierPropositions: path.join(CONFIG.banques, 'propositions.json'), etatInitial: { fournisseur: CONFIG.fournisseur, densite: CONFIG.densite } });
 const orch = new Orchestrateur({ banques, moderateur, journal, jeu, fournisseurs,
   config: { acceleration: CONFIG.acceleration, maxAppelsMin: CONFIG.maxAppelsMin, ollamaMode: CONFIG.ollamaMode,
     // en spectacle, nos machines d'abord (3090 › dgx2 › dgx1), Haiku en secours ; en répétition, Haiku d'abord s'il a une clé
@@ -68,6 +68,7 @@ const MIME = {
 };
 // Jamais servis : fichiers cachés (.git, .env…), journaux, dépendances.
 const INTERDITS = [/(^|\/)\.[^/]/, /^prototypes\/figurants\/serveur\/(journaux|node_modules)(\/|$)/, /(^|\/)node_modules(\/|$)/];
+const AUTORISES = [/^prototypes\/figurants\/pages\//, /^packages\/theme\//];
 let racineReelle = RACINE;
 try { racineReelle = fs.realpathSync(RACINE); } catch { /* rien */ }
 
@@ -83,7 +84,10 @@ function servir(req, res) {
   if (chemin === '/') return repondre(res, 302, '', { location: '/prototypes/figurants/pages/regie/' });
   if (chemin.includes('\0') || chemin.includes('\\')) return repondre(res, 400, 'chemin invalide');
   const relatif = path.posix.normalize(chemin).replace(/^\/+/, '');
+  if (chemin === '/echo' || chemin === '/echo/') return repondre(res, 302, '', { location: '/prototypes/figurants/pages/echo/' });   // cible du QR du public
   if (relatif.split('/').includes('..') || INTERDITS.some((r) => r.test(relatif))) return repondre(res, 404, 'introuvable');
+  // exposé par un tunnel public : seulement les pages et le thème (jamais le reste du dépôt ni les fichiers hors git)
+  if (!AUTORISES.some((r) => r.test(relatif))) return repondre(res, 404, 'introuvable');
   const absolu = path.resolve(RACINE, relatif);
   if (absolu !== RACINE && !absolu.startsWith(RACINE + path.sep)) return repondre(res, 404, 'introuvable');
   fs.realpath(absolu, (err, reel) => {

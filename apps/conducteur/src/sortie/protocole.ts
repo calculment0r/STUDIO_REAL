@@ -170,6 +170,16 @@ export function configParDefaut(titre?: string): ConfigSortie {
     const v = (import.meta.env?.VITE_ADRESSE_PUBLIC as string | undefined)?.trim();
     if (v) adresse = v;
   } catch { /* hors Vite */ }
+  // `?adresse=https://…` dans l'adresse de la page (régie ou sortie) : remplace l'adresse du QR et reste retenue dans ce
+  // navigateur (le tunnel du soir change d'adresse à chaque lancement) ; `?adresse=defaut` revient à la valeur livrée
+  try {
+    const CLE = 'studio-real:adresse-public';
+    const q = new URLSearchParams(location.search).get('adresse')?.trim();
+    if (q === 'defaut') localStorage.removeItem(CLE);
+    else if (q && /^https?:\/\//i.test(q)) localStorage.setItem(CLE, q);
+    const retenue = localStorage.getItem(CLE);
+    if (retenue) adresse = retenue;
+  } catch { /* hors navigateur, stockage indisponible */ }
   return { titre: titre?.trim() || 'Studio Real', adresse, consigne: CONSIGNE_DEFAUT };
 }
 
