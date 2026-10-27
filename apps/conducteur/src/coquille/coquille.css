@@ -404,3 +404,12 @@
 .pup-grille.avec-regie { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(300px, .9fr); gap: 40px; }
 .pup-regie { overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(var(--lr), .28) transparent; }
 .pup-regie .rg-journal { max-height: none; }
+
+/* gros bouton TAP (spectacle) : bas de l’écran, grisé tant qu’on ne peut pas passer */
+.tap-geant { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60; min-width: 340px; min-height: 76px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 32px; border-radius: 16px;
+  background: var(--tile2); color: var(--ink3); box-shadow: inset 0 0 0 1px var(--filet-20); cursor: not-allowed; }
+.tap-geant b { font-family: var(--f-disp); font-weight: 700; font-size: 30px; letter-spacing: .2em; }
+.tap-geant span { font-size: 13px; max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tap-geant.pret { background: var(--ort); color: var(--on-ort); cursor: pointer; box-shadow: 0 6px 30px rgba(0,0,0,.5); }
+.tap-geant.pret:active { transform: translateX(-50%) scale(.97); }
