@@ -21,6 +21,9 @@ import { PupitreRegie } from './Regie';
 import { Equipe, useCommentairesOuverts } from './Equipe';
 import { chargerLive } from './projet-live';
 import { ApercuSortie } from '../sortie';
+import { EnCoursProchain, SectionAttend, SectionEnvois, cibleSignal } from './InspecteurEnvois';
+import { signauxDuProjet } from '@studio-real/modele';
+import { ajouterConditionSignal } from './envois';
 
 type Modif = (fn: (p: Projet) => void, etiquette?: string) => void;
 
@@ -78,7 +81,21 @@ function Conditions({ g, modifier, chemin }: { g: Condition[]; modifier: Modif; 
           <button key={k} onClick={() => modifier(p => { chemin(p)?.push(nouvelleCondition(k, v)); }, 'ajout de condition')}>+ {t}</button>
         ))}
       </div>
+      <SignalActeur onChoisir={nom => modifier(p => { const g = chemin(p); if (g) ajouterConditionSignal(g, nom); }, 'ajout de condition')} />
     </>
+  );
+}
+
+/** « + signal d'un acteur » : les signaux que les acteurs du projet renvoient (condition sig:<acteur>.<signal> ≥ 1). */
+function SignalActeur({ onChoisir }: { onChoisir: (nom: string) => void }) {
+  const projet = useMagasin(s => s.projet);
+  const signaux = signauxDuProjet(projet);
+  if (!signaux.length) return null;
+  return (
+    <select className="pn-signal" value="" aria-label="Attendre le signal d’un acteur" onChange={e => { if (e.target.value) onChoisir(e.target.value); }}>
+      <option value="">+ SIGNAL D’UN ACTEUR…</option>
+      {signaux.map(s => <option key={s.nom} value={s.nom}>{s.acteurNom} · {s.signal}</option>)}
+    </select>
   );
 }
 
@@ -106,7 +123,7 @@ function PanneauEtape({ sel }: { sel: Selection }) {
         </div>
         <span className="pn-micro">SORTIES</span>
         {sorties.map((o, k) => (
-          <div key={o.i} className="pn-sortie">
+          <div key={o.i} className="pn-sortie" {...cibleSignal(m.id, o.i)} title="Glisser ici un signal de la section ATTEND">
             <span className="num no">{k + 1}</span>
             <span className="corps-s" onClick={() => selectionner({ moment: m.id, sortie: o.i })}>
               <span className="vers">→ {o.tr.b ? m.st.find(x => x.id === o.tr.b)?.name ?? '?' : 'fin du moment'}</span>
@@ -119,6 +136,8 @@ function PanneauEtape({ sel }: { sel: Selection }) {
           </div>
         ))}
       </div>
+      <SectionEnvois moment={m.id} etape={st.id} />
+      <SectionAttend moment={m.id} etape={st.id} />
       <Accordeon k="r" titre="RÉGLAGES">
         <Ligne l="MOMENT" v={m.name} />
         <Ligne l="TYPE" v={info.nature} />
@@ -150,7 +169,7 @@ function PanneauSortie({ sel }: { sel: Selection }) {
   const deplacer = (d: -1 | 1) => { let i = sel.sortie!; modifier(p => { i = deplacerSortie(p, m.id, sel.sortie!, d); }, 'ordre des sorties'); selectionner({ moment: m.id, sortie: i }); };
   return (
     <>
-      <div className="pn-bloc">
+      <div className="pn-bloc" {...cibleSignal(m.id, sel.sortie!)}>
         <Tete tag={soeurs.length > 1 ? 'SORTIE ' + (k + 1) + ' / ' + soeurs.length : 'SORTIE'} />
         <span className="pn-titre">{nom(tr.a)} → {nom(tr.b)}</span>
         <Conditions g={tr.g} modifier={modifier} chemin={chemin} />
@@ -454,6 +473,7 @@ function ProjetVersions() {
         <Bouton onClick={m.revenirDemo}>DÉMONSTRATION</Bouton>
         <Bouton onClick={() => void chargerLive()}>SPECTACLE LIVE</Bouton>
         <Bouton onClick={() => useInterface.getState().poser({ projets: true })}>OUVRIR…</Bouton>
+        <Bouton onClick={() => useInterface.getState().poser({ acteurs: true })}>ACTEURS…</Bouton>
       </div>
       <input ref={fichier} type="file" accept="application/json,.json" hidden
         onChange={async e => { const f = e.target.files?.[0]; if (f) m.importer(await f.text()); e.target.value = ''; }} />
@@ -486,6 +506,7 @@ function SectionEquipe() {
 export function Panneau() {
   const sel = useMagasin(s => s.selection);
   const largeur = useInterface(s => s.largeurPanneau);
+  const spectacle = useMagasin(s => s.mode === 'spectacle');
   let contenu: ReactNode = null;
   if (sel.piste) contenu = <PanneauPiste sel={sel} />;
   else if (sel.acte !== undefined) contenu = <PanneauActe sel={sel} />;
@@ -495,6 +516,7 @@ export function Panneau() {
   else if (sel.moment) contenu = <PanneauMoment sel={sel} />;
   return (
     <aside className="panneau" style={{ width: largeur }} aria-label="Panneau de la sélection">
+      {spectacle && <EnCoursProchain />}
       {contenu}
       <OuEnEstOn />
       <Accordeon k="g" titre="RÉGIE">

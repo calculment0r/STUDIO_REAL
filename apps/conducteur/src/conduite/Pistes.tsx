@@ -8,6 +8,8 @@ import { couleurPiste, dessinClip, hauteurPiste, traceCourbe, ORDRE_TYPES, TYPES
 import { fm } from './temps';
 import { glisser } from './glisser';
 import { useMagasin } from '../etat/magasin';
+import { useInterface } from '../coquille/interface';
+import { HAUTEUR_PISTE_ACTEUR, MenuPistesActeurs, PistesActeurs, acteursMontres } from './PistesActeurs';
 
 export interface ActionsPistes {
   basculer: (piste: string) => void;
@@ -163,6 +165,10 @@ export function Pistes({ projet, plan, pps, actions }: PropsPistes) {
   const S = debuts(plan);
   let y = 0;
   const rangs = projet.tracks.map((tk) => { const h = hauteurPiste(tk), top = y; y += h + 1; return { tk, h, top }; });
+  // pistes par acteur (dérivées des envois, réglage du poste) : sous les pistes du projet
+  const idsActeurs = useInterface((s) => s.pistesActeurs);
+  const topActeurs = y;
+  y += acteursMontres(projet, idsActeurs).length * (HAUTEUR_PISTE_ACTEUR + 1);
   return (
     <div className="cd-pistes-in" style={{ height: y + 44 }}>
       {rangs.map(({ tk, h, top }) => (
@@ -170,6 +176,7 @@ export function Pistes({ projet, plan, pps, actions }: PropsPistes) {
           sel={selection.piste === tk.id ? (selection.clip ?? selection.note ?? null) : null}
           pisteChoisie={selection.piste === tk.id && !selection.clip && !selection.note} />
       ))}
+      <PistesActeurs projet={projet} plan={plan} pps={pps} top={topActeurs} />
       <button className="cd-ajout-piste" style={{ top: y + 6 }} onPointerDown={(e) => e.stopPropagation()} onClick={() => setMenu((m) => !m)}>
         <b>+</b>AJOUTER UNE PISTE
       </button>
@@ -181,6 +188,7 @@ export function Pistes({ projet, plan, pps, actions }: PropsPistes) {
               <span className="col"><span className="n">{TYPES_PISTE[ty].nom}</span><span className="d">{TYPES_PISTE[ty].description}</span></span>
             </button>
           ))}
+          <MenuPistesActeurs projet={projet} />
         </div>
       )}
     </div>

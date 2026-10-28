@@ -3,6 +3,7 @@ import { dureeEtape, type Condition, type EtatLecture, type Projet, type Signaux
 import { trouverBloc, trouverFamille, formaterReglage, type DefBloc } from '../blocs';
 import { conditionRemplie, entreeDuMoment, issueSalle, prevoir, valeurCondition } from '../etat/moteur';
 import { mmss, romain } from '../theme/format';
+import { libelleSignal } from '../planche/geometrie';
 
 // ─── blocs ────────────────────────────────────────────────────────────────────────────────────────────
 export interface InfoBloc { nature: string; nom: string; couleur: string; reglages: { nom: string; aff: (pos: number) => string }[] }
@@ -28,7 +29,7 @@ export function libelleCondition(g: Condition): string {
     case 'bruit': return 'salle calme · ≤ ' + Math.round(v) + ' dB';
     case 'assis': return Math.round(v) + ' % du public assis';
     case 't': return 'après ' + mmss(v);
-    default: return g.k.startsWith('mem:') ? 'mémoire ' + g.k.slice(4) + ' ' + g.op + ' ' + String(g.v) : g.k + ' ' + g.op + ' ' + String(g.v);
+    default: return g.k.startsWith('mem:') ? 'mémoire ' + g.k.slice(4) + ' ' + g.op + ' ' + String(g.v) : libelleSignal(g) ?? g.k + ' ' + g.op + ' ' + String(g.v);
   }
 }
 

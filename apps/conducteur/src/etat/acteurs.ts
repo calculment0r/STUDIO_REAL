@@ -18,6 +18,13 @@
 //   diagnosticActeur(entrée)      pastille (verte < 1 s de latence, ambre en attente, rouge perdu), affiché / demandé,
 //                                 écart (ambre > 2 s, rouge > 5 s), latence, alertes
 //   chuteConnectes(historique)    chute de plus de 10 % des connectés en 10 s
+// Lot « planche des acteurs » (bande PLATEAU, inspecteur Envois, fenêtre Acteurs) :
+//   pastilleDiagnostic(diag)      texte et jeton de couleur d'une pastille de la bande (calculé depuis le diagnostic)
+//   brancherTemoin(fn)            l'émulateur (etat/emulateur.ts) déclare son téléphone témoin ; `fn` reçoit la vue à
+//                                 montrer et renvoie true si elle est partie. Renvoie la fonction de débranchement.
+//   testerVue(vue)                bouton « Tester » de l'inspecteur : envoie la vue au témoin s'il existe, sinon ne fait
+//                                 rien (renvoie { envoye: false }). Jamais vers le vrai public.
+//   Pour un essai à la main dans la console : window.studioRealActeurs.poserEtatActeur('public', { ecran: null, visible: true }).
 import { create } from 'zustand';
 import type { Acteur } from '@studio-real/modele';
 import type { AppClient, EcranAffiche, MediaActeur, MsgSalle, ResumeActeurSalle } from '@studio-real/protocole';
@@ -267,4 +274,53 @@ export function chuteConnectes(historique: readonly { t: number; n: number }[], 
   if (avant <= 0) return null;
   const part = (avant - dernier.n) / avant;
   return part > CHUTE_PART ? { avant, apres: dernier.n, part } : null;
+}
+
+// ── Pastille de la bande des acteurs (planche) ─────────────────────────────────────────────────────────────────────
+
+/** Libellé et jeton de couleur de la pastille d'un acteur sur la planche, lus dans son diagnostic (gris tant que le
+ *  serveur n'a rien dit). `foule` : le total des connectés remplace « connecté » pour le public. */
+export function pastilleDiagnostic(diag: Diagnostic | undefined, foule?: Pick<AgregatsFoule, 'connectes'>): { texte: string; couleur: string } {
+  if (!diag || diag.pastille === 'eteinte') return { texte: 'inconnu', couleur: 'rgba(var(--lr), .35)' };
+  const couleur = diag.pastille === 'rouge' ? 'var(--rec)' : diag.pastille === 'ambre' ? 'var(--amb)' : 'var(--gt)';
+  if (diag.pastille === 'rouge') return { texte: diag.alertes[0] ?? 'perdu', couleur };
+  if (foule) return { texte: `${foule.connectes} présent${foule.connectes > 1 ? 's' : ''}`, couleur };
+  return { texte: diag.pastille === 'ambre' ? (diag.alertes[0] ?? 'en attente') : 'connecté', couleur };
+}
+
+// ── Téléphone témoin de l'émulateur ────────────────────────────────────────────────────────────────────────────────
+
+/** Ce que le bouton « Tester » envoie au témoin. */
+export interface VueTest { acteur: string; ecran?: string; fx?: string; params: Record<string, unknown> }
+/** Le téléphone témoin : renvoie true si la vue est partie. */
+export type FonctionTemoin = (vue: VueTest) => boolean | void;
+
+interface MagasinTemoin { temoin: FonctionTemoin | null }
+/** À part du magasin des acteurs : `oublierActeurs()` (déliaison du serveur) ne doit pas débrancher l'émulateur. */
+const magasinTemoin = create<MagasinTemoin>(() => ({ temoin: null }));
+/** Le témoin est-il branché (bouton « Tester » actif) ? */
+export const useTemoinBranche = (): boolean => magasinTemoin(s => s.temoin !== null);
+
+/** L'émulateur déclare son téléphone témoin ; renvoie la fonction qui le débranche. */
+export function brancherTemoin(fn: FonctionTemoin): () => void {
+  magasinTemoin.setState({ temoin: fn });
+  return () => { if (magasinTemoin.getState().temoin === fn) magasinTemoin.setState({ temoin: null }); };
+}
+
+/** Bouton « Tester » : la vue part au témoin s'il existe (sinon rien). */
+export function testerVue(vue: VueTest): { envoye: boolean; message: string } {
+  const t = magasinTemoin.getState().temoin;
+  if (!t) return { envoye: false, message: 'Aucun téléphone témoin : ouvrez l’émulateur pour tester.' };
+  try {
+    const r = t(vue);
+    return r === false ? { envoye: false, message: 'Le téléphone témoin a refusé la vue.' } : { envoye: true, message: 'Vue envoyée au téléphone témoin.' };
+  } catch (e) {
+    return { envoye: false, message: 'Téléphone témoin en erreur : ' + (e as Error).message };
+  }
+}
+
+if (typeof window !== 'undefined') {
+  (window as unknown as { studioRealActeurs?: unknown }).studioRealActeurs = {
+    poserEtatActeur, poserResumeSalle, oublierActeurs, brancherTemoin, testerVue,
+  };
 }

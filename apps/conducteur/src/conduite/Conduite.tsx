@@ -24,6 +24,7 @@ import {
 } from './edition';
 import { Regle, RangeeActes, RangeeMoments, RangeePassages } from './Rangees';
 import { Pistes, estMuette, type ActionsPistes } from './Pistes';
+import { MenuPistesActeurs } from './PistesActeurs';
 import { ORDRE_TYPES, TYPES_PISTE, couleurPiste } from './types-pistes';
 import { TeteDeLecture } from './TeteDeLecture';
 import { BarreZoom } from './BarreZoom';
@@ -410,6 +411,7 @@ export function Conduite() {
                   <span className="col"><span className="n">{TYPES_PISTE[ty].nom}</span><span className="d">{TYPES_PISTE[ty].description}</span></span>
                 </button>
               ))}
+              <MenuPistesActeurs projet={projet} />
             </div>
           )}
         </span>

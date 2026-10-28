@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { useMagasin } from '../etat/magasin';
-import { magasinActeurs } from '../etat/acteurs';
+import { magasinActeurs, pastilleDiagnostic } from '../etat/acteurs';
 import {
   SURVEILLANCE_MS, adressePubliqueSpectacle, jetonActeurSpectacle, lienActeur, lienPublic, sortieLocale, useSpectacle,
   vignettesSorties, type VignetteActeur,
@@ -41,8 +41,8 @@ export function useHorloge(ms = SURVEILLANCE_MS): number {
 }
 
 /** Les vignettes du rail, recalculées à l'horloge du rail. */
-export function useVignettes(): VignetteActeur[] {
-  const maintenant = useHorloge();
+export function useVignettes(ms = SURVEILLANCE_MS): VignetteActeur[] {
+  const maintenant = useHorloge(ms);
   const projet = useMagasin(s => s.projet);
   const mode = useMagasin(s => s.mode);
   // abonnés pour re-rendre aussitôt un changement de liaison ou de fenêtre
@@ -51,6 +51,15 @@ export function useVignettes(): VignetteActeur[] {
   return vignettesSorties({
     projet, acteurs: magasinActeurs.getState(), local: sortieLocale(useSortie.getState(), maintenant), spectacle: mode === 'spectacle', maintenant,
   });
+}
+
+/** Pastille (texte, couleur) de chaque acteur du projet, pour la bande de la planche et la fenêtre Acteurs : même
+ *  diagnostic que le rail des sorties, donc elle se colore dès que `poserEtatActeur` / `poserResumeSalle` sont appelés. */
+export function usePastillesActeurs(): Record<string, { texte: string; couleur: string }> {
+  const vignettes = useVignettes(1000);
+  const sortie: Record<string, { texte: string; couleur: string }> = {};
+  for (const v of vignettes) sortie[v.id] = pastilleDiagnostic(v.diag, v.agregats);
+  return sortie;
 }
 
 /** Lien de l'acteur (public : l'application sans jeton ; acteur nommé : avec le jeton des acteurs). */
