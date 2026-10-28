@@ -104,7 +104,7 @@ export interface Magasin {
   basculerLecture: () => void;
   revenirAuDebut: () => void;
   reglerSalle: (k: keyof SalleSimulee, v: number) => void;
-  /** Signaux de la salle à l'instant (salle simulée). */
+  /** Signaux de la salle à l'instant (salle simulée, ou la source branchée par brancherSignaux : émulateur). */
   signaux: () => Signaux;
 
   assets: CategorieAssets[];
@@ -200,6 +200,14 @@ let vusServeur = { c: 0, j: 0, a: 0 };
 let numeroRegie = 0;
 /** Fait avancer la lecture de dt secondes de spectacle (posé par le magasin, appelé par la boucle). */
 let avancerLecture: (dt: number) => void = () => {};
+
+/** Source des signaux de la salle : la salle simulée des rotatifs, sauf si une autre source est branchée
+ *  (src/etat/emulateur.ts : `sourceSignaux()` — téléphones émulés comptés, plus tard la salle réelle). */
+export type FournisseurSignaux = (sens: SalleSimulee, tEtape: number) => Signaux;
+let fournisseurSignaux: FournisseurSignaux | null = null;
+/** Branche une source de signaux (null : retour à la salle simulée). */
+export function brancherSignaux(f: FournisseurSignaux | null): void { fournisseurSignaux = f; }
+const signauxCourants: FournisseurSignaux = (sens, tEtape) => (fournisseurSignaux ?? signauxSalle)(sens, tEtape);
 
 const lireTheme = (): 'sombre' | 'clair' => {
   try { return localStorage.getItem('sr-conducteur-theme') === 'clair' ? 'clair' : 'sombre'; } catch { return 'sombre'; }
@@ -349,7 +357,7 @@ export const useMagasin = create<Magasin>((set, get) => {
     while (reste > 1e-6 && !e.termine) {
       const d = Math.min(0.5, reste);
       reste -= d;
-      e = l.avancer(d, signauxSalle(get().projet.sens, e.tEtape));
+      e = l.avancer(d, signauxCourants(get().projet.sens, e.tEtape));
     }
     publier(e);
     const apres = (e.moment ?? '') + '/' + (e.etape ?? '');
@@ -504,7 +512,7 @@ export const useMagasin = create<Magasin>((set, get) => {
       // la salle ne change pas la structure : le lecteur continue (les signaux sont relus à chaque image)
       set({ projet: { ...s.projet, sens: { ...s.projet.sens, [k]: Math.max(0, Math.min(100, Math.round(v))) } } });
     },
-    signaux: () => { const s = get(); return signauxSalle(s.projet.sens, s.lecture?.tEtape ?? 0); },
+    signaux: () => { const s = get(); return signauxCourants(s.projet.sens, s.lecture?.tEtape ?? 0); },
 
     assets: reprise?.assets?.length ? reprise.assets : ASSETS_DEMO,
     executions: reprise?.runs ?? [],

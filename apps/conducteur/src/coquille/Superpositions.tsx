@@ -1,6 +1,7 @@
 // Ce qui se pose par-dessus la mise en page : cadre « en lecture », alerte de sécurité (repères de la piste Sécurité,
 // alertes du moteur et alertes des sorties : acteur perdu, sortie périmée, chute des connectés, écart, serveur muet),
-// pupitre de représentation (avec le pupitre de la régie), ouverture de projet (onglets PROJET, SPECTACLE, LIENS), raccourcis.
+// pupitre de représentation (avec le pupitre de la régie), ouverture de projet (onglets PROJET, SPECTACLE, LIENS), raccourcis,
+// et la fenêtre détachable de l'émulateur de téléphones (Emulateur.tsx, touche E).
 import { useMagasin } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
 import { deconnecterSalle, useSalle } from '../etat/serveur';
@@ -14,6 +15,8 @@ import { useGoRecent } from './useGoRecent';
 import { useSpectacle } from '../etat/spectacle';
 import { OngletsProjet, SpectacleProjet } from './LiensActeurs';
 import { useOngletProjet } from './rail-etat';
+
+export { FenetreEmulateur } from './Emulateur';
 
 /** Une alerte du moteur reste au bandeau ce temps-là (horloge murale) si personne ne l'accuse. */
 const DUREE_ALERTE_MS = 9000;
@@ -204,7 +207,7 @@ export function Pupitre() {
 const RACCOURCIS: [string, string][] = [
   ['Espace', 'SPECTACLE : GO · RÉPÉTITION : lecture / pause'], ['Maj + Espace', 'SPECTACLE : lecture / pause'],
   ['T / G', 'GO (le cue suivant, maintenant)'], ['P', 'Pupitre de représentation'], ['Ctrl + Espace', 'Tiroir des assets'],
-  ['Ctrl + Z', 'Annuler'], ['Ctrl + Maj + Z', 'Rétablir'], ['M', 'Nouveau moment'], ['K', 'Note de régie à la tête de lecture'],
+  ['E', 'Émulateur de téléphones'], ['Ctrl + Z', 'Annuler'], ['Ctrl + Maj + Z', 'Rétablir'], ['M', 'Nouveau moment'], ['K', 'Note de régie à la tête de lecture'],
   ['+ / −', 'Zoom de la conduite'], ['F', 'Plein écran (sur la planche : recadrer)'], ['V / C', 'Outils de la conduite : sélection / couper'], ['Ctrl + K', 'Rechercher'],
   ['Échap', 'Fermer / désélectionner'], ['?', 'Raccourcis'],
 ];

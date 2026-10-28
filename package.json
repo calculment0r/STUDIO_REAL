@@ -11,7 +11,7 @@
     "dev": "npm run dev -w conducteur",
     "dev:telephone": "npm run dev -w telephone",
     "build": "npm run build -w @studio-real/modele && npm run build -w conducteur && npm run build -w telephone",
-    "test": "vitest run --project modele --project protocole --project conducteur-rapide --project serveur-logique --project figurants --project outils-medias --project outils-banc-media --project serveur-spectacle --project ui-telephone",
+    "test": "vitest run --project modele --project protocole --project conducteur-rapide --project serveur-logique --project figurants --project outils-medias --project outils-banc-media --project serveur-spectacle --project ui-telephone --project emulateur",
     "test:lent": "vitest run --project conducteur-lent --project serveur-integration",
     "test:tout": "vitest run",
     "verifier-projets": "npm run verifier -w @studio-real/modele",

@@ -16,7 +16,7 @@ import { EnTete } from './EnTete';
 import { Recherche } from './Recherche';
 import { Panneau } from './Panneau';
 import { TiroirAssets, TYPE_ASSET, type AssetGlisse } from './TiroirAssets';
-import { AlerteSecurite, Aide, CadreEnLecture, Projets, Pupitre } from './Superpositions';
+import { AlerteSecurite, Aide, CadreEnLecture, FenetreEmulateur, Projets, Pupitre } from './Superpositions';
 import { FenetreActeurs } from './FenetreActeurs';
 import { useRaccourcis } from './raccourcis';
 import { useRelaisSortie } from '../sortie';
@@ -146,6 +146,7 @@ export function App() {
       <BoutonTap />
       <TiroirAssets />
       <Recherche />
+      <FenetreEmulateur />
       <AlerteSecurite />
       <Pupitre />
       <Projets />

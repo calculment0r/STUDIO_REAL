@@ -4,6 +4,7 @@
     { "path": "./packages/modele" },
     { "path": "./packages/protocole" },
     { "path": "./packages/ui-telephone" },
+    { "path": "./packages/emulateur" },
     { "path": "./apps/telephone" },
     { "path": "./apps/serveur/tsconfig.json" },
     { "path": "./apps/serveur-spectacle/tsconfig.json" },

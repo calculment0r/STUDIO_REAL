@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'node:child_process'
 import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { basename, resolve } from 'node:path'
+import { basename, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Les polices (Chakra Petch, Azeret Mono, Venus Rising) viennent de packages/theme/polices/ : le CSS du paquet
@@ -78,6 +78,44 @@ function mediasLocales(): Plugin {
   }
 }
 
+// Émulateur de téléphones (src/coquille/Emulateur.tsx) : les téléphones de la VITRINE sont la vraie application
+// téléphone (apps/telephone, `?emule=1&id=…`) dans des iframes de la MÊME origine que le Conducteur (l'émulateur
+// branche le transport mémoire de chaque iframe, `window.studioRealTelephone`). En développement et en preview, /t/
+// sert donc apps/telephone/dist, construite avec base '/t/' (`npm run build -w telephone`, fait par `npm run build`).
+// Choix : la version construite plutôt qu'un second serveur Vite (un seul port, rien à lancer de plus). Pour
+// travailler l'application téléphone elle-même, SR_TELEPHONE_DEV=http://localhost:5180 relaie /t/ vers
+// `npm run dev:telephone` (proxy). Sans dist : une page explique quoi faire ; la foule de l'émulateur marche sans.
+const DOSSIER_TELEPHONE = fileURLToPath(new URL('../telephone/dist', import.meta.url))
+const TELEPHONE_DEV = process.env.SR_TELEPHONE_DEV
+const TYPES_TELEPHONE: Record<string, string> = {
+  html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json',
+  svg: 'image/svg+xml', png: 'image/png', webp: 'image/webp', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf', txt: 'text/plain; charset=utf-8',
+}
+
+function telephoneEmule(): Plugin {
+  const servir: Connect.NextHandleFunction = (req, res, next) => {
+    const chemin = (req.url ?? '').split('?')[0] ?? ''
+    if (TELEPHONE_DEV || (chemin !== '/t' && !chemin.startsWith('/t/'))) return next()
+    const relatif = decodeURIComponent(chemin.slice(2)).replace(/^\/+/, '') || 'index.html'
+    const fichier = resolve(DOSSIER_TELEPHONE, relatif)
+    if (fichier !== DOSSIER_TELEPHONE && !fichier.startsWith(DOSSIER_TELEPHONE + sep)) { res.statusCode = 403; res.end(); return }
+    if (!existsSync(fichier) || statSync(fichier).isDirectory()) {
+      res.statusCode = 404
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.end(existsSync(resolve(DOSSIER_TELEPHONE, 'index.html')) ? '' : '<!doctype html><meta charset="utf-8"><p style="font:14px sans-serif;padding:16px">Application téléphone non construite : <code>npm run build -w telephone</code>, puis recharger la vitrine.</p>')
+      return
+    }
+    res.setHeader('Content-Type', TYPES_TELEPHONE[extension(fichier)] ?? 'application/octet-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    createReadStream(fichier).pipe(res)
+  }
+  return {
+    name: 'telephone-emule',
+    configureServer(server) { server.middlewares.use(servir) },
+    configurePreviewServer(server) { server.middlewares.use(servir) },
+  }
+}
+
 // Pages : la régie (index.html), la sortie écran scène (sortie.html, chantier SORTIE SCÈNE) et la page téléphone du
 // streamer (streamer.html, chantier FLUX ; prise seulement si elle existe déjà).
 const ICI = fileURLToPath(new URL('.', import.meta.url))
@@ -96,8 +134,9 @@ function empreinteBuild(): string {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), licencesPolices(), mediasLocales()],
+  plugins: [react(), licencesPolices(), mediasLocales(), telephoneEmule()],
   define: { __BUILD__: JSON.stringify(empreinteBuild()) },
+  server: TELEPHONE_DEV ? { proxy: { '/t/': { target: TELEPHONE_DEV, changeOrigin: true } } } : {},
   build: { rollupOptions: { input: PAGES } },
   // Vitest vide les fichiers CSS (même en ?raw) ; src/theme/jetons.ts lit les jetons du thème en ?raw, y compris dans les tests.
   test: { css: { include: [/theme[/]jetons.*[.]css/] } },
