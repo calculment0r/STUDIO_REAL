@@ -3,10 +3,13 @@
 // src/etat/serveur.ts (WebSocket natif de Node 24) : présence, chat, modification propagée, conflits, verrou,
 // coupure et reprise. Arrête le serveur à la fin.
 // Désactiver (machine sans wrangler) : SR_SANS_SERVEUR=1.
+// Test LENT (projet vitest « conducteur-lent », `npm run test:lent`). Quand il se saute, il l'annonce : nom de describe
+// « [SAUTÉ : raison] … » et un avertissement en tête de sortie.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +19,16 @@ import { copie } from './ops';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 const SERVEUR = join(RACINE, 'apps', 'serveur');
-const SANS = process.env.SR_SANS_SERVEUR === '1';
+
+/** Raison du saut, ou `null` si le test peut tourner (SR_SANS_SERVEUR=1, ou wrangler non installé). */
+function raisonSaut(): string | null {
+  if (process.env.SR_SANS_SERVEUR === '1') return 'SR_SANS_SERVEUR=1';
+  try { createRequire(join(SERVEUR, 'package.json')).resolve('wrangler/package.json'); } catch { return 'wrangler introuvable (npm install)'; }
+  return null;
+}
+const RAISON_SAUT = raisonSaut();
+const SANS = RAISON_SAUT !== null;
+if (SANS) console.warn(`[SAUTÉ : ${RAISON_SAUT}] salle réelle : aucun serveur lancé`);
 
 let base = '';
 let admin = '';
@@ -88,7 +100,7 @@ async function attendre(pred: () => boolean, quoi: string, ms = 10_000) {
 
 const json = (p: Projet) => JSON.stringify(p);
 
-describe.skipIf(SANS)('salle réelle : deux clients du module serveur.ts', () => {
+describe.skipIf(SANS)(SANS ? `[SAUTÉ : ${RAISON_SAUT}] salle réelle : deux clients du module serveur.ts` : 'salle réelle : deux clients du module serveur.ts', () => {
   let api: ClientApi;
   let id = '', jeton = '';
   const docA = new DocMemoire(), docB = new DocMemoire();
