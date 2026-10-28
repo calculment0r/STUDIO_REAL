@@ -1,7 +1,5 @@
 # Outils médias
-
 Encoder les médias du spectacle (H.264 + AAC, `moov` en tête), puis les vérifier et produire `medias.json`.
-
 ## Encoder (PowerShell, ffmpeg dans le PATH)
 ```
 .\outils\medias\normaliser.ps1 -Entree brut.mov -Sortie intro.mp4 -Cible telephone   # 720x1280
