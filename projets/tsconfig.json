@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "tsBuildInfoFile": "../node_modules/.cache/tsc/projets.tsbuildinfo",
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "references": [{ "path": "../packages/modele" }],
+  "include": [
+    "echo/generer-echo-simple.ts"
+    // à inclure quand le lot generateurs-echo est fusionné :
+    // "echo/generer-echo-complet.ts"
+  ]
+}

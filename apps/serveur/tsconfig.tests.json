@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/serveur-tests.tsbuildinfo",
     "types": ["node"]
   },
   "include": ["tests", "src/logique", "vitest.config.ts"]
