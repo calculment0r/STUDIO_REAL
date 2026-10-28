@@ -2,13 +2,14 @@
 // Tout est posé en coordonnées du MONDE dans le calque transformé de la planche : le panoramique et le zoom ne
 // re-rendent pas ce composant (seul le niveau de zoom sémantique, l'état de lecture ou le projet le font).
 import { memo, useMemo, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
-import { dureeEtape, type Etape } from '@studio-real/modele';
+import { dureeEtape, type Acteur, type Etape } from '@studio-real/modele';
 import {
   entreesDe, fm, hauteurBloc, liensDuMoment, regleSortie, libelleCondition, rondEntree, rondSortie, statutSortie,
   LARGEUR_BLOC, type CadreMoment, type Niveau, type StatutEtape,
 } from './geometrie';
 import { ApercuEtape, infoBloc, type ThemePlanche } from './pont-blocs';
 import { LIGNE, px, teinte } from './styles';
+import { pointPuces, pucesEtape } from './acteurs';
 
 export interface ApiPlanche {
   saisirEtape: (e: RPointerEvent, moment: string, etape: string, poignee: boolean) => void;
@@ -16,6 +17,8 @@ export interface ApiPlanche {
   choisirSortie: (e: RPointerEvent, moment: string, index: number) => void;
   deplacerSortie: (moment: string, index: number, sens: -1 | 1) => void;
   saisirRotatif: (e: RPointerEvent, moment: string, etape: string, i: number, v0: number) => void;
+  /** Poignée « envoyer » d'un bloc : tirer vers un acteur de la bande. */
+  saisirEnvoi: (e: RPointerEvent, moment: string, etape: string) => void;
 }
 
 export interface EtatActif { etape: string; tEtape: number; bloque: boolean }
@@ -42,6 +45,8 @@ export interface ProprietesMoment {
   lienDepuis: string | null;
   editable: boolean;
   rotatif: RotatifProvisoire | null;
+  /** Acteurs du projet (puces d'ordres et poignée « envoyer » sous les blocs). */
+  acteurs?: Acteur[];
   tag: string;
   api: ApiPlanche;
 }
@@ -150,7 +155,7 @@ export const MomentPlanche = memo(function MomentPlanche(p: ProprietesMoment) {
               sel={p.selEtape === st.id} terne={p.terne} entree={entrees.includes(st.id)}
               sorties={parSource.get(st.id) ?? []} moment={m} selSortie={p.selSortie}
               rotatif={p.rotatif && p.rotatif.etape === st.id ? p.rotatif : null}
-              cibleLien={!!p.lienDepuis && p.lienDepuis !== st.id} editable={p.editable} api={p.api} />
+              cibleLien={!!p.lienDepuis && p.lienDepuis !== st.id} editable={p.editable} api={p.api} acteurs={p.acteurs} />
           ))}
         </>
       )}
@@ -162,7 +167,7 @@ interface ProprietesBloc {
   st: Etape; si: number; pos: { x: number; y: number }; momentId: string; niveau: Niveau; NH: number; theme: ThemePlanche;
   statut: StatutEtape; actif: EtatActif | null; sel: boolean; terne: boolean; entree: boolean;
   sorties: number[]; moment: CadreMoment['moment']; selSortie: number; rotatif: RotatifProvisoire | null;
-  cibleLien: boolean; editable: boolean; api: ApiPlanche;
+  cibleLien: boolean; editable: boolean; api: ApiPlanche; acteurs?: Acteur[];
 }
 
 const TXT_STATUT: Record<StatutEtape, string> = { neutre: 'à jouer', joue: 'joué', actif: 'en cours', avenir: 'à venir', ignore: 'non choisi' };
@@ -273,7 +278,33 @@ function BlocEtape(b: ProprietesBloc) {
         )}
       </div>
       {ronds}
+      <OrdresBloc b={b} />
     </>
+  );
+}
+
+/** Sous le bloc, à taille d'écran constante : la poignée « envoyer » (tirer vers un acteur de la bande) et la rangée
+ *  des puces d'ordres (« PUBLIC · vote 1 »), une par envoi de l'étape. */
+function OrdresBloc({ b }: { b: ProprietesBloc }) {
+  const { st, pos, niveau, momentId, api } = b;
+  const puces = pucesEtape(st, b.acteurs);
+  const avecActeurs = !!b.acteurs?.length;
+  if (!puces.length && !(avecActeurs && b.editable)) return null;
+  const p = pointPuces(pos, niveau);
+  return (
+    <div className="planche-ecran" style={{ left: p.x, top: p.y, zIndex: 4, opacity: b.terne ? 0.45 : 1 }}>
+      <div className="planche-ordres" style={{ width: `calc(${LARGEUR_BLOC}px * var(--z) + 120px)` }}>
+        {avecActeurs && b.editable && (
+          <span data-ui="1" className="planche-envoyer" title="Envoyer : tirer vers un acteur de la bande PLATEAU"
+            onPointerDown={e => api.saisirEnvoi(e, momentId, st.id)} onDoubleClick={e => e.stopPropagation()}>↗</span>
+        )}
+        {puces.map(x => (
+          <span key={x.index} className={'planche-puce' + (x.tenu ? '' : ' passe')} title={x.texte} style={{ boxShadow: `inset 0 0 0 1px ${x.couleur}` }}>
+            <i style={{ background: x.couleur }} />{x.texte}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 

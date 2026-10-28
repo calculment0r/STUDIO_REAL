@@ -17,6 +17,7 @@ import { Recherche } from './Recherche';
 import { Panneau } from './Panneau';
 import { TiroirAssets, TYPE_ASSET, type AssetGlisse } from './TiroirAssets';
 import { AlerteSecurite, Aide, CadreEnLecture, Projets, Pupitre } from './Superpositions';
+import { FenetreActeurs } from './FenetreActeurs';
 import { useRaccourcis } from './raccourcis';
 import { useRelaisSortie } from '../sortie';
 import './coquille.css';
@@ -144,6 +145,7 @@ export function App() {
       <AlerteSecurite />
       <Pupitre />
       <Projets />
+      <FenetreActeurs />
       <Aide />
     </div>
   );

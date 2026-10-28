@@ -26,6 +26,7 @@ import { bibliotheque, type EntreeBibliotheque, type ThemePlanche } from './pont
 import { teinte } from './styles';
 import { CurseursDistants, useEmettreCurseur } from '../collab';
 import { PastillesCommentaires } from './collab-planche';
+import { CoucheActeurs, type ApiCoucheActeurs } from './CoucheActeurs';
 import './planche.css';
 
 const ROMAINS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
@@ -97,6 +98,7 @@ export function Planche() {
   const selectionInterne = useRef(false);
   const dernierZoomPousse = useRef(cam.z);
   const minuterieMessage = useRef<number | undefined>(undefined);
+  const coucheActeurs = useRef<ApiCoucheActeurs>(null);
 
   const dire = useCallback((t: string) => {
     setMessage(t);
@@ -401,6 +403,12 @@ export function Planche() {
       modifierMoment(moment, (_p, m) => { j = deplacerSortie(m, index, sens); });
       if (j >= 0) setSortieSel({ moment, i: j });
     },
+    saisirEnvoi: (e, moment, etape) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      refBoite.current?.focus({ preventScroll: true });
+      coucheActeurs.current?.commencerEnvoi(e, moment, etape);
+    },
     saisirRotatif: (e, moment, etape, i, v0) => {
       if (e.button !== 0 || !etat.current.editable) return;
       e.stopPropagation();
@@ -657,7 +665,7 @@ export function Planche() {
               selMoment={selection.moment === m.id && !selection.etape} selEtape={selection.moment === m.id ? selection.etape ?? null : null}
               selSortie={sortieSel && sortieSel.moment === m.id ? sortieSel.i : -1}
               lienDepuis={lien && lien.moment === m.id ? lien.a : null} editable={editable}
-              rotatif={rotatif && rotatif.moment === m.id ? rotatif : null}
+              rotatif={rotatif && rotatif.moment === m.id ? rotatif : null} acteurs={projet.acteurs}
               tag={`Moment ${f.index + 1} · acte ${romain(m.act)} · ${m.st.length} étape${m.st.length > 1 ? 's' : ''}`} api={api} />
           );
         })}
@@ -674,6 +682,10 @@ export function Planche() {
 
       {/* Curseurs des autres membres de la salle (monde → écran) */}
       <CurseursDistants zone="planche" projeter={(x, y) => ({ x: x * cam.z + cam.px, y: y * cam.z + cam.py })} />
+
+      {/* Les acteurs : bande PLATEAU, liens étape → acteur et acteur → sortie, menus (calque à l'écran) */}
+      <CoucheActeurs ref={coucheActeurs} projet={projet} cadres={cadres} cam={cam} niveau={niveau} taille={taille} vue={vue}
+        selection={selection} editable={editable} relatif={relatif} dire={dire} />
 
       {/* Barre d'outils de la planche */}
       <div className="planche-outils" data-ui="1" onPointerDown={e => e.stopPropagation()} onDoubleClick={e => e.stopPropagation()}>

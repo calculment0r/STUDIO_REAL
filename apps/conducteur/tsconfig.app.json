@@ -20,5 +20,8 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* l'application téléphone (aperçus de l'inspecteur) est lue par ses déclarations : ses options (et celles du protocole)
+     ne sont pas celles du Conducteur */
+  "references": [{ "path": "../../packages/ui-telephone" }]
 }

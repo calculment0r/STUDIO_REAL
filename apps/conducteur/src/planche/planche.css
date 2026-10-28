@@ -169,3 +169,62 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ort) 60%, transparent), 0 6px 18px var(--ombre-2); }
 .planche-prochain__nom { font-family: var(--f-mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink2); max-width: 160px;
   overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Les acteurs (bande PLATEAU, liens, puces d'ordres) ─────────────────────────────────────────────────────────────
+   Couleurs : familles du catalogue des blocs (--fam-ui téléphones, --fam-scene sortie et agents, --fam-trig signaux). */
+
+/* Sous un bloc : poignée « envoyer » et puces d'ordres, à taille d'écran constante (.planche-ecran) */
+.planche-ordres { position: absolute; left: 0; top: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; pointer-events: none; }
+.planche-envoyer { pointer-events: auto; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: none;
+  cursor: crosshair; background: var(--bg); color: var(--fam-ui); box-shadow: inset 0 0 0 1.5px var(--fam-ui); font-size: 10px; line-height: 1;
+  transition: transform .12s; }
+.planche-envoyer:hover { transform: scale(1.25); }
+.planche-puce { display: inline-flex; align-items: center; gap: 5px; height: 17px; padding: 0 6px 0 5px; border-radius: 4px; background: var(--bg);
+  font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .1em; color: var(--ink); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.planche-puce > i { width: 5px; height: 5px; border-radius: 50%; flex: none; }
+.planche-puce.passe { opacity: .7; font-style: italic; }
+
+/* Liens étape → acteur et acteur → sortie (calque à l'écran, sous les menus) */
+.acp-liens { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 5; overflow: visible; }
+.acp-lien { fill: none; stroke-width: 1.1; opacity: .32; stroke-linecap: round; }
+.acp-lien.signal { stroke-dasharray: 4 4; }
+.acp-lien.fort { opacity: .95; stroke-width: 1.6; }
+.acp-lien.tire { stroke-dasharray: 5 4; }
+
+/* La bande */
+.acp-bande { position: absolute; z-index: 7; display: flex; flex-direction: column; gap: 2px; cursor: default; }
+.acp-tete { height: 22px; display: flex; align-items: center; gap: 4px; padding: 0 2px 0 6px; border-radius: 6px; background: var(--tile);
+  box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); }
+.acp-tete .planche-micro { color: var(--ink3); font-size: 7px; }
+.acp-espace { flex: 1; }
+.acp-bt { height: 18px; min-width: 18px; padding: 0 5px; border-radius: 4px; border: 0; background: transparent; cursor: pointer; color: var(--ink2);
+  font-family: var(--f-mono); font-size: 7px; letter-spacing: .12em; }
+.acp-bt:hover { color: var(--ink); background: var(--tile2); }
+.acp-bt.on { color: var(--gink); background: var(--gdeep); }
+.acp-liste { overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.acp-noeud { position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: 0 9px 0 8px; border-radius: 8px; cursor: pointer;
+  background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .16); transition: box-shadow .12s, background .12s; }
+.acp-noeud:hover, .acp-noeud.survol { background: var(--tile2); }
+.acp-noeud.cible { box-shadow: inset 0 0 0 1px var(--fam-ui); }
+.acp-noeud.cible:hover { box-shadow: inset 0 0 0 2px var(--fam-ui), 0 0 0 4px color-mix(in srgb, var(--fam-ui) 22%, transparent); }
+.acp-glyphe { width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: var(--bg); flex: none; }
+.acp-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.acp-nom { font-size: 11px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acp-etat { font-family: var(--f-mono); font-size: 6.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink3); white-space: nowrap; }
+.acp-ancre { position: absolute; right: -3px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--bg);
+  box-shadow: inset 0 0 0 1.2px rgba(var(--lr), .45); }
+.acp-vide { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 8px; border: 0; cursor: pointer; text-align: left;
+  background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .16); color: var(--ink); font-family: var(--f-mono); font-size: 8px; letter-spacing: .14em; }
+.acp-vide .d { font-family: var(--f-ui); font-size: 10.5px; letter-spacing: 0; color: var(--ink3); }
+.acp-vide:hover { background: var(--tile2); }
+.acp-rouvrir { position: absolute; left: 34px; top: 58px; z-index: 7; height: 22px; padding: 0 8px; border-radius: 6px; border: 0; cursor: pointer;
+  background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); color: var(--ink2); font-family: var(--f-mono); font-size: 7px; letter-spacing: .14em; }
+.acp-rouvrir:hover { color: var(--ink); }
+
+/* Vignette au survol d'un acteur */
+.acp-vignette { position: absolute; z-index: 20; display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 9px; pointer-events: none;
+  background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .2), 0 14px 40px var(--ombre-2); max-width: 220px; }
+.acp-vignette-tete { display: flex; align-items: center; gap: 6px; font-family: var(--f-disp); font-weight: 700; font-size: 9px; letter-spacing: .1em; color: var(--ink); }
+.acp-vignette .planche-micro { color: var(--ink2); font-size: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.planche-menu__item:disabled { opacity: .45; cursor: default; background: none; }
