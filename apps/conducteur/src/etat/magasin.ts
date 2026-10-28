@@ -9,6 +9,9 @@
 // GO unique (`go`), versions locales, export / import JSON, messages à la régie. La lecture passe par src/etat/moteur.ts (moteur du chantier MODÈLE, ou provisoire).
 // Pupitre de la régie (chantier INTÉGRATION) : `poserMemoire`, `envoyerSignal`, `reprendreAuPoint` (entrées extérieures
 // du moteur) et `journalRegie` (commandes émises par les blocs, entrées reçues, alertes ; voir src/etat/regie.ts).
+// Serveur de spectacle (src/etat/spectacle.ts) : `surConduiteLocale` annonce chaque geste de conduite (GO et le nombre
+// de tops qu'il a joués, saut, mémoire, signal, reprise) pour qu'il parte en `conduite` ; `resynchroniser(etat)` cale
+// le lecteur local, devenu MIROIR, sur l'état officiel reçu du serveur (`lecture`).
 import { create } from 'zustand';
 import {
   exempleDemo,
@@ -146,6 +149,35 @@ export interface Magasin {
   /** Journal de régie de la représentation en cours : commandes émises par les blocs (machine, message, chrono,
    *  figurants), entrées reçues (signaux, mémoires, reprises) et alertes ; le plus récent en dernier (300 au plus). */
   journalRegie: LigneRegie[];
+
+  // ── lecture miroir (serveur de spectacle, src/etat/spectacle.ts) ──
+  /** Cale la lecture sur l'état OFFICIEL reçu du serveur (`lecture{etat}`) : le lecteur local (même projet) se replace
+   *  au même moment, à la même étape (ou au passage), avec les mêmes mémoires, et son horloge est recalée sur `etat.t`.
+   *  Entre deux `lecture`, il continue d'animer la conduite à 60 i/s. Le journal de régie suit alors le serveur.
+   *  Sans effet en RÉPÉTITION. */
+  resynchroniser: (etat: EtatLecture) => void;
+  /** Vrai depuis le premier `resynchroniser` en SPECTACLE, jusqu'au retour en RÉPÉTITION ou au début. */
+  miroir: boolean;
+}
+
+/** Geste de conduite fait dans CE Conducteur (src/etat/spectacle.ts le relaie au serveur de spectacle). `go` : `tops`
+ *  = nombre de `Lecteur.top()` joués par l'appui (0 : la représentation commence ou repart, 1 ou 2 : voir `go`). */
+export type GesteConduite =
+  | { k: 'go'; tops: number }
+  | { k: 'allerA'; moment: string; etape?: string }
+  | { k: 'poser'; nom: string; valeur: ValeurMemoire }
+  | { k: 'signal'; nom: string; donnees?: unknown }
+  | { k: 'reprendre'; nom?: string };
+const ecouteursConduite = new Set<(g: GesteConduite) => void>();
+/** S'abonne aux gestes de conduite de ce Conducteur ; renvoie le désabonnement. */
+export function surConduiteLocale(fn: (g: GesteConduite) => void): () => void {
+  ecouteursConduite.add(fn);
+  return () => { ecouteursConduite.delete(fn); };
+}
+function annoncer(g: GesteConduite): void {
+  for (const fn of [...ecouteursConduite]) {
+    try { fn(g); } catch (e) { console.error('[conducteur] geste de conduite', e); }
+  }
 }
 
 // ─── hors React : le lecteur, sa révision, l'exécution en cours ───────────────────────────────────────
@@ -163,6 +195,8 @@ let execution: Execution | null = null;
 let minuteurMessage: ReturnType<typeof setTimeout> | undefined;
 /** Ce que le journal de régie a déjà relevé dans l'état du lecteur courant (commandes, journal, alertes). */
 let vus = { c: 0, j: 0, a: 0 };
+/** Idem dans l'état officiel du serveur (lecture miroir : le journal suit le serveur, pas le lecteur local). */
+let vusServeur = { c: 0, j: 0, a: 0 };
 let numeroRegie = 0;
 /** Fait avancer la lecture de dt secondes de spectacle (posé par le magasin, appelé par la boucle). */
 let avancerLecture: (dt: number) => void = () => {};
@@ -243,26 +277,29 @@ export const useMagasin = create<Magasin>((set, get) => {
   const projetLu = (): Projet => projetLecteur ?? get().projet;
 
   /** Relève les commandes, entrées et alertes nouvelles du lecteur pour le journal de régie (temps décalés). */
-  const releverRegie = (e: EtatLecture): LigneRegie[] | null => {
+  const releverRegie = (e: EtatLecture, serveur = false): LigneRegie[] | null => {
+    let v = serveur ? vusServeur : vus;
     const c = e.commandes ?? [], j = e.journal ?? [], a = e.alertes ?? [];
-    if (c.length < vus.c || j.length < vus.j || a.length < vus.a) vus = { c: 0, j: 0, a: 0 };
-    if (c.length === vus.c && j.length === vus.j && a.length === vus.a) return null;
+    if (c.length < v.c || j.length < v.j || a.length < v.a) v = { c: 0, j: 0, a: 0 };
+    if (c.length === v.c && j.length === v.j && a.length === v.a) return null;
     const recu = Date.now(), lignes: LigneRegie[] = [];
-    for (const x of c.slice(vus.c)) lignes.push(ligneCommande(x, ++numeroRegie, recu));
-    for (const x of j.slice(vus.j)) { const l = ligneEvenement(x, numeroRegie + 1, recu); if (l) { numeroRegie++; lignes.push(l); } }
-    for (const x of a.slice(vus.a)) lignes.push(ligneAlerte(x, ++numeroRegie, recu));
-    vus = { c: c.length, j: j.length, a: a.length };
-    for (const l of lignes) l.t += decalT;
+    for (const x of c.slice(v.c)) lignes.push(ligneCommande(x, ++numeroRegie, recu));
+    for (const x of j.slice(v.j)) { const l = ligneEvenement(x, numeroRegie + 1, recu); if (l) { numeroRegie++; lignes.push(l); } }
+    for (const x of a.slice(v.a)) lignes.push(ligneAlerte(x, ++numeroRegie, recu));
+    if (serveur) vusServeur = { c: c.length, j: j.length, a: a.length };
+    else vus = { c: c.length, j: j.length, a: a.length };
+    if (!serveur) for (const l of lignes) l.t += decalT;
     lignes.sort((p, q) => p.t - q.t || p.n - q.n);
     return [...get().journalRegie, ...lignes].slice(-300);
   };
   const publier = (e: EtatLecture) => {
     const lecture = { ...e, t: e.t + decalT, retard: e.retard + decalRetard };
-    const journalRegie = releverRegie(e);
+    // lecture miroir : le journal de régie suit l'état officiel du serveur (resynchroniser), pas le lecteur local
+    const journalRegie = get().miroir ? null : releverRegie(e);
     set(journalRegie ? { lecture, journalRegie } : { lecture });
   };
   /** Nouvelle représentation : le journal de régie repart de zéro. */
-  const viderRegie = () => { vus = { c: 0, j: 0, a: 0 }; set({ journalRegie: [] }); };
+  const viderRegie = () => { vus = { c: 0, j: 0, a: 0 }; vusServeur = { c: 0, j: 0, a: 0 }; set({ journalRegie: [] }); };
 
   const journal = (type: string, extra: Record<string, unknown> = {}) => {
     if (!execution) return;
@@ -340,6 +377,7 @@ export const useMagasin = create<Magasin>((set, get) => {
       if (!s.lecture) publier(e);
       accepter('GO · le spectacle commence');
       journal('go', { moment: e.moment, etape: e.etape });
+      annoncer({ k: 'go', tops: 0 });
       return;
     }
     const p = projetLu();
@@ -347,21 +385,23 @@ export const useMagasin = create<Magasin>((set, get) => {
     if (!m) return;
     const momentAvant = e.moment;
     const dernier = i >= p.ev.length - 1;
+    let tops = 0;
     if (e.etape === null) {
       // un passage attend (le top, ou ses conditions) : GO le franchit
-      e = l.top();
+      e = l.top(); tops++;
     } else {
       // Pendant une étape. Dernier moment : l'étape qui termine le spectacle n'est pas un cue (on la laisse finir).
       const versEtape = m.tr.some(o => o.a === e.etape && !!o.b && m.st.some(x => x.id === o.b));
       if (dernier && !versEtape && !e.sequence) {
-        if (!s.enLecture) accepter('Lecture reprise · dernier moment, aucun cue après celui-ci');
+        if (!s.enLecture) { accepter('Lecture reprise · dernier moment, aucun cue après celui-ci'); annoncer({ k: 'go', tops: 0 }); }
         else signaler('Dernier moment : aucun cue après celui-ci.');
         return;
       }
       // fin de l'étape forcée ; si elle mène au passage « go » du moment (cas d'Écho), on le franchit aussitôt
-      e = l.top();
-      if (!e.termine && e.moment === momentAvant && e.etape === null && (m.gate.mode === 'go' || e.attenteGo)) e = l.top();
+      e = l.top(); tops++;
+      if (!e.termine && e.moment === momentAvant && e.etape === null && (m.gate.mode === 'go' || e.attenteGo)) { e = l.top(); tops++; }
     }
+    annoncer({ k: 'go', tops });
     publier(e);
     journal('go', { moment: e.moment, etape: e.etape });
     const j = e.moment ? p.ev.findIndex(x => x.id === e.moment) : -1;
@@ -401,7 +441,7 @@ export const useMagasin = create<Magasin>((set, get) => {
         set({ mode, verrou: true, vitesse: 1, modificationsEnAttente: lecteurAJour() ? 0 : Math.max(0, revision - revisionLecteur) });
         signaler('SPECTACLE · structure verrouillée, vitesse ×1, Espace = GO, Maj+Espace = pause.');
       } else {
-        set({ mode, verrou: false, modificationsEnAttente: 0 });
+        set({ mode, verrou: false, modificationsEnAttente: 0, miroir: false });
         signaler('RÉPÉTITION · modifications autorisées, Espace = lecture / pause, T = GO.');
       }
     },
@@ -425,6 +465,7 @@ export const useMagasin = create<Magasin>((set, get) => {
       set({ selection: { moment, etape } });
       publier(assurerLecteur(true).allerA(moment, etape));
       journal('aller', { moment, etape });
+      annoncer(etape === undefined ? { k: 'allerA', moment } : { k: 'allerA', moment, etape });
     },
 
     zoomerPlanche: (z) => set({ zoomPlanche: Math.min(3, Math.max(0.2, z)) }),
@@ -453,7 +494,7 @@ export const useMagasin = create<Magasin>((set, get) => {
       viderRegie();
       publier(l.reinitialiser());
       instantDernierGo = -Infinity;
-      set({ enLecture: false, dernierGo: 0 });
+      set({ enLecture: false, dernierGo: 0, miroir: false });
     },
 
     reglerSalle: (k, v) => {
@@ -559,18 +600,48 @@ export const useMagasin = create<Magasin>((set, get) => {
       if (!n) return;
       publier(assurerLecteur().poser(n, valeur));
       journal('memoire', { nom: n, valeur });
+      annoncer({ k: 'poser', nom: n, valeur });
     },
     envoyerSignal: (nom, donnees) => {
       const n = nom.trim();
       if (!n) return;
       publier(assurerLecteur().signal(n, donnees));
       journal('signal', { nom: n });
+      annoncer(donnees === undefined ? { k: 'signal', nom: n } : { k: 'signal', nom: n, donnees });
     },
     reprendreAuPoint: (nom) => {
       publier(assurerLecteur().reprendre(nom));
       journal('reprise', { nom: nom ?? '' });
+      annoncer(nom === undefined ? { k: 'reprendre' } : { k: 'reprendre', nom });
     },
     journalRegie: [],
+
+    miroir: false,
+    resynchroniser: (etat) => {
+      if (get().mode !== 'spectacle') return;
+      const l = assurerLecteur();
+      let e = l.etat();
+      const p = projetLu();
+      const connu = !!etat.moment && p.ev.some(x => x.id === etat.moment);
+      // replacer le lecteur local s'il n'est plus au même endroit (même projet, même graine : mêmes étapes ensuite)
+      if (!etat.termine && connu && (e.termine || e.moment !== etat.moment || e.etape !== etat.etape)) {
+        const m = p.ev.find(x => x.id === etat.moment)!;
+        const etape = etat.etape && m.st.some(x => x.id === etat.etape) ? etat.etape : undefined;
+        e = l.allerA(m.id, etape);
+        if (etat.etape === null && etat.phase !== 'fin') e = placerAuPassage(l, m.id);
+      }
+      for (const [k, v] of Object.entries(etat.memoires ?? {})) if (e.memoires[k] !== v) e = l.poser(k, v);
+      // ce que le lecteur local a émis en se replaçant n'est pas nouveau pour la régie
+      vus = { c: e.commandes?.length ?? 0, j: e.journal?.length ?? 0, a: e.alertes?.length ?? 0 };
+      decalT = etat.t - e.t; decalRetard = etat.retard - e.retard;
+      // premier calage : l'historique du serveur ne remplit pas le journal, seules les nouveautés y entrent
+      if (!get().miroir) vusServeur = { c: etat.commandes?.length ?? 0, j: etat.journal?.length ?? 0, a: etat.alertes?.length ?? 0 };
+      const journalRegie = releverRegie(etat, true);
+      const maj: Partial<Magasin> = { lecture: { ...etat }, miroir: true };
+      if (journalRegie) maj.journalRegie = journalRegie;
+      if (etat.termine) maj.enLecture = false;
+      set(maj);
+    },
   };
 });
 

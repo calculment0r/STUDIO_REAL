@@ -173,6 +173,28 @@ describe('lireMessageServeur', () => {
     expect(okS({ t: 'agent.cmd', n: 57, type: 'figurants.cmd', etape: 'b5_q1_s', donnees: { densite: 'calme' } })).toMatchObject({ n: 57 });
   });
 
+  it('salle pour le rail des sorties : vue demandée, écrans affichés, aller-retour médian', () => {
+    const acteurs = {
+      public: { presents: 124, prets: 100, enLigne: 122, demande: { vseq: 7, ecran: 'vote', at: 1793000, cle: 'b5_q1/b5_q1_s#1@8' }, parEcran: { vote: 118, noir: 4, '': 2 }, rttMs: 380 },
+      scene: { presents: 0, demande: { vseq: 3, ecran: null, at: 1793000 } },
+    };
+    expect(okS({ t: 'salle', ts: 1, acteurs })).toEqual({ t: 'salle', ts: 1, acteurs });
+    expect(refusS({ t: 'salle', ts: 1, acteurs: { public: { presents: 1, parEcran: { vote: -1 } } } })).toMatch(/parEcran/);
+    expect(refusS({ t: 'salle', ts: 1, acteurs: { public: { presents: 1, demande: { ecran: 'vote', at: 1 } } } })).toMatch(/demande.vseq/);
+  });
+
+  it('etat relayé à la régie (acteur nommé) : ce qui est AFFICHÉ, latence, médias, erreurs, version', () => {
+    const m = {
+      t: 'etat', acteur: 'scene', personne: 'poste_projecteur', ts: 1793000, heure: 1792990,
+      ecran: { vseq: 3, ecran: 'mur', cle: 'k', depuis: 1792900 }, visible: true, enLigne: true, rttMs: 38,
+      media: [{ asset: 'clip.mp4', pret: 1, lecture: 'lit' }], erreurs: ['son bloqué'], app: { version: '0.1.0', build: 'abc1234' },
+    };
+    expect(okS(m)).toEqual(m);
+    expect(okS({ t: 'etat', acteur: 'franck', ts: 1, heure: 1, ecran: null, visible: false })).toEqual({ t: 'etat', acteur: 'franck', ts: 1, heure: 1, ecran: null, visible: false });
+    expect(refusS({ t: 'etat', acteur: 'scene', ts: 1, heure: 1, ecran: null })).toMatch(/visible/);
+    expect(refusS({ t: 'etat', acteur: 'sc ène', ts: 1, heure: 1, ecran: null, visible: true })).toMatch(/acteur/);
+  });
+
   it('ack, refus, pong, resync, rtc ; type client refusé côté serveur', () => {
     expect(okS({ t: 'ack', cseq: 42, statut: 'doublon' })).toEqual({ t: 'ack', cseq: 42, statut: 'doublon' });
     expect(refusS({ t: 'ack', cseq: 42, statut: 'conflit' })).toMatch(/statut/);
@@ -181,7 +203,7 @@ describe('lireMessageServeur', () => {
     expect(okS({ t: 'resync', raison: 'redemarrage' })).toEqual({ t: 'resync', raison: 'redemarrage' });
     expect(okS({ t: 'rtc', de: 'franck', vers: 'scene', signal: { type: 'ice' }, ts: 3 })).toMatchObject({ de: 'franck' });
     expect(refusS({ t: 'hello', v: 2 })).toMatch(/^type-inconnu/);
-    expect(TYPES_SERVEUR).toHaveLength(11);
+    expect(TYPES_SERVEUR).toHaveLength(12);
   });
 
   it('messageVue relie la Vue du modèle au message diffusé', () => {

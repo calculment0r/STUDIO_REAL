@@ -22,6 +22,9 @@
 // - `vue.at` et `fx.at` en heure serveur ; un `fx` dont `at + ttl` est passé n'est pas rejoué à la reconnexion ;
 // - `panique` : tous les acteurs (hors agents) sur leur écran de sécurité ; levée → retour aux vues calculées ;
 // - `forcer` : vue imposée, journalisée, valable jusqu'au prochain envoi du lecteur à cet acteur.
+// - rail des sorties de la régie (rapport 2 §4.2 a) : le battement (et l'accusé d'affichage) d'un acteur NOMMÉ
+//   (cardinalité 1) est relayé à la régie (`etat`) ; la foule est résumée dans `salle` (vue demandée, écrans affichés
+//   par ses personnes présentes, aller-retour médian), toujours ≤ 4 par seconde.
 import {
   cibleDansFoule, creerLecteur, envoisPasses, personneConcernee, vueActeur,
   type Acteur, type ContexteFoule, type EnvoiPasse, type EtatLecture, type Lecteur, type Projet, type Signaux,
@@ -29,7 +32,7 @@ import {
 import {
   LIMITES, VERSION_PROTOCOLE,
   type MessageClient, type MessageServeur, type MsgAck, type MsgAgentAck, type MsgAgentCmd, type MsgAgentIn, type MsgBienvenue, type MsgConduite,
-  type MsgEtat, type MsgFx, type MsgHello, type MsgIn, type MsgSalle, type StatutAck, type VueDiffusee,
+  type MsgEtat, type MsgEtatActeur, type MsgFx, type MsgHello, type MsgIn, type MsgSalle, type StatutAck, type VueDiffusee,
 } from '@studio-real/protocole';
 import { acteursCibles, acteursFoule, agentPour, preparerProjet, type ProjetPrepare } from './projet';
 import { cloner, empreinteDe, idRepresentation, jsonStable, lettre } from './outils';
@@ -437,6 +440,25 @@ export class Representation {
     if (m.rttMs !== undefined) p.rttMs = m.rttMs;
     p.vu = this.horloge();
     if (jsonStable(p.affiche) !== avant) this.journaliser('entree', { k: 'etat', acteur: s.acteur, personne: s.personne ?? session, ecran: p.affiche });
+    this.relayerEtat(s, p, m);
+  }
+
+  /** Battement (ou accusé d'affichage) d'un acteur nommé : relayé tel quel à la régie (rail des sorties). La foule
+   *  n'est pas relayée personne par personne (résumé dans `salle`). */
+  private relayerEtat(s: SessionEtat, p: PersonneSalle, m?: MsgEtat) {
+    const a = s.acteur ? this.acteurs.get(s.acteur) : undefined;
+    if (!a || a.cardinalite !== 1) return;
+    const r: MsgEtatActeur = {
+      t: 'etat', acteur: a.id, ts: this.horloge(), heure: m?.heure ?? p.affiche?.depuis ?? this.horloge(),
+      ecran: p.affiche ? cloner(p.affiche) : null, visible: p.visible, enLigne: p.enLigne,
+    };
+    if (s.personne !== undefined) r.personne = s.personne;
+    if (p.rttMs !== undefined) r.rttMs = p.rttMs;
+    if (m?.media) r.media = cloner(m.media);
+    if (m?.batterie !== undefined) r.batterie = m.batterie;
+    if (m?.erreurs) r.erreurs = [...m.erreurs];
+    if (s.app) r.app = { ...s.app };
+    this.envoyer({ role: 'regie' }, r);
   }
 
   private conduite(session: string, s: SessionEtat, m: MsgConduite): Resultat {
@@ -550,6 +572,7 @@ export class Representation {
         const ecran = f && f.vue.vseq === m.data.vseq ? f.vue.ecran ?? '' : '';
         p.affiche = { vseq: m.data.vseq, ecran, depuis: m.data.affiche, ...(f?.vue.cle && f.vue.vseq === m.data.vseq ? { cle: f.vue.cle } : {}) };
         if (m.data.refus) journal({ vseq: m.data.vseq, refus: m.data.refus });
+        this.relayerEtat(s, p);
         return ok();
       }
     }
@@ -793,13 +816,29 @@ export class Representation {
       let presents = 0;
       let prets = 0;
       let enLigne = 0;
+      const parEcran: Record<string, number> = {};
+      const rtts: number[] = [];
       for (const p of Object.values(this.e.salle[a.id] ?? {})) {
         if (!p.sessions.length) continue;
         presents++;
         if (p.pret) prets++;
-        if (p.enLigne && p.visible) enLigne++;
+        if (!(p.enLigne && p.visible)) continue;
+        // écrans affichés par les personnes EN LIGNE (les autres sont « hors ligne » : presents − enLigne)
+        enLigne++;
+        const ecran = p.affiche?.ecran ?? '';
+        parEcran[ecran] = (parEcran[ecran] ?? 0) + 1;
+        if (p.rttMs !== undefined && Number.isFinite(p.rttMs)) rtts.push(p.rttMs);
       }
-      acteurs[a.id] = { presents, prets, enLigne };
+      const r: MsgSalle['acteurs'][string] = { presents, prets, enLigne };
+      // rail des sorties : vue demandée (vue commune), écrans affichés, aller-retour médian (arrondi : moins d'envois)
+      const f = this.e.flux[a.id];
+      if (f) {
+        r.demande = { vseq: f.vue.vseq, ecran: f.vue.ecran, at: f.vue.at };
+        if (f.vue.cle !== undefined) r.demande.cle = f.vue.cle;
+      }
+      if (enLigne) r.parEcran = Object.fromEntries(Object.entries(parEcran).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)));
+      if (rtts.length) r.rttMs = Math.round(rtts.sort((x, y) => x - y)[Math.floor((rtts.length - 1) / 2)]! / 10) * 10;
+      acteurs[a.id] = r;
     }
     const m: MsgSalle = { t: 'salle', ts: this.horloge(), acteurs };
     const q = this.e.question;

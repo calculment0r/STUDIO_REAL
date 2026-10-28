@@ -266,10 +266,27 @@ const TYPES_MESSAGE_SORTIE = ['bonjour', 'present', 'fin-video', 'refus', 'au-re
 
 // ── adresse et configuration ─────────────────────────────────────────────────────────────────────────────────────
 
-/** Adresse publique des pages spectateur (docs/04 §1) ; VITE_ADRESSE_PUBLIC la remplace au build. */
-// Spectacle du 27/10 : le serveur du soir, par le tunnel public (les spectateurs sont en 4G/5G)
-export const ADRESSE_PUBLIC_DEFAUT = 'https://highway-regions-temperatures-penn.trycloudflare.com/echo';
+/** Adresse publique des pages spectateur : REPLI NEUTRE (le serveur de spectacle local, adresse par défaut de
+ *  apps/serveur-spectacle). La vraie adresse vient du réglage du spectacle (fenêtre Projet › Spectacle, ou
+ *  `/config.json` du serveur) : l'application téléphone `<adresse publique>/t/`, sans jeton nommé. */
+export const ADRESSE_PUBLIC_DEFAUT = 'http://localhost:8790/t/';
 export const CONSIGNE_DEFAUT = 'Scannez pour entrer';
+/** Clé du réglage « adresse publique » du client régie (etat/spectacle.ts) ; la sortie, même origine, la lit aussi. */
+export const CLE_ADRESSE_PUBLIQUE_SPECTACLE = 'studio-real:spectacle:adresse-publique';
+
+/** `<adresse publique>/t/` depuis le réglage du spectacle ; null s'il n'y en a pas. */
+function adresseDuSpectacle(): string | null {
+  try {
+    const a = localStorage.getItem(CLE_ADRESSE_PUBLIQUE_SPECTACLE)?.trim();
+    if (!a || !/^https?:\/\//i.test(a)) return null;
+    const u = new URL(a);
+    u.hash = ''; u.search = '';
+    let p = u.pathname.replace(/\/+$/, '');
+    if (!p.endsWith('/t')) p += '/t';
+    u.pathname = p + '/';
+    return u.toString();
+  } catch { return null; }
+}
 
 export function configParDefaut(titre?: string): ConfigSortie {
   let adresse = ADRESSE_PUBLIC_DEFAUT;
@@ -277,6 +294,9 @@ export function configParDefaut(titre?: string): ConfigSortie {
     const v = (import.meta.env?.VITE_ADRESSE_PUBLIC as string | undefined)?.trim();
     if (v) adresse = v;
   } catch { /* hors Vite */ }
+  // le réglage du spectacle (adresse fixe du serveur) passe avant l'adresse de build et l'ancienne adresse retenue
+  const spectacle = adresseDuSpectacle();
+  if (spectacle) return { titre: titre?.trim() || 'Studio Real', adresse: spectacle, consigne: CONSIGNE_DEFAUT };
   // `?adresse=https://…` dans l'adresse de la page (régie ou sortie) : remplace l'adresse du QR et reste retenue dans ce
   // navigateur (le tunnel du soir change d'adresse à chaque lancement) ; `?adresse=defaut` revient à la valeur livrée
   try {

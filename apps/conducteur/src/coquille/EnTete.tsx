@@ -5,6 +5,7 @@
 // thème. Tous les chiffres qui changent : largeur fixe, tabulaires.
 // Salle collaborative : pastilles de présence (chantier COLLAB) dans un bouton qui ouvre « Projet » (dépôt, serveur, fichier).
 // Le retard est affiché dans la barre de la conduite (comme le design).
+// Voyant PONT (serveur de spectacle : relié, périmé, absent, jeton refusé, GO non accusé) à côté de la sortie écran scène.
 import { VITESSES_REPETITION, useMagasin, type ModeConducteur } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
 import { mmss } from '../theme/format';
@@ -16,6 +17,7 @@ import { basculerPleinEcran } from './raccourcis';
 import { BoutonSortieScene } from '../sortie';
 import { etatRepresentation } from './etat-scene';
 import { useGoRecent } from './useGoRecent';
+import { VoyantSpectacle } from './RailSorties';
 
 const MODES: [ModeConducteur, string, string][] = [
   ['repetition', 'RÉPÉTITION', 'Écrire, régler, répéter (×1 ×5 ×20) : Espace = lecture / pause, T = GO, la caméra reste libre'],
@@ -117,6 +119,7 @@ export function EnTete() {
       </button>
       <button className={'btn-carre si-moyen' + (ui.pupitre ? ' on' : '')} onClick={() => ui.basculer('pupitre')} title="Pupitre de représentation · touche P"><IcoPupitre /></button>
       <button className="btn-carre disp-txt si-moyen" onClick={() => ui.basculer('aide')} title="Raccourcis · touche ?">?</button>
+      <VoyantSpectacle />
       <BoutonSortieScene />
       <button className="btn-carre" onClick={basculerPleinEcran} title={ui.pleinEcran ? 'Quitter le plein écran · F' : 'Plein écran · F'}>
         <IcoPleinEcran actif={ui.pleinEcran} />

@@ -31,7 +31,7 @@ ElevenLabs, Whisper, pont OSC) exécutent les commandes numérotées du lecteur 
 | `role` | Qui | Reçoit | Envoie |
 |---|---|---|---|
 | `auteur` | poste d'écriture | messages v1 de la salle de projet (`modif`, `verrou`, `mode`, `chat`, `commentaire`…), inchangés : `apps/serveur/src/logique/protocole.ts` | idem |
-| `regie` | le Conducteur en mode scène | `lecture`, `salle`, `ack` | `conduite` |
+| `regie` | le Conducteur en mode scène | `lecture`, `salle`, `etat` (acteurs nommés), `ack` | `conduite` |
 | `acteur` (+ `acteur:<id>`) | sortie scène, téléphone du public, téléphone nommé, prompteur | `vue`, `fx`, `ack` | `in`, `etat` |
 | `agent` (+ `acteur:<id>`) | service figurants, enveloppe ElevenLabs, Whisper, pont OSC | `agent.cmd` | `agent.ack`, `agent.in` |
 
@@ -65,6 +65,16 @@ Un jeton par rôle (et par acteur nommé). Le jeton n'est jamais conservé dans 
 
 `etat` est envoyé 1 fois par seconde par un écran, 1 fois toutes les 5 s par un téléphone. Il dit ce qui est **affiché**
 (pas ce qui a été demandé) : la régie compare avec la dernière `vue` et affiche l'écart.
+
+### Ce que la régie voit des sorties (rail des sorties, rapport 2 §4.2 a)
+
+- Un acteur **nommé** (cardinalité 1 : écran scène, téléphone d'un comédien, de la ministre) : son battement `etat`, et son
+  accusé d'affichage (`in{k:'accuse'}`), sont relayés tels quels à la régie (`etat`, serveur → régie).
+- La **foule** (public) n'est pas relayée personne par personne : `salle.acteurs.<id>` porte `parEcran` (écrans affichés
+  par les personnes EN LIGNE ; clé `''` = aucun écran ; les autres sont hors ligne : `presents − enLigne`) et `rttMs`
+  (aller-retour médian, arrondi à 10 ms).
+- Pour tous : `salle.acteurs.<id>.demande` = la vue commune diffusée (`vseq`, `ecran`, `at`, `cle`). La régie compare
+  demandé et affiché : écart au-delà de 2 s → ambre, au-delà de 5 s → rouge.
 
 ### `conduite` : les ordres de la régie
 
@@ -107,7 +117,8 @@ Une seule famille pour tout ce qu'un acteur renvoie (ex `entree` et `ack{n, affi
 | `vue` | un acteur (ou une personne de la foule) | `acteur`, `vseq`, `at`, `ecran` (ou `null` : aucun écran encore), `params`, `cle?` |
 | `fx` | un acteur | `acteur`, `id`, `at`, `kind` (`vibrer`, `son`, `flash`, `pop`…), `p`, `ttl` (ms, ≤ 10 min) |
 | `lecture` | régie | `etat` (`EtatLecture` du modèle), `par`, `ts` — émis par le serveur en scène |
-| `salle` | régie | `ts`, `acteurs{<id>: {presents, prets?, enLigne?}}`, `vote?{q, recus, parts[]}` — ≤ 4 par seconde |
+| `salle` | régie | `ts`, `acteurs{<id>: {presents, prets?, enLigne?, demande?{vseq, ecran, at, cle?}, parEcran?{<écran>: n}, rttMs?}}`, `vote?{q, recus, parts[]}` — ≤ 4 par seconde |
+| `etat` | régie | battement d'un acteur NOMMÉ (cardinalité 1) relayé : `acteur`, `personne?`, `ts` (serveur), `heure` (client), `ecran` (`{vseq, ecran, cle?, depuis}` ou `null`), `visible`, `enLigne?`, `rttMs?`, `media?[]`, `batterie?`, `erreurs?[]`, `app?` |
 | `agent.cmd` | un agent | `n`, `type` (`figurants.cmd`, `appel`, `machine`…), `moment?`, `etape`, `donnees`, `at?` |
 | `ack` | l'émetteur d'un `cseq` | `cseq`, `statut` (`ok` \| `doublon` \| `refus` \| `ferme`), `raison?`, `res?` |
 | `refus` | l'émetteur | `code`, `message`, `fatal?` (le serveur ferme) — hello invalide, jeton faux, version |
