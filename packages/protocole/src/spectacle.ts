@@ -193,12 +193,54 @@ export interface MsgFx { t: 'fx'; acteur: string; id: string; at: number; kind: 
 /** État de lecture (régie), émis par le serveur en scène. */
 export interface MsgLecture { t: 'lecture'; etat: EtatLecture; par: string; ts: number }
 
+/** Vue DEMANDÉE à un acteur (la vue commune diffusée) : la régie la compare à l'écran AFFICHÉ (écart demandé / affiché). */
+export interface VueDemandee {
+  vseq: number;
+  /** null = aucun écran encore */
+  ecran: string | null;
+  /** heure serveur de la vue */
+  at: number;
+  cle?: string;
+}
+
+/** Résumé d'un acteur dans `salle` : présents, prêts, en ligne ; et, pour le rail des sorties de la régie (rapport 2
+ *  §4.2 a), la vue demandée, les écrans AFFICHÉS par ses personnes EN LIGNE (clé '' = rien d'affiché) et l'aller-retour
+ *  médian de ses personnes en ligne (ms, arrondi à 10 ms). */
+export interface ResumeActeurSalle {
+  presents: number;
+  prets?: number;
+  enLigne?: number;
+  demande?: VueDemandee;
+  parEcran?: Record<string, number>;
+  rttMs?: number;
+}
+
 /** Résumé de la salle pour la régie (≤ 4 par seconde). */
 export interface MsgSalle {
   t: 'salle';
   ts: number;
-  acteurs: Record<string, { presents: number; prets?: number; enLigne?: number }>;
+  acteurs: Record<string, ResumeActeurSalle>;
   vote?: { q: string; recus: number; parts: number[] };
+}
+
+/** Battement d'un acteur NOMMÉ (cardinalité 1 : écran scène, téléphone de comédien…) relayé à la régie : ce qu'il
+ *  AFFICHE, sa latence, ses médias, ses erreurs. La foule n'est pas relayée personne par personne : elle est résumée
+ *  dans `salle` (`parEcran`, `rttMs`). `ts` = heure serveur de réception ; `heure` = heure du client. */
+export interface MsgEtatActeur {
+  t: 'etat';
+  acteur: string;
+  personne?: string;
+  ts: number;
+  heure: number;
+  ecran: EcranAffiche | null;
+  visible: boolean;
+  enLigne?: boolean;
+  rttMs?: number;
+  media?: MediaActeur[];
+  batterie?: number;
+  erreurs?: string[];
+  /** version de l'application de l'acteur (annoncée dans son `hello`) */
+  app?: AppClient;
 }
 
 /** Commande numérotée du lecteur vers un agent (ex `fig.cmd`, `junon`, appel ElevenLabs…). */
@@ -225,7 +267,7 @@ export interface MsgResyncServeur { t: 'resync'; raison: string }
 export interface MsgRtcServeur { t: 'rtc'; de: string; vers: string; signal: Record<string, unknown>; ts: number }
 
 export type MessageServeur =
-  | MsgBienvenue | MsgVue | MsgFx | MsgLecture | MsgSalle | MsgAgentCmd | MsgAck | MsgRefus | MsgPong | MsgResyncServeur
-  | MsgRtcServeur;
+  | MsgBienvenue | MsgVue | MsgFx | MsgLecture | MsgSalle | MsgEtatActeur | MsgAgentCmd | MsgAck | MsgRefus | MsgPong
+  | MsgResyncServeur | MsgRtcServeur;
 export type TypeMessageServeur = MessageServeur['t'];
-export const TYPES_SERVEUR: readonly TypeMessageServeur[] = ['bienvenue', 'vue', 'fx', 'lecture', 'salle', 'agent.cmd', 'ack', 'refus', 'pong', 'resync', 'rtc'];
+export const TYPES_SERVEUR: readonly TypeMessageServeur[] = ['bienvenue', 'vue', 'fx', 'lecture', 'salle', 'etat', 'agent.cmd', 'ack', 'refus', 'pong', 'resync', 'rtc'];

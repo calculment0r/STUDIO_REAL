@@ -427,3 +427,29 @@ describe('le noyau reste pur', () => {
     }
   });
 });
+
+describe('rail des sorties de la régie : ce que chaque acteur AFFICHE', () => {
+  it('le battement d’un acteur nommé est relayé à la régie ; celui d’un téléphone du public ne l’est pas', () => {
+    const b = pret();
+    const vseq = b.rep.vue('scene')!.vseq;
+    const out = b.brut('scene_1', { t: 'etat', heure: T0 + 5, ecran: { vseq, ecran: 'accueil-qr', depuis: T0 + 1 }, visible: true, rttMs: 38, erreurs: ['son bloqué'] });
+    const relais = de(out, 'etat');
+    expect(relais).toHaveLength(1);
+    expect(relais[0]!.a).toEqual({ role: 'regie' });
+    expect(relais[0]!.m).toMatchObject({ acteur: 'scene', heure: T0 + 5, ecran: { vseq, ecran: 'accueil-qr' }, visible: true, rttMs: 38, erreurs: ['son bloqué'] });
+    expect(lireMessageServeur(JSON.stringify(relais[0]!.m)).message).not.toBeNull();
+    const pub = b.brut('pub_s1', { t: 'etat', heure: T0 + 5, ecran: { vseq: b.rep.vue('public', 'tel_001')!.vseq, ecran: 'regardez', depuis: T0 + 1 }, visible: true, rttMs: 120 });
+    expect(de(pub, 'etat')).toHaveLength(0);
+  });
+
+  it('le résumé de salle porte la vue demandée, les écrans affichés par la foule et l’aller-retour médian', () => {
+    const b = pret();
+    const v = b.rep.vue('public')!;
+    b.brut('pub_s1', { t: 'etat', heure: T0, ecran: { vseq: v.vseq, ecran: 'regardez', depuis: T0 }, visible: true, rttMs: 104 });
+    b.brut('pub_s2', { t: 'etat', heure: T0, ecran: { vseq: v.vseq, ecran: 'regardez', depuis: T0 }, visible: true, rttMs: 300 });
+    const salle = messages(b.secondes(1), 'salle').pop()!;
+    expect(salle.acteurs.public).toMatchObject({ presents: 4, demande: { vseq: v.vseq, ecran: 'regardez' }, parEcran: { regardez: 2, '': 2 }, rttMs: 100 });
+    expect(salle.acteurs.scene!.demande).toMatchObject({ ecran: 'accueil-qr' });
+    expect(lireMessageServeur(JSON.stringify(salle)).message).not.toBeNull();
+  });
+});

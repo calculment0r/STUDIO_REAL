@@ -6,8 +6,8 @@ import { RE_ID_ACTEUR, cibleDansFoule, type EtatLecture, type Vue } from '@studi
 import {
   GENRES_ENTREE, LIMITES, OPS_CONDUITE, ROLES, VERSION_PROTOCOLE,
   type EcranAffiche, type EntreeActeur, type GenreEntree, type MediaActeur, type MessageClient, type MessageServeur,
-  type MsgAgentAck, type MsgBienvenue, type MsgEtat, type MsgHello, type MsgSalle, type NomOpConduite, type OpConduite,
-  type RefusAffichage, type Role, type StatutAck, type VueDiffusee,
+  type MsgAgentAck, type MsgBienvenue, type MsgEtat, type MsgEtatActeur, type MsgHello, type MsgSalle, type NomOpConduite,
+  type OpConduite, type RefusAffichage, type ResumeActeurSalle, type Role, type StatutAck, type VueDemandee, type VueDiffusee,
 } from './spectacle';
 
 export { VERSION_PROTOCOLE };
@@ -17,7 +17,8 @@ export type Lu<T> = { message: T; raison?: undefined } | { message: null; raison
 
 /** Refus interne (levé pendant la lecture, rendu en `raison`). */
 class Refus extends Error {
-  constructor(public readonly code: string, detail: string) { super(`${code} : ${detail}`); }
+  readonly code: string;
+  constructor(code: string, detail: string) { super(`${code} : ${detail}`); this.code = code; }
 }
 
 type Brut = Record<string, unknown>;
@@ -235,11 +236,11 @@ function lireEcranAffiche(x: unknown): EcranAffiche | null {
   });
 }
 
-function lireEtat(m: Brut): MsgEtat {
-  return avec<MsgEtat>({ t: 'etat', heure: nombre(m.heure, 'heure'), ecran: lireEcranAffiche(m.ecran), visible: booleen(m.visible, 'visible') }, {
+/** Champs du battement communs au message de l'acteur (`etat`) et à son relais vers la régie. */
+function champsEtat(m: Brut) {
+  return {
     enLigne: opt(m.enLigne, v => booleen(v, 'enLigne')),
     rttMs: opt(m.rttMs, v => nombre(v, 'rttMs')),
-    decalageMs: opt(m.decalageMs, v => nombre(v, 'decalageMs')),
     media: opt(m.media, v => tableau(v, 'media').map((x, i) => {
       const o = objet(x, `media[${i}]`);
       const pret = nombre(o.pret, `media[${i}].pret`);
@@ -252,6 +253,13 @@ function lireEtat(m: Brut): MsgEtat {
       return b;
     }),
     erreurs: opt(m.erreurs, v => tableau(v, 'erreurs').map((x, i) => texte(x, `erreurs[${i}]`))),
+  };
+}
+
+function lireEtat(m: Brut): MsgEtat {
+  return avec<MsgEtat>({ t: 'etat', heure: nombre(m.heure, 'heure'), ecran: lireEcranAffiche(m.ecran), visible: booleen(m.visible, 'visible') }, {
+    ...champsEtat(m),
+    decalageMs: opt(m.decalageMs, v => nombre(v, 'decalageMs')),
   });
 }
 
@@ -317,9 +325,27 @@ function lireSalle(m: Brut): MsgSalle {
   for (const [id, v] of Object.entries(a)) {
     acteurId(id, 'acteurs');
     const o = objet(v, `acteurs.${id}`);
-    acteurs[id] = avec({ presents: entier(o.presents, `acteurs.${id}.presents`) }, {
+    acteurs[id] = avec<ResumeActeurSalle>({ presents: entier(o.presents, `acteurs.${id}.presents`) }, {
       prets: opt(o.prets, x => entier(x, `acteurs.${id}.prets`)),
       enLigne: opt(o.enLigne, x => entier(x, `acteurs.${id}.enLigne`)),
+      demande: opt(o.demande, x => {
+        const d = objet(x, `acteurs.${id}.demande`);
+        return avec<VueDemandee>({
+          vseq: entier(d.vseq, `acteurs.${id}.demande.vseq`), at: nombre(d.at, `acteurs.${id}.demande.at`),
+          ecran: d.ecran === null ? null : texte(d.ecran, `acteurs.${id}.demande.ecran`, 64),
+        }, { cle: opt(d.cle, c => texte(c, `acteurs.${id}.demande.cle`, 200)) });
+      }),
+      parEcran: opt(o.parEcran, x => {
+        const p = objet(x, `acteurs.${id}.parEcran`);
+        if (Object.keys(p).length > LIMITES.tableau) throw new Refus('trop-long', `acteurs.${id}.parEcran : ${LIMITES.tableau} écrans au plus`);
+        const out: Record<string, number> = {};
+        for (const [e, n] of Object.entries(p)) {
+          if (e.length > 64 || CLES_INTERDITES.has(e)) throw new Refus('champ-invalide', `acteurs.${id}.parEcran : écran invalide`);
+          out[e] = entier(n, `acteurs.${id}.parEcran.${e}`);
+        }
+        return out;
+      }),
+      rttMs: opt(o.rttMs, x => nombre(x, `acteurs.${id}.rttMs`)),
     });
   }
   return avec<MsgSalle>({ t: 'salle', ts: nombre(m.ts, 'ts'), acteurs }, {
@@ -354,6 +380,18 @@ export function lireMessageServeur(x: unknown): Lu<MessageServeur> {
         };
       case 'lecture': return { t: 'lecture', ...lireEtatLecture(m, 'lecture') };
       case 'salle': return lireSalle(m);
+      case 'etat':
+        return avec<MsgEtatActeur>({
+          t: 'etat', acteur: acteurId(m.acteur), ts: nombre(m.ts, 'ts'), heure: nombre(m.heure, 'heure'),
+          ecran: lireEcranAffiche(m.ecran), visible: booleen(m.visible, 'visible'),
+        }, {
+          ...champsEtat(m),
+          personne: opt(m.personne, v => motif(v, 'personne', RE_SESSION, 'identifiant [A-Za-z0-9_-]{6,64}')),
+          app: opt(m.app, v => {
+            const a = objet(v, 'app');
+            return { version: texte(a.version, 'app.version', 64), build: texte(a.build, 'app.build', 64, true) };
+          }),
+        });
       case 'agent.cmd':
         return avec<MessageServeur>({
           t: 'agent.cmd', n: entier(m.n, 'n', 1), type: motif(m.type, 'type', RE_NOM, 'nom en minuscules (figurants.cmd, appel…)'),
