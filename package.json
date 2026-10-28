@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "npm run dev -w conducteur",
     "build": "npm run build -w @studio-real/modele && npm run build -w conducteur",
-    "test": "npm test -w @studio-real/modele",
+    "test": "vitest run --project modele --project conducteur-rapide --project serveur-logique --project figurants",
+    "test:lent": "vitest run --project conducteur-lent --project serveur-integration",
+    "test:tout": "vitest run",
     "verifier-projets": "npm run verifier -w @studio-real/modele"
   }
 }

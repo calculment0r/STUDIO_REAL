@@ -11,24 +11,29 @@
 //   5. par la SALLE : un moniteur dans un contexte de navigation isolé (autre « profil » : aucun BroadcastChannel
 //      commun) pilote la même sortie.
 // Arrête tout à la fin. Désactiver : SR_SANS_NAVIGATEUR=1 (ou SR_SANS_SERVEUR=1). Navigateur : SR_EDGE=<chemin>.
+// Test LENT (projet vitest « conducteur-lent », `npm run test:lent`). Pilote CDP : ../test-outils/cdp.ts.
+// Quand il se saute (en tout ou en partie), il l'annonce : nom « [SAUTÉ : raison] … » et avertissement en tête de sortie.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lancerEdge, nomAvecSaut, pause, portLibre, raisonSautNavigateur, tuer, type Cdp, type Onglet } from '../test-outils/cdp';
 
 const CONDUCTEUR = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SERVEUR = join(CONDUCTEUR, '..', 'serveur');
 const MEDIAS = join(CONDUCTEUR, '..', '..', 'medias-locales');
-const EDGE = process.env.SR_EDGE ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const SANS = process.env.SR_SANS_NAVIGATEUR === '1' || process.env.SR_SANS_SERVEUR === '1' || !existsSync(EDGE);
+const RAISON_SAUT = raisonSautNavigateur();
+const SANS = RAISON_SAUT !== null;
 const ADMIN = 'jeton-admin-essai-bascule-0123456789';
 const ENV = { ...process.env, WRANGLER_SEND_METRICS: 'false', CI: '1', NO_COLOR: '1' };
 const VIDEO = 'test-h3.mp4';
 const AVEC_VIDEO = existsSync(join(MEDIAS, VIDEO));
+const RAISON_SANS_VIDEO = `vidéo locale absente : ${join(MEDIAS, VIDEO)}`;
+if (SANS) console.warn(`[SAUTÉ : ${RAISON_SAUT}] bascule de la sortie écran scène : aucun serveur ni navigateur lancé`);
+else if (!AVEC_VIDEO) console.warn(`[SAUTÉ EN PARTIE : ${RAISON_SANS_VIDEO}] bascule de la sortie : les étapes VIDÉO (moniteur, conduite, salle) sont omises`);
 
 const tmp = mkdtempSync(join(tmpdir(), 'bascule-sortie-'));
 const dist = join(tmp, 'dist');
@@ -40,70 +45,6 @@ let journal = '';
 let cdp: Cdp | null = null;
 let projet = { id: '', jeton: '' };
 
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const portLibre = () => new Promise<number>((ok, ko) => {
-  const s = createServer();
-  s.once('error', ko);
-  s.listen(0, '127.0.0.1', () => { const a = s.address(); s.close(() => ok(typeof a === 'object' && a ? a.port : 0)); });
-});
-const tuer = (p: ChildProcess | null) => {
-  if (!p?.pid) return;
-  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F'], { stdio: 'ignore' });
-  else p.kill('SIGTERM');
-};
-
-/** Client minimal du protocole DevTools (WebSocket natif de Node 24). */
-class Cdp {
-  private id = 0;
-  private attente = new Map<number, { ok: (v: any) => void; ko: (e: Error) => void }>();
-  private ws: WebSocket;
-  ouvert: Promise<void>;
-  constructor(url: string) {
-    this.ws = new WebSocket(url);
-    this.ouvert = new Promise((ok, ko) => { this.ws.onopen = () => ok(); this.ws.onerror = () => ko(new Error('CDP injoignable')); });
-    this.ws.onmessage = (e) => {
-      const m = JSON.parse(String(e.data));
-      const a = m.id !== undefined ? this.attente.get(m.id) : undefined;
-      if (!a) return;
-      this.attente.delete(m.id);
-      if (m.error) a.ko(new Error(m.error.message)); else a.ok(m.result);
-    };
-  }
-  envoyer(method: string, params: Record<string, unknown> = {}, sessionId?: string): Promise<any> {
-    const id = ++this.id;
-    this.ws.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
-    return new Promise((ok, ko) => this.attente.set(id, { ok, ko }));
-  }
-  async onglet(url: string, browserContextId?: string): Promise<Onglet> {
-    const { targetId } = await this.envoyer('Target.createTarget', { url, ...(browserContextId ? { browserContextId } : {}) });
-    const { sessionId } = await this.envoyer('Target.attachToTarget', { targetId, flatten: true });
-    return new Onglet(this, targetId, sessionId);
-  }
-  fermer() { try { this.ws.close(); } catch { /* fermé */ } }
-}
-
-class Onglet {
-  readonly cdp: Cdp; readonly targetId: string; readonly sessionId: string;
-  constructor(cdp: Cdp, targetId: string, sessionId: string) { this.cdp = cdp; this.targetId = targetId; this.sessionId = sessionId; }
-  async eval<T = any>(expression: string): Promise<T> {
-    const r = await this.cdp.envoyer('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }, this.sessionId);
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
-    return r.result.value as T;
-  }
-  async attendre<T = any>(expression: string, ms = 20_000, quoi = expression): Promise<T> {
-    const fin = Date.now() + ms;
-    let derniere: unknown;
-    for (;;) {
-      try { derniere = await this.eval(expression); if (derniere) return derniere as T; } catch (e) { derniere = (e as Error).message; }
-      if (Date.now() > fin) throw new Error(`délai dépassé : ${quoi} (dernier : ${JSON.stringify(derniere)})`);
-      await pause(250);
-    }
-  }
-  fermer() { return this.cdp.envoyer('Target.closeTarget', { targetId: this.targetId }); }
-  /** Met l'onglet au premier plan (la sortie est une fenêtre VISIBLE sur le projecteur ; un onglet caché retarde
-   *  la lecture des vidéos). */
-  devant() { return this.cdp.envoyer('Target.activateTarget', { targetId: this.targetId }); }
-}
 
 /** Ce que montre la sortie : la couche du dessus (la scène qui entre par fondu). */
 const SCENE_SORTIE = `(() => {
@@ -155,19 +96,7 @@ beforeAll(async () => {
   projet = await r.json();
 
   // 3. Edge sans tête, fausse caméra, lecture automatique permise
-  const portCdp = await portLibre();
-  edge = spawn(EDGE, [
-    '--headless=new', `--remote-debugging-port=${portCdp}`, `--user-data-dir=${join(tmp, 'profil')}`, '--no-first-run', '--no-default-browser-check',
-    '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required',
-    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', 'about:blank',
-  ], { stdio: 'ignore' });
-  let url = '';
-  for (const limite = Date.now() + 30_000; !url;) {
-    try { url = (await (await fetch(`http://127.0.0.1:${portCdp}/json/version`)).json()).webSocketDebuggerUrl; } catch { /* pas prêt */ }
-    if (!url) { if (Date.now() > limite) throw new Error('Edge ne répond pas'); await pause(250); }
-  }
-  cdp = new Cdp(url);
-  await cdp.ouvert;
+  ({ edge, cdp } = await lancerEdge(tmp));
 }, 240_000);
 
 afterAll(() => {
@@ -177,7 +106,7 @@ afterAll(() => {
   try { rmSync(tmp, { recursive: true, force: true }); } catch { /* fichiers verrouillés sous Windows */ }
 });
 
-describe.skipIf(SANS)('bascule de la sortie écran scène (Edge sans tête)', () => {
+describe.skipIf(SANS)(nomAvecSaut(RAISON_SAUT, 'bascule de la sortie écran scène (Edge sans tête)'), () => {
   const lien = (role: string) => `${base}/streamer.html#role=${role}&projet=${projet.id}&jeton=${projet.jeton}`;
   let sortie: Onglet;
   let moniteur: Onglet;
@@ -234,8 +163,7 @@ describe.skipIf(SANS)('bascule de la sortie écran scène (Edge sans tête)', ()
     await attendreScene(`s.type === 'noir'`, 'noir');
   }, 60_000);
 
-  it('conduite du Conducteur (index.html, même navigateur) : un clip de la piste vidéo fait basculer la sortie', async (ctx) => {
-    if (!AVEC_VIDEO) { ctx.skip(); return; }
+  it.skipIf(!AVEC_VIDEO)(nomAvecSaut(AVEC_VIDEO ? null : RAISON_SANS_VIDEO, 'conduite du Conducteur (index.html, même navigateur) : un clip de la piste vidéo fait basculer la sortie'), async () => {
     conducteur = await cdp!.onglet(`${base}/index.html`);
     await conducteur.attendre(`!!window.__conduite`, 30_000, 'Conducteur chargé');
     await sortie.devant();
