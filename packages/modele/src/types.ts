@@ -36,6 +36,62 @@ export interface Projet {
   memoires?: Record<string, number | string | boolean>;
   /** Séquences réutilisables (bloc « Séquence », 'd:sequence') : sous-déroulés nommés. Ajout STUDIO_REAL. */
   sequences?: Sequence[];
+  /** Les acteurs du spectacle : qui reçoit quoi (écran scène, public, téléphones nommés, agents). Ajout STUDIO_REAL
+   *  (audit 2026-10, rapport 1 §4.4) ; absent = projet sans acteurs, comme avant. */
+  acteurs?: Acteur[];
+}
+
+// ── Acteurs et envois (audit 2026-10, rapport 1 §4.4 ; catalogue et calcul des vues : acteurs.ts) ────────────────────
+
+/** Type d'un acteur : fixe ce qu'on peut lui envoyer (catalogue CATALOGUE_ACTEURS). */
+export type TypeActeur = 'regie' | 'comedien' | 'public' | 'ecran' | 'telephone' | 'agent';
+
+/** Comment un acteur est rendu : 'sortie' (fenêtre projecteur), 'telephone' (app téléphone, écran par acteur),
+ *  'externe' (agent ou machine hors navigateur), 'conducteur' (la régie elle-même). */
+export type RenduActeur = 'sortie' | 'telephone' | 'externe' | 'conducteur';
+
+/** Service qui anime un acteur de type 'agent'. */
+export type GenreAgent = 'figurants' | 'elevenlabs' | 'asr' | 'osc';
+
+/** Une destination nommée et durable du spectacle. Ajout STUDIO_REAL. */
+export interface Acteur {
+  /** identifiant court, sans espace ni point : 'public', 'scene', 'ministre', 'franck', 'eco', 'figurants' */
+  id: string;
+  type: TypeActeur;
+  /** nom affiché : « Le public », « Téléphone de la ministre » */
+  nom: string;
+  rendu: RenduActeur;
+  /** nombre attendu : 1 (acteur nommé, adresse d'entrée propre) ou 'n' (foule) */
+  cardinalite: 1 | 'n';
+  /** agent : quel service l'anime et sa configuration (JAMAIS de clé ni de secret ici) */
+  agent?: { genre: GenreAgent; config?: Record<string, unknown> };
+  /** écrans qu'il sait afficher (validation des envois) */
+  ecrans: string[];
+  /** signaux qu'il renvoie, lus par les conditions 'sig:<acteur>.<signal>' et 'sigv:<acteur>.<signal>' */
+  signaux: string[];
+  /** position sur la planche (bande des acteurs) */
+  x?: number;
+  y?: number;
+}
+
+/** Quand un envoi part : à l'entrée de l'étape (défaut), à sa sortie, ou `apres` secondes après l'entrée. */
+export type QuandEnvoi = 'entree' | 'sortie' | { apres: number };
+
+/** Ce qu'une étape envoie à un acteur. Ajout STUDIO_REAL. */
+export interface Envoi {
+  /** id d'un acteur, ou cible dans la foule : 'public', 'public:ont-vote:A', 'public:aleatoire:3' (voir cibleDansFoule) */
+  vers: string;
+  /** écran (vue persistante) : 'vote', 'regardez', 'mur', 'noir'… (pris dans Acteur.ecrans) */
+  ecran?: string;
+  /** effet éphémère : 'vibrer', 'son', 'flash', 'pop'… */
+  fx?: string;
+  /** réglages de l'écran ou de l'effet ; une valeur texte '$nom' est lue dans les params de l'étape */
+  params?: Record<string, unknown>;
+  /** défaut 'entree' */
+  quand?: QuandEnvoi;
+  /** l'écran reste jusqu'à ce qu'un autre envoi au même acteur le remplace (défaut : oui) ; false = écran montré le
+   *  temps de l'étape seulement, l'acteur retrouve ensuite le dernier écran tenu */
+  tenir?: boolean;
 }
 
 /**
@@ -89,6 +145,8 @@ export interface Etape {
   asset?: string;
   /** Réglages propres au bloc au-delà des rotatifs (ajout STUDIO_REAL ; ex. texte d'une question, cible). */
   params?: Record<string, unknown>;
+  /** Ce que l'étape envoie aux acteurs (ordre = ordre d'envoi ; voir acteurs.ts). Ajout STUDIO_REAL. */
+  envois?: Envoi[];
 }
 
 /** Condition élémentaire d'une sortie ou d'un passage. */
