@@ -8,8 +8,9 @@
   ],
   "scripts": {
     "dev": "npm run dev -w conducteur",
-    "build": "npm run build -w @studio-real/modele && npm run build -w conducteur",
-    "test": "npm test -w @studio-real/modele -w @studio-real/protocole",
+    "dev:telephone": "npm run dev -w telephone",
+    "build": "npm run build -w @studio-real/modele && npm run build -w conducteur && npm run build -w telephone",
+    "test": "npm test -w @studio-real/modele -w @studio-real/protocole -w @studio-real/ui-telephone",
     "verifier-projets": "npm run verifier -w @studio-real/modele"
   }
 }
