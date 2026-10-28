@@ -15,7 +15,7 @@
     "test:tout": "vitest run",
     "verifier-projets": "npm run verifier -w @studio-real/modele",
     "typecheck": "tsc -b",
-    "lint": "npm run lint -w conducteur",
+    "lint": "eslint .",
     "pages": "npm run pages -w conducteur",
     "dev:spectacle": "npm start -w @studio-real/serveur-spectacle",
     "dev:figurants": "node prototypes/figurants/serveur/index.mjs",
