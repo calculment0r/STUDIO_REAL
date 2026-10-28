@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { exempleDemo, type Moment } from '@studio-real/modele';
 import {
-  ajouterSortie, cadreAuPoint, cadrer, cheminLien, creerEtape, deplacerSortie, ecranVersMonde, etapeDeFin, fm,
-  grilleDepuisPoint, hauteurBloc, intersecte, libelleCondition, liensDuMoment, mondeVersEcran, niveauZoom,
+  ajouterSortie, cadrerSansZoom, cadreAuPoint, cadrer, cheminLien, creerEtape, deplacerSortie, ecranVersMonde, etapeDeFin, fm,
+  flecheProchain, grilleDepuisPoint, hauteurBloc, intersecte, libelleCondition, liensDuMoment, mondeVersEcran, niveauZoom,
   placerMoments, pointSurLien, positionEtape, progressionEtape, rapprocher, regleSortie, rondEntree, rondSortie,
-  statutSortie, statutsMoment, supprimerEtape, vueMonde, yRondSortie, zoomerAutour,
-  LARGEUR_BLOC, MARGE_CADRE, PAS_COLONNE, PAS_RANGEE, ZOOM_MAX, ZOOM_MIN,
+  statutSortie, statutsMoment, supprimerEtape, vueMonde, yRondSortie, zoomDeSpectacle, zoomerAutour,
+  LARGEUR_BLOC, MARGE_CADRE, PAS_COLONNE, PAS_RANGEE, ZOOM_MAX, ZOOM_MIN, ZOOM_NIVEAU,
 } from './geometrie';
 
 describe('placement colonne / rangée → x / y', () => {
@@ -198,5 +198,80 @@ describe('libellés et lecture', () => {
     const F = placerMoments(exempleDemo().ev);
     expect(etapeDeFin(F[0].moment, F[0])).toBe('noir');
     expect(etapeDeFin(F[2].moment, F[2])).toBe('issB');
+  });
+});
+
+describe('caméra de spectacle : panoramique sans changement de zoom', () => {
+  const r = { x: 1000, y: -200, w: 800, h: 400 };
+
+  it('garde exactement le zoom demandé, quel que soit le moment cadré', () => {
+    const F = placerMoments(exempleDemo().ev);
+    for (const f of F) expect(cadrerSansZoom(f.r, 1200, 600, 0.75).z).toBe(0.75);
+  });
+  it('centre le rectangle quand il tient dans la vue', () => {
+    const cam = cadrerSansZoom(r, 1200, 700, 0.8);
+    const c = mondeVersEcran(cam, r.x + r.w / 2, r.y + r.h / 2);
+    expect(c.x).toBeCloseTo(600, 6);
+    expect(c.y).toBeCloseTo(64 + (700 - 64 - 56) / 2, 6);
+  });
+  it('cale le bord gauche et le bord haut sur la marge quand le rectangle déborde', () => {
+    const grand = { x: 500, y: 100, w: 4000, h: 3000 };
+    const cam = cadrerSansZoom(grand, 1000, 600, 0.75);
+    expect(mondeVersEcran(cam, grand.x, grand.y)).toEqual({ x: 40, y: 64 });
+  });
+  it('un changement de moment ne déplace que le panoramique (px, py), jamais z', () => {
+    const F = placerMoments(exempleDemo().ev);
+    const a = cadrerSansZoom(F[1].r, 1200, 600, 0.75), b = cadrerSansZoom(F[2].r, 1200, 600, 0.75);
+    expect(a.z).toBe(b.z);
+    expect(a.px).not.toBe(b.px);
+  });
+  it('zoom de spectacle : on garde un zoom lisible, la vue d’ensemble passe au niveau ÉTAPES', () => {
+    expect(zoomDeSpectacle(0.9)).toBe(0.9);
+    expect(zoomDeSpectacle(0.5)).toBe(0.5);
+    expect(zoomDeSpectacle(1.4)).toBe(1.4);
+    expect(zoomDeSpectacle(0.3)).toBe(ZOOM_NIVEAU.moyen);
+    expect(zoomDeSpectacle(9)).toBe(ZOOM_MAX);
+  });
+});
+
+describe('flèche « PROCHAIN » : direction à partir de la vue et du rectangle suivant', () => {
+  const vue = { x: 0, y: 0, w: 1000, h: 600 };
+
+  it('suivant à droite : bord droit, angle nul, à mi-hauteur', () => {
+    const f = flecheProchain(vue, { x: 1500, y: 250, w: 400, h: 100 });
+    expect(f?.bord).toBe('droite');
+    expect(f?.angle).toBeCloseTo(0, 6);
+    expect(f?.u).toBeCloseTo(1, 6);
+    expect(f?.v).toBeCloseTo(0.5, 6);
+  });
+  it('suivant à gauche : bord gauche, angle π', () => {
+    const f = flecheProchain(vue, { x: -1400, y: 250, w: 400, h: 100 });
+    expect(f?.bord).toBe('gauche');
+    expect(Math.abs(f?.angle ?? 0)).toBeCloseTo(Math.PI, 6);
+    expect(f?.u).toBeCloseTo(0, 6);
+  });
+  it('suivant en dessous / au-dessus : bord bas (angle +π/2) / haut (−π/2)', () => {
+    const bas = flecheProchain(vue, { x: 400, y: 1500, w: 200, h: 200 });
+    expect(bas?.bord).toBe('bas'); expect(bas?.angle).toBeCloseTo(Math.PI / 2, 6); expect(bas?.v).toBeCloseTo(1, 6);
+    const haut = flecheProchain(vue, { x: 400, y: -1700, w: 200, h: 200 });
+    expect(haut?.bord).toBe('haut'); expect(haut?.angle).toBeCloseTo(-Math.PI / 2, 6); expect(haut?.v).toBeCloseTo(0, 6);
+  });
+  it('suivant en diagonale : la flèche se pose sur le bord touché en premier, avec une fraction entre 0 et 1', () => {
+    const f = flecheProchain(vue, { x: 1900, y: 1000, w: 200, h: 200 });
+    expect(f).not.toBeNull();
+    expect(f!.u).toBeGreaterThanOrEqual(0); expect(f!.u).toBeLessThanOrEqual(1);
+    expect(f!.v).toBeGreaterThan(0.5); expect(f!.angle).toBeGreaterThan(0); expect(f!.angle).toBeLessThan(Math.PI / 2);
+  });
+  it('rien à signaler quand le centre du suivant est déjà dans la vue, ou quand la vue est vide', () => {
+    expect(flecheProchain(vue, { x: 600, y: 100, w: 800, h: 200 })).toBeNull();
+    expect(flecheProchain({ x: 0, y: 0, w: 0, h: 600 }, { x: 5000, y: 0, w: 10, h: 10 })).toBeNull();
+  });
+  it('avec la vraie planche : depuis le premier moment cadré à 75 %, le deuxième est à droite', () => {
+    const F = placerMoments(exempleDemo().ev);
+    const cam = cadrerSansZoom(F[0].r, 1200, 600, 0.75);
+    const f = flecheProchain(vueMonde(cam, 1200, 600), F[1].r);
+    if (f) { expect(f.bord).toBe('droite'); expect(Math.abs(f.angle)).toBeLessThan(Math.PI / 2); }
+    // le centre du moment suivant est toujours à droite de la vue qui cadre le précédent
+    expect(F[1].r.x + F[1].r.w / 2).toBeGreaterThan(F[0].r.x + F[0].r.w / 2);
   });
 });
