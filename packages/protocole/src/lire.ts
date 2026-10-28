@@ -15,9 +15,11 @@ export { VERSION_PROTOCOLE };
 /** Résultat d'une lecture : le message typé, ou null et la raison du refus (« code : détail »). */
 export type Lu<T> = { message: T; raison?: undefined } | { message: null; raison: string };
 
-/** Refus interne (levé pendant la lecture, rendu en `raison`). */
+/** Refus interne (levé pendant la lecture, rendu en `raison`). Champ déclaré à la main (pas de propriété de paramètre) :
+ *  le Conducteur, qui compile ce fichier avec `erasableSyntaxOnly` (émulateur de téléphones), le refuserait sinon. */
 class Refus extends Error {
-  constructor(public readonly code: string, detail: string) { super(`${code} : ${detail}`); }
+  readonly code: string;
+  constructor(code: string, detail: string) { super(`${code} : ${detail}`); this.code = code; }
 }
 
 type Brut = Record<string, unknown>;

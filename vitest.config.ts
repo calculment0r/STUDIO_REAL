@@ -1,8 +1,8 @@
 // Projets vitest (vitest 3.2 : `test.projects` remplace le fichier vitest.workspace.ts, devenu obsolète) : un projet
 // par famille de tests, pour séparer le rapide du lent.
-//   rapides (npm test)        : modele, protocole, conducteur-rapide, serveur-logique, figurants, outils-medias, outils-banc-media, serveur-spectacle, ui-telephone  → aucun serveur, aucun navigateur
+//   rapides (npm test)        : modele, protocole, conducteur-rapide, serveur-logique, figurants, outils-medias, outils-banc-media, serveur-spectacle, ui-telephone, emulateur  → aucun serveur, aucun navigateur
 //   lents (npm run test:lent) : conducteur-lent (wrangler dev + Edge sans tête), serveur-integration (wrangler dev)
-//   tout  (npm run test:tout) : les onze projets
+//   tout  (npm run test:tout) : les douze projets
 // Chaque projet garde les réglages de son vitest.config / vite.config (timeouts du serveur, environnement…) : on les
 // étend ici, on ne les recopie pas. Attention : à l'extension, vite CONCATÈNE les listes (include, exclude) au lieu de
 // les remplacer ; d'où le découpage par `exclude` pour le serveur, dont la config déclare déjà `include`.
@@ -56,6 +56,9 @@ export default defineConfig({
       },
       {
         test: { name: 'ui-telephone', root: './packages/ui-telephone', include: ['src/**/*.test.{ts,tsx}'] },
+      },
+      {
+        test: { name: 'emulateur', root: './packages/emulateur', include: ['src/**/*.test.ts'], environment: 'node' },
       },
     ],
   },

@@ -1,0 +1,26 @@
+{
+  "name": "@studio-real/emulateur",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Émulateur de téléphones : une salle émulée (le noyau du serveur de spectacle en mémoire) et de faux spectateurs qui exécutent la vraie machine d'état du téléphone, pour répéter et tester sans vrais téléphones.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@studio-real/modele": "*",
+    "@studio-real/protocole": "*",
+    "@studio-real/serveur-spectacle": "*",
+    "@studio-real/ui-telephone": "*"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
