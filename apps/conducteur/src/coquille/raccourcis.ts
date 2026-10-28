@@ -1,7 +1,8 @@
 // Raccourcis clavier globaux de la coquille.
 //   Espace lecture / pause · T (ou G) top régie · M nouveau moment · K note de régie · + / − zoom de la conduite ·
 //   Ctrl+Z annuler · Ctrl+Maj+Z (ou Ctrl+Y) rétablir · F plein écran · P pupitre · ? raccourcis · Ctrl+Espace assets ·
-//   Échap fermer / désélectionner.
+//   Échap fermer / désélectionner · S (mode Jouer) reprendre le suivi de la caméra : écouteur posé par la planche
+//   (planche/Planche.tsx, elle seule porte l'état de la caméra) ; la coquille n'a rien à faire. F reste le plein écran.
 // Convention avec PLANCHE et CONDUITE : une touche qu'ils traitent eux-mêmes est marquée `preventDefault()` (ou
 // arrêtée) ; la coquille l'ignore alors (ex. F sur la planche = recadrer, + / − au-dessus de la conduite).
 import { useEffect } from 'react';
