@@ -1,8 +1,7 @@
-/* @studio-real/theme : composants.
-   PARTIE 1 — copie FIDÈLE de apps/conducteur/src/theme/composants.css (le curseur et la tête de lecture, à ne
-   jamais redessiner). PARTIE 2 — des composants simples pour les pages hors Conducteur, préfixés sr-, dont chaque
-   valeur est reprise d'un composant du Conducteur (coquille.css, collab.css) : rien d'inventé, aucune couleur
-   en dur (jetons.css, jetons-derives.css). */
+/* @studio-real/theme : composants, SOURCE UNIQUE (le Conducteur les importe depuis ce paquet).
+   PARTIE 1 — le curseur et la tête de lecture du Conducteur (à ne jamais redessiner). PARTIE 2 — des composants
+   simples pour les pages hors Conducteur, préfixés sr-, dont chaque valeur est reprise d'un composant du Conducteur
+   (coquille.css, collab.css) : rien d'inventé, aucune couleur en dur (jetons.css, jetons-derives.css). */
 
 /* Deux composants communs du thème, repris TELS QUELS de design/ (règles de REGLES-sliders-et-tetes-de-lecture.md :
    ne jamais en redessiner un). Ils sont posés pour toute l'application : CONDUITE et PLANCHE les prennent sans rien

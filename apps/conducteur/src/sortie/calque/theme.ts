@@ -1,4 +1,4 @@
-// Couleurs du calque Pixi : lues À L'EXÉCUTION dans les jetons de l'interface (src/theme/jetons.css, thème sombre)
+// Couleurs du calque Pixi : lues À L'EXÉCUTION dans les jetons de l'interface (packages/theme/jetons.css, thème sombre)
 // et converties en entiers 0xRRGGBB. Aucune couleur en dur : un jeton absent retombe sur --ink.
 // (Porté de prototypes/scene-pops/theme.js.)
 

@@ -1,5 +1,5 @@
 /* @studio-real/theme : une application qui occupe toute la fenêtre (le Conducteur : #root), sans défilement de page.
-   C'est la règle d'origine de apps/conducteur/src/theme/base.css, mise à part. */
+   C'est la règle d'origine de base.css, mise à part (le Conducteur l'importe). */
 
 html, body, #root {
   margin: 0;

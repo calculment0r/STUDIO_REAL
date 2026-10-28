@@ -1,26 +1,27 @@
 # @studio-real/theme
 
-Le thème de l'interface STUDIO REAL, celui du Conducteur (`apps/conducteur/src/theme/`, issu du design
-`conception/conducteur/`), extrait en CSS autonome : il marche dans une page statique **sans build** (fichiers
-relatifs) comme dans une app Vite. C'est une **copie fidèle** : aucune valeur n'a changé. Si le Conducteur change
-une valeur, on la recopie ici (ou, mieux, le Conducteur pointe sur ce paquet).
+Le thème de l'interface STUDIO REAL : la **source unique** des jetons, des polices, de la base et des composants. Le
+Conducteur (`apps/conducteur/src/theme/index.css`) l'importe comme dépendance de l'espace de travail npm ; les pages
+statiques (prototypes, pages publiques) le prennent par chemin relatif. Le thème marche **sans build** (fichiers
+relatifs) comme dans une app Vite. Une valeur se corrige ici, une seule fois : il n'existe plus de copie dans le Conducteur.
 
 ## Ce qu'il y a dedans
 
 | Fichier | Rôle |
 |---|---|
 | `theme.css` | Point d'entrée des **pages** (prototypes, pages publiques) : noyau + `pages.css`. |
-| `noyau.css` | L'équivalent de `apps/conducteur/src/theme/index.css` (+ jetons dérivés). |
+| `noyau.css` | Le noyau : polices, jetons, jetons dérivés, base, composants. Le Conducteur l'importe. |
 | `polices.css` + `polices/` | Chakra Petch 300 → 700 et Azeret Mono (variable), libres, **licences OFL** à côté des fichiers. |
-| `jetons-portail.css` | Copie exacte : jetons du portail (fonds, encres, `--f-ui`, `--f-mono`, `--f-disp`, espacements `--s1…--s6`). |
-| `jetons.css` | Copie exacte : la couche Studio Real, **sombre** (`:root`, `[data-theme="dark"]`) et **clair** (`[data-theme="light"]`). |
+| `jetons-portail.css` | Jetons du portail (fonds, encres, `--f-ui`, `--f-mono`, `--f-disp`, espacements `--s1…--s6`). |
+| `jetons.css` | La couche Studio Real, **sombre** (`:root`, `[data-theme="dark"]`) et **clair** (`[data-theme="light"]`) : couleurs, familles de blocs `--fam-*`, ombres et voiles. |
+| `jetons-apercus.css` | Les couleurs des aperçus de blocs du Conducteur (`--apercu-*`, sombre et clair), lues par `apps/conducteur/src/theme/jetons.ts` ; hors `noyau.css` et `theme.css`. |
 | `jetons-derives.css` | Noms composés, aucune couleur nouvelle : filets `--filet-12…`, fonds `--ort-14`, `--rec-22`…, rayons NL-16 `--nl-7`, `--nl-10`, `--nl-16`. |
-| `base.css` | Base du Conducteur (police, couleurs, barres de défilement, focus, `.f-disp`, `.f-micro`, `.chiffres`, animation `srp`). |
-| `composants.css` | Le curseur (`input[type=range]`) et la tête de lecture, copiés tels quels ; puis des composants simples `sr-*`. |
+| `base.css` | Base commune (police, couleurs, barres de défilement, focus, `.f-disp`, `.f-micro`, `.chiffres`, animation `srp`). |
+| `composants.css` | Le curseur (`input[type=range]`) et la tête de lecture du Conducteur ; puis des composants simples `sr-*`. |
 | `pages.css` | Remises à zéro d'une page (contrôles nus, `[hidden]`, sélection, mouvement réduit). |
 | `plein-ecran.css` | `html, body, #root` à 100 % sans défilement (une app plein écran, comme le Conducteur). |
-| `format.js` | `mmss(125.7) → "02:05"`, `mmssSigne`, `romain` (copie de `format.ts`). |
-| `venus.js` | Charge Venus Rising **seulement si elle est présente en local**. |
+| `format.js` | `mmss(125.7) → "02:05"`, `mmssSigne`, `romain` (le Conducteur garde son `format.ts` typé : une valeur se change des deux côtés). |
+| `venus.js` | Charge Venus Rising (`polices/venus-rising.otf`, versionnée ici) dans une page statique. |
 
 Les règles du design (à ne pas casser) : fond `--bg` `#0a0d0b`, rampe corail `--rampe-1 → --rampe-5`, verts profonds
 `--gdeep` / `--gt`, accent `--ort` `#e0674a`, encre tech `--cy` `#b9cfd8`, filets en `box-shadow: inset` (jamais de
@@ -64,21 +65,29 @@ chemins relatifs y sont valides.
 
 ## Dans une app Vite
 
-```ts
-// main.tsx
-import '@studio-real/theme/noyau.css';        // ou le chemin relatif ../../packages/theme/noyau.css
-import '@studio-real/theme/plein-ecran.css';  // si l'app occupe toute la fenêtre
+```json
+// package.json de l'app : l'espace de travail npm (packages/*) crée le lien node_modules/@studio-real/theme
+"dependencies": { "@studio-real/theme": "*" }
 ```
 
-Le paquet est un espace de travail npm (`packages/*`) : après son ajout, un `npm install` à la racine met
-`package-lock.json` à jour et crée le lien `node_modules/@studio-real/theme` (sans lui, passer par le chemin relatif).
-Vite résout les `url('./polices/…')` et copie les polices dans `dist/`. Pour Venus Rising, une app Vite garde son
-chargeur (le Conducteur : `src/theme/polices.ts`, qui lit `/polices-privees/`) ; `venus.js` est fait pour les pages
-statiques.
+```css
+/* apps/conducteur/src/theme/index.css */
+@import '@studio-real/theme/noyau.css';
+@import '@studio-real/theme/jetons-apercus.css';   /* seulement pour les aperçus de blocs */
+@import '@studio-real/theme/plein-ecran.css';      /* si l'app occupe toute la fenêtre */
+```
+
+Vite résout les `url('./polices/…')`, les copie dans `dist/assets/` avec une empreinte et réécrit les URL (y compris avec
+`--base ./`). Pour un `<link rel="preload">` d'une police dans une page HTML de l'app, pointer le fichier du paquet par un
+chemin relatif (`href="../../packages/theme/polices/azeret-mono.ttf"`) : Vite le remplace par l'adresse finale. Les
+licences `polices/*.txt` ne sont référencées par aucun CSS : l'app les recopie dans `dist/` si elle les redistribue
+(le Conducteur le fait dans `vite.config.ts`). Pour Venus Rising, le Conducteur la charge à l'exécution
+(`src/theme/polices.ts`, import `@studio-real/theme/polices/venus-rising.otf?url`) ; `venus.js` est fait pour les pages statiques.
 
 ## Venus Rising
 
-Sans licence connue : **jamais copiée** ici ni ailleurs dans le dépôt (`conception/conducteur/source/uploads/` est hors
-git). Elle s'affiche si elle est installée dans le système (`local()` dans `polices.css`) ou si le fichier hors git est
-présent à côté du dépôt et que la page charge `venus.js`. Sinon, repli Chakra Petch 700 : les éléments en `--f-disp`
-portent `font-weight: 700`. `venus.js` pose `<html data-venus="oui|repli">`.
+La police est **versionnée dans ce paquet** (`polices/venus-rising.otf`), à la demande du propriétaire (commit 88e2925) :
+elle fait partie du dépôt, de `dist/` et de GitHub Pages. Elle se charge à l'exécution (`venus.js` dans une page statique,
+`polices.ts` dans le Conducteur) ; installée dans le système, `polices.css` la prend aussi par `local()`. Si le fichier
+manque, repli Chakra Petch 700 : les éléments en `--f-disp` portent `font-weight: 700`. `venus.js` pose
+`<html data-venus="oui|repli">`.

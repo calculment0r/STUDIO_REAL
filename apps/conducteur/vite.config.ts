@@ -1,29 +1,26 @@
-import { defineConfig, type Connect, type Plugin } from 'vite'
+import { type Connect, type Plugin } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Polices sans licence connue (Venus Rising) : JAMAIS dans le dépôt public ni dans dist/. En local seulement, on sert
-// /polices-privees/<fichier> depuis conception/conducteur/source/uploads/ (hors git) ; absent → 404, et l'application
-// reste sur son repli libre (Chakra Petch 700, voir src/theme/polices.ts).
-const DOSSIER_PRIVE = fileURLToPath(new URL('../../conception/conducteur/source/uploads', import.meta.url))
+// Les polices (Chakra Petch, Azeret Mono, Venus Rising) viennent de packages/theme/polices/ : le CSS du paquet
+// @studio-real/theme les référence et Vite les copie dans dist/. Venus Rising est versionnée dans le dépôt, à la demande
+// du propriétaire (commit 88e2925) : il n'y a plus de dossier privé ni de route /polices-privees/ à servir.
+// Les licences OFL qui accompagnent les polices (polices/*.txt) ne sont référencées par aucun CSS : ce greffon les
+// recopie dans dist/polices/, comme le faisait l'ancien dossier public/polices/.
+const DOSSIER_POLICES = fileURLToPath(new URL('../../packages/theme/polices', import.meta.url))
 
-function policesPrivees(): Plugin {
-  const servir: Connect.NextHandleFunction = (req, res, next) => {
-    const url = req.url ?? ''
-    if (!url.startsWith('/polices-privees/')) return next()
-    const nom = basename(decodeURIComponent(url.slice('/polices-privees/'.length).split('?')[0]))
-    const fichier = resolve(DOSSIER_PRIVE, nom)
-    if (!/\.(otf|ttf|woff2?)$/i.test(nom) || !existsSync(fichier)) { res.statusCode = 404; res.end(); return }
-    res.setHeader('Content-Type', nom.endsWith('.otf') ? 'font/otf' : nom.endsWith('.ttf') ? 'font/ttf' : 'font/woff2')
-    res.setHeader('Cache-Control', 'no-cache')
-    res.end(readFileSync(fichier))
-  }
+function licencesPolices(): Plugin {
   return {
-    name: 'polices-privees',
-    configureServer(server) { server.middlewares.use(servir) },
-    configurePreviewServer(server) { server.middlewares.use(servir) },
+    name: 'licences-polices',
+    generateBundle() {
+      if (!existsSync(DOSSIER_POLICES)) return
+      for (const nom of readdirSync(DOSSIER_POLICES)) {
+        if (nom.endsWith('.txt')) this.emitFile({ type: 'asset', fileName: 'polices/' + nom, source: readFileSync(resolve(DOSSIER_POLICES, nom)) })
+      }
+    },
   }
 }
 
@@ -88,6 +85,8 @@ if (existsSync(resolve(ICI, 'streamer.html'))) PAGES.streamer = resolve(ICI, 'st
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), policesPrivees(), mediasLocales()],
+  plugins: [react(), licencesPolices(), mediasLocales()],
   build: { rollupOptions: { input: PAGES } },
+  // Vitest vide les fichiers CSS (même en ?raw) ; src/theme/jetons.ts lit les jetons du thème en ?raw, y compris dans les tests.
+  test: { css: { include: [/theme[/]jetons.*[.]css/] } },
 })

@@ -253,7 +253,7 @@ D.noresp = (c, w, _h, _t, C, S) => {
   fr(c, 12, 70, w - 24, 4, C['--panel3']); fr(c, 12, 70, (w - 24) * S.voted / S.total, 4, C['--grn2']);
 };
 D.color = (c, w, h, t, C) => {
-  const col = C['--tel-demo']; fr(c, 12, 12, w - 84, h - 24, col); tx(c, '#7D5BD6', 18, h - 20, F.m(8, 600), C['--titre-clair'], 'left', '1px');
+  const col = C['--tel-demo']; fr(c, 12, 12, w - 84, h - 24, col); tx(c, col.toUpperCase(), 18, h - 20, F.m(8, 600), C['--titre-clair'], 'left', '1px');
   phone(c, w - 58, 8, 34, h - 16, C, (x, y, W, H) => { const p = (Math.sin(t * 2) + 1) / 2; c.globalAlpha = .55 + .45 * p; fr(c, x, y, W, H, col); c.globalAlpha = 1; });
 };
 D.wave = (c, w, h, t, C, _S, o) => {

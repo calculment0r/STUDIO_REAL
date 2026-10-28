@@ -2,7 +2,7 @@
   "name": "@studio-real/theme",
   "version": "0.1.0",
   "private": true,
-  "description": "Le thème de l'interface STUDIO REAL (celui du Conducteur), en CSS sans build : jetons sombre et clair, polices libres, base, composants.",
+  "description": "Le thème de l'interface STUDIO REAL, source unique du Conducteur et des pages : CSS sans build, jetons sombre et clair, polices, base, composants.",
   "style": "theme.css",
   "exports": {
     ".": "./theme.css",
