@@ -1,14 +1,20 @@
 // Générateur du projet ÉCHO, version SIMPLE du 27/10 (projets/echo/echo.conducteur.json) : le déroulé Whimsical de
-// l'équipe, en 6 blocs. Chaque bloc est un acte, chaque étape est un moment qui attend le TOP de la régie (passage « go »),
-// sans durée imposée ni garde automatique : la régie force les tops à la main. Pas de piste lumière.
+// l'équipe, en 7 blocs (actes) et 19 étapes. Chaque bloc est un acte, chaque étape est un moment qui attend le TOP de la
+// régie (passage « go »), sans durée imposée ni garde automatique : la régie force les tops à la main. Pas de piste lumière.
 // Les lignes du déroulé (écran, plateau, téléphones) sont dans les paramètres de chaque étape.
 // Usage (depuis la racine du dépôt) : npx tsx projets/echo/generer-echo-simple.ts
-// L'ancien projet détaillé (10 séquences, textes de l'auteur) reste générable par generer-echo-complet.ts.
-import { writeFileSync } from 'node:fs';
+//   --verifier : régénère en mémoire et compare au fichier sur disque (« identique » → code 0, « différent » → code 1) ;
+//   n'écrit jamais.
+// Valide AVANT d'écrire : une erreur de validation bloque l'écriture (code 1, fichier inchangé) ; les avertissements
+// s'affichent mais n'empêchent pas l'écriture. L'ancien projet détaillé (10 séquences, textes de l'auteur) reste générable
+// par generer-echo-complet.ts, qui écrit echo-complet.conducteur.json (jamais echo.conducteur.json).
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { planifier, validerProjet, formatMMSS, type Projet, type Moment } from '../../packages/modele/src/index.ts';
 
 const RACINE = fileURLToPath(new URL('.', import.meta.url));
+const NOM_FICHIER = 'echo.conducteur.json';
+const VERIFIER = process.argv.includes('--verifier');
 
 interface EtapeDef {
   id: string; nom: string; minutes: number;
@@ -96,9 +102,26 @@ const projet: Projet = {
 };
 
 const fichier = { format: 'studio-real/conducteur@1', project: projet, assets: [], runs: [] };
-writeFileSync(RACINE + 'echo.conducteur.json', JSON.stringify(fichier, null, 2) + '\n', 'utf8');
+const serialise = JSON.stringify(fichier, null, 2) + '\n';
 
+// --verifier : compare la régénération en mémoire au fichier sur disque (même sérialisation) ; n'écrit jamais.
+if (VERIFIER) {
+  const surDisque = existsSync(RACINE + NOM_FICHIER) ? readFileSync(RACINE + NOM_FICHIER, 'utf8') : null;
+  if (surDisque === serialise) { console.log(NOM_FICHIER + ' : identique'); process.exit(0); }
+  console.log(NOM_FICHIER + ' : différent' + (surDisque === null ? ' (fichier absent)' : ' (relancer sans --verifier pour réécrire)'));
+  process.exit(1);
+}
+
+// Valide AVANT d'écrire : une erreur bloque (code 1, fichier inchangé) ; les avertissements s'affichent mais n'empêchent pas.
 const pb = validerProjet(projet);
+const erreurs = pb.filter(p => p.niveau === 'erreur');
+if (erreurs.length) {
+  console.error('problèmes :', pb.length, pb.map(p => p.niveau + ' ' + p.message));
+  console.error(erreurs.length + ' erreur(s) : ' + NOM_FICHIER + ' n’a PAS été écrit.');
+  process.exit(1);
+}
+
+writeFileSync(RACINE + NOM_FICHIER, serialise, 'utf8');
 console.log('problèmes :', pb.length, pb.map(p => p.niveau + ' ' + p.message));
 const plan = planifier(projet);
 for (const mp of plan.moments) console.log(mp.id.padEnd(14), formatMMSS(mp.fin - mp.debut), mp.passage?.mode ?? '');
