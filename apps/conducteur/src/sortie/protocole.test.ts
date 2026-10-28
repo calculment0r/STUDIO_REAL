@@ -3,10 +3,10 @@ import { Horloge, mmssRebours, restantCompteur } from './horloge';
 import { clesNom } from './medias';
 import {
   adresseEntree, adresseLisible, borneFondu, BUILD_SORTIE, cleScene, examinerMessageRegie, lireMessageRegie, lireMessageSortie, msgBonjour,
-  msgConfig, msgEtat, msgEvenement, msgHeure, msgPrecharger, msgPresent, msgRecharger, msgScene, sceneValide, VERSION_SORTIE,
+  msgConfig, msgEtat, msgEvenement, msgHeure, msgPrecharger, msgPresent, msgRecharger, msgScene, msgSource, sceneValide, VERSION_SORTIE,
 } from './protocole';
 import { clePage, hotePage, pourcentages, traceQr } from './scenes';
-import { cadrageAuto } from './videos';
+import { cadrageAuto, etatPrecharge } from './videos';
 
 describe('protocole du canal régie → sortie', () => {
   it('les messages construits sont relus à l’identique', () => {
@@ -54,10 +54,36 @@ describe('protocole du canal régie → sortie', () => {
     expect(lireMessageSortie({ t: 'bonjour', v: 1, heure: 1 })).toBeNull();
   });
 
-  it('version 2 du protocole (scène « page », refus, recharger)', () => {
-    expect(VERSION_SORTIE).toBe(2);
+  it('version 3 du protocole (v2 : scène « page », refus, recharger ; v3 : mur, visio, source)', () => {
+    expect(VERSION_SORTIE).toBe(3);
     expect(typeof BUILD_SORTIE).toBe('string');
     expect(BUILD_SORTIE.length).toBeGreaterThan(0);
+  });
+
+  it('v3 : scènes natives mur et visio validées, message source relu, état des préchargements', () => {
+    const mur = {
+      type: 'mur', titre: 'Écho', qr: 'https://e.test/?r=K7', audio: { asset: 'junon.mp3', depuis: 1000 },
+      messages: [{ id: 'm1', pseudo: 'zoe', texte: 'salut', couleur: '--cy', grand: true }],
+      vote: { etat: 'revele', numero: 1, question: 'Q ?', reponses: ['a', 'b'], comptes: [3, 1], pourcents: [75, 25], resultat: 'A gagne' },
+    };
+    expect(sceneValide(mur)).toBe(true);
+    // couleur en clair, chemin de fichier, trop de réponses : refusés
+    expect(sceneValide({ ...mur, messages: [{ pseudo: 'x', texte: 'y', couleur: '#ff0000' }] })).toBe(false);
+    expect(sceneValide({ ...mur, audio: { asset: '../banques/echo/votes.json' } })).toBe(false);
+    expect(sceneValide({ ...mur, vote: { ...mur.vote, reponses: Array(9).fill('r') } })).toBe(false);
+    const visio = { type: 'visio', postes: [{ id: 'franck', nom: 'Jim', son: false }, { id: 'ministre', nom: 'Junon', son: true }], disposition: 'cote' };
+    expect(sceneValide(visio)).toBe(true);
+    expect(sceneValide({ ...visio, postes: [] })).toBe(false);
+    expect(sceneValide({ ...visio, disposition: 'mosaique' })).toBe(false);
+    const s = msgSource({ url: 'wss://spectacle.test/ws', jeton: 'sr_scene_x' }, 5);
+    expect(lireMessageRegie(JSON.parse(JSON.stringify(s)))).toEqual(s);
+    expect(lireMessageRegie(msgSource(null, 5))).toEqual(msgSource(null, 5));
+    expect(lireMessageRegie({ ...s, spectacle: { url: 'https://pas-ws.test', jeton: 'x' } })).toBeNull();
+    expect(lireMessageRegie({ ...s, spectacle: { url: 'wss://a.test/ws', jeton: 'avec espace' } })).toBeNull();
+    expect(etatPrecharge(null, 0)).toBe('charge');
+    expect(etatPrecharge(false, 0)).toBe('absent');
+    expect(etatPrecharge(true, 2)).toBe('charge');
+    expect(etatPrecharge(true, 4)).toBe('pret');
   });
 
   it('bonjour et present portent la version et le build ; present porte la scène vue', () => {

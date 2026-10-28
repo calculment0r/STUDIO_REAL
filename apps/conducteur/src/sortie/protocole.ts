@@ -11,7 +11,8 @@
 //   scene      la scène à montrer (noir, QR d'accueil, streamer, vote, chrono, titre, média) + durée du fondu
 //   evenement  un événement du public (pop de chat, réaction, cœurs, voix, résultats, fusée, alerte, gabarit)
 //   config     titre du spectacle, adresse d'entrée du public, consigne, code de représentation
-//   precharger vidéos annoncées (assets) : la sortie les met en mémoire avant la bascule
+//   precharger vidéos (et sons) annoncés (assets) : la sortie les met en mémoire avant la bascule
+//   source     la régie dit à la sortie d'écouter le serveur de spectacle (acteur `scene`) ou de revenir au canal local
 //   heure      battement (1 par seconde) : témoin de connexion et synchro
 //   recharger  la sortie se recharge (location.reload) ; lu QUELLE QUE SOIT la version, pour rattraper une sortie périmée
 // Messages sortie → régie (MessageSortie) :
@@ -26,7 +27,12 @@
 // VERSIONS : `bonjour` et `present` portent `version` (VERSION_SORTIE) et `build` (empreinte du code, __BUILD__) et la
 // régie les lit QUELLE QUE SOIT leur version : elle repère ainsi une sortie périmée (fenêtre restée ouverte sur un
 // ancien code) et propose de la recharger. Tout changement du protocole (nouveau type de scène, nouveau champ requis)
-// DOIT incrémenter VERSION_SORTIE (v2 : scène « page », refus, recharger, present.vue).
+// DOIT incrémenter VERSION_SORTIE (v2 : scène « page », refus, recharger, present.vue ; v3 : scènes natives « mur » et
+// « visio », message `source`, present.etat.precharges).
+//
+// SERVEUR DE SPECTACLE (audit 2026-10, rapport 1 §4.3) : la sortie est aussi l'acteur `scene` du serveur de spectacle
+// (client-spectacle.ts, protocole v2 du paquet @studio-real/protocole). Elle y reçoit des `vue` (écran + réglages)
+// converties en `Scene` (traduction.ts, sceneDeVue) : `Scene` reste le type de RENDU, quelle que soit la source.
 //
 // PLUSIEURS RÉGIES (Conducteur, moniteur du flux, autre machine par la salle) pilotent la même sortie : chaque scène
 // porte `source` (identifiant de la régie) et `depuis` (heure de la DÉCISION, horloge de la régie ; un renvoi garde
@@ -35,7 +41,7 @@
 // (heure - depuis, même horloge) est retranché de l'heure d'arrivée locale. La sortie écoute TOUJOURS le canal local,
 // plus la salle si son adresse en donne une ; un message arrivé par les deux chemins n'est traité qu'une fois.
 
-export const VERSION_SORTIE = 2;
+export const VERSION_SORTIE = 3;
 /** Empreinte du code (hash git court ou date ISO du build, posée par Vite : define __BUILD__) ; 'dev' à défaut. */
 export const BUILD_SORTIE: string = typeof __BUILD__ === 'string' && __BUILD__ ? __BUILD__ : 'dev';
 /** Nom du BroadcastChannel (même origine, même navigateur). */
@@ -46,8 +52,8 @@ export const NOM_FENETRE = 'studio-real-sortie-scene';
 export const BATTEMENT_MS = 1000;
 export const PERTE_MS = 3500;
 
-export type TypeScene = 'noir' | 'accueil-qr' | 'streamer' | 'vote' | 'chrono' | 'titre' | 'image' | 'video' | 'page';
-export const TYPES_SCENE: readonly TypeScene[] = ['noir', 'accueil-qr', 'streamer', 'vote', 'chrono', 'titre', 'image', 'video', 'page'];
+export type TypeScene = 'noir' | 'accueil-qr' | 'streamer' | 'vote' | 'chrono' | 'titre' | 'image' | 'video' | 'page' | 'mur' | 'visio';
+export const TYPES_SCENE: readonly TypeScene[] = ['noir', 'accueil-qr', 'streamer', 'vote', 'chrono', 'titre', 'image', 'video', 'page', 'mur', 'visio'];
 /** Fondu enchaîné entre deux scènes : 0 → 2 s. */
 export const FONDU_MAX_MS = 2000;
 export const FONDU_DEFAUT_MS = 600;
@@ -60,6 +66,46 @@ export type Gabarit = 'calme' | 'chat' | 'folie' | 'vote' | 'entracte';
 export const GABARITS: readonly Gabarit[] = ['calme', 'chat', 'folie', 'vote', 'entracte'];
 
 export interface OptionVote { cle: string; libelle: string }
+
+/** Bornes du mur (messages gardés, réponses d'un vote) et de la visio (postes). */
+export const MUR_MAX_MESSAGES = 60;
+export const MUR_MAX_REPONSES = 8;
+export const VISIO_MAX_POSTES = 4;
+/** Couleur d'un pseudo : NOM d'un jeton du thème (« --cy »), jamais une couleur en clair. */
+export const RE_JETON_COULEUR = /^--[a-z0-9-]{1,32}$/;
+
+/** Un message du mur (chat façon Twitch du 27/10). */
+export interface MessageMur {
+  /** identifiant (dédoublonnage entre la vue et les effets) */
+  id?: string;
+  pseudo: string;
+  texte: string;
+  /** jeton CSS de la couleur du pseudo (« --cy ») */
+  couleur?: string;
+  /** message d'un spectateur : écrit plus gros que ceux des figurants */
+  grand?: boolean;
+}
+
+/** Le vote en grand sur le mur : question, réponses, compteurs qui montent, pourcentages à la révélation. */
+export interface VoteMur {
+  /** ouvert : on vote, compteurs visibles · revele : pourcentages et réponse gagnante */
+  etat: 'ouvert' | 'revele';
+  numero?: number;
+  question: string;
+  reponses: string[];
+  /** voix reçues par réponse (même ordre que `reponses`) */
+  comptes?: number[];
+  /** pourcentages révélés (même ordre) ; calculés depuis `comptes` à défaut */
+  pourcents?: number[];
+  /** phrase de résultat (« Le public a choisi… ») */
+  resultat?: string;
+}
+
+/** Audio de salle du mur (discours) : asset LOCAL, préchargé ; `depuis` = heure serveur (ms) de sa position 0. */
+export interface AudioMur { asset: string; depuis?: number; boucle?: boolean }
+
+/** Un poste de la visio (cadre) : flux du registre flux-visio.ts, étiquette, son sur la sono ou coupé. */
+export interface PosteVisio { id: string; nom: string; son: boolean }
 
 export type Scene =
   | { type: 'noir' }
@@ -91,6 +137,24 @@ export type Scene =
       son?: boolean;
       cadrage?: Cadrage;
       legende?: string;
+    }
+  | {
+      /** le mur du 27/10 : chat des spectateurs et des figurants, vote en grand, bandeau titre, audio de salle */
+      type: 'mur';
+      titre?: string;
+      messages?: MessageMur[];
+      vote?: VoteMur;
+      audio?: AudioMur;
+      /** QR d'accueil en coin (adresse complète, code compris) */
+      qr?: string;
+    }
+  | {
+      /** la visio de scène : deux cadres côte à côte, ou un poste en plein écran */
+      type: 'visio';
+      postes: PosteVisio[];
+      disposition: 'cote' | 'plein';
+      /** id du poste montré en plein écran (disposition « plein ») */
+      plein?: string;
     };
 
 /** Compte à rebours vivant (chrono, vote) : la sortie l'extrapole entre deux messages. */
@@ -154,7 +218,16 @@ export interface EtatSortie {
   pleinEcran: boolean;
   /** vidéo (ou image) demandée mais introuvable dans les médias de la sortie */
   absent?: string;
+  /** médias annoncés (precharger, vue courante) : prêt à jouer, en chargement, introuvable */
+  precharges?: Record<string, EtatPrecharge>;
+  /** liaison au serveur de spectacle (absent : la sortie n'en a pas) */
+  spectacle?: 'connexion' | 'ouvert' | 'attente' | 'refuse';
 }
+
+export type EtatPrecharge = 'pret' | 'charge' | 'absent';
+
+/** Serveur de spectacle à écouter : adresse WebSocket (ws:// ou wss://) et jeton de l'acteur (défaut « scene »). */
+export interface SourceSpectacle { url: string; jeton: string; acteur?: string }
 
 export type MessageRegie =
   | { t: 'etat'; v: number; heure: number; etat: EtatScene }
@@ -163,7 +236,9 @@ export type MessageRegie =
   | { t: 'config'; v: number; heure: number; config: ConfigSortie }
   | { t: 'precharger'; v: number; heure: number; assets: string[] }
   | { t: 'heure'; v: number; heure: number }
-  | { t: 'recharger'; v: number; heure: number };
+  | { t: 'recharger'; v: number; heure: number }
+  /** écouter le serveur de spectacle (null : revenir au canal local et à la salle) */
+  | { t: 'source'; v: number; heure: number; spectacle: SourceSpectacle | null };
 
 /** Pourquoi la sortie refuse un message : autre version du protocole, ou forme / scène qu'elle ne connaît pas. */
 export type RaisonRefus = 'version' | 'invalide';
@@ -245,6 +320,7 @@ export const msgEvenement = (evenement: EvenementScene, heure = Date.now()): Mes
 export const msgConfig = (config: ConfigSortie, heure = Date.now()): MessageRegie => ({ t: 'config', v: VERSION_SORTIE, heure, config });
 export const msgHeure = (heure = Date.now()): MessageRegie => ({ t: 'heure', v: VERSION_SORTIE, heure });
 export const msgRecharger = (heure = Date.now()): MessageRegie => ({ t: 'recharger', v: VERSION_SORTIE, heure });
+export const msgSource = (spectacle: SourceSpectacle | null, heure = Date.now()): MessageRegie => ({ t: 'source', v: VERSION_SORTIE, heure, spectacle });
 
 /** Messages de la sortie qui l'annoncent : version du protocole et build du code toujours joints. */
 export const msgBonjour = (id: string, heure = Date.now()): MessageSortie =>
@@ -272,6 +348,27 @@ function recordNombres(x: unknown): x is Record<string, number> {
   return estObjet(x) && Object.keys(x).length <= 26 && Object.values(x).every(estNombre);
 }
 
+const nombresOpt = (x: unknown, max: number) => x === undefined || (Array.isArray(x) && x.length <= max && x.every(estNombre));
+
+export function messageMurValide(x: unknown): x is MessageMur {
+  return estObjet(x) && estTexte(x.pseudo, 40) && estTexte(x.texte, 400) && texteOpt(x.id, 80)
+    && (x.couleur === undefined || (typeof x.couleur === 'string' && RE_JETON_COULEUR.test(x.couleur)))
+    && (x.grand === undefined || typeof x.grand === 'boolean');
+}
+
+function voteMurValide(x: unknown): x is VoteMur {
+  return estObjet(x) && (x.etat === 'ouvert' || x.etat === 'revele') && (x.numero === undefined || estNombre(x.numero))
+    && estTexte(x.question, 600) && Array.isArray(x.reponses) && x.reponses.length <= MUR_MAX_REPONSES && x.reponses.every((r) => estTexte(r, 300))
+    && nombresOpt(x.comptes, MUR_MAX_REPONSES) && nombresOpt(x.pourcents, MUR_MAX_REPONSES) && texteOpt(x.resultat, 600);
+}
+
+/** Un nom de média : pas de chemin (le média est cherché dans les médias LOCAUX de la sortie). */
+export const estAsset = (x: unknown): x is string => estTexte(x, 200) && x.length > 0 && !/[\\/]/.test(x);
+
+function posteValide(x: unknown): x is PosteVisio {
+  return estObjet(x) && typeof x.id === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(x.id) && estTexte(x.nom, 80) && typeof x.son === 'boolean';
+}
+
 export function sceneValide(x: unknown): x is Scene {
   if (!estObjet(x) || !TYPES_SCENE.includes(x.type as TypeScene)) return false;
   switch (x.type as TypeScene) {
@@ -291,7 +388,24 @@ export function sceneValide(x: unknown): x is Scene {
       return estTexte(x.asset) && x.asset.length > 0 && texteOpt(x.legende)
         && (x.boucle === undefined || typeof x.boucle === 'boolean') && (x.son === undefined || typeof x.son === 'boolean')
         && (x.cadrage === undefined || ['contain', 'cover', 'auto'].includes(x.cadrage as string));
+    case 'mur': {
+      const a = x.audio;
+      return texteOpt(x.titre, 200) && texteOpt(x.qr, 1000)
+        && (x.messages === undefined || (Array.isArray(x.messages) && x.messages.length <= MUR_MAX_MESSAGES && x.messages.every(messageMurValide)))
+        && (x.vote === undefined || voteMurValide(x.vote))
+        && (a === undefined || (estObjet(a) && estAsset(a.asset) && (a.depuis === undefined || estNombre(a.depuis)) && (a.boucle === undefined || typeof a.boucle === 'boolean')));
+    }
+    case 'visio':
+      return Array.isArray(x.postes) && x.postes.length >= 1 && x.postes.length <= VISIO_MAX_POSTES && x.postes.every(posteValide)
+        && (x.disposition === 'cote' || x.disposition === 'plein') && texteOpt(x.plein, 40);
   }
+}
+
+/** Source de spectacle lisible : adresse ws(s)://, jeton imprimable sans espace, acteur facultatif. */
+export function sourceSpectacleValide(x: unknown): x is SourceSpectacle {
+  return estObjet(x) && estTexte(x.url, 500) && /^wss?:\/\/\S+$/i.test(x.url)
+    && estTexte(x.jeton, 512) && /^[\x21-\x7e]{1,512}$/.test(x.jeton)
+    && (x.acteur === undefined || (typeof x.acteur === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(x.acteur)));
 }
 
 function etatValide(x: unknown): x is EtatScene {
@@ -343,6 +457,8 @@ export function lireMessageRegie(x: unknown): MessageRegie | null {
     case 'evenement': return evenementValide(x.evenement) ? (x as unknown as MessageRegie) : null;
     case 'config': return configValide(x.config) ? (x as unknown as MessageRegie) : null;
     case 'heure': return x as unknown as MessageRegie;
+    case 'source':
+      return x.spectacle === null || sourceSpectacleValide(x.spectacle) ? (x as unknown as MessageRegie) : null;
   }
   return null;
 }

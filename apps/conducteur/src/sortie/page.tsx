@@ -5,29 +5,42 @@
 //   sortie.html                                         même machine que la régie (BroadcastChannel)
 //   sortie.html?serveur=https://…&projet=p_…&jeton=sr_…  par la salle du serveur (autre machine) ET le canal local :
 //                                                        la sortie écoute TOUJOURS le canal local en plus de la salle
+//   sortie.html#spectacle=wss://…/ws&jeton=…             ACTEUR `scene` du serveur de spectacle (client-spectacle.ts) :
+//                                                        ses vues font la scène ; le fragment est rangé dans l'onglet
+//                                                        puis effacé. La régie peut aussi le demander (message `source`).
+//                                                        Le canal local reste le SECOURS : ses scènes ne passent que si
+//                                                        le serveur de spectacle est injoignable ; ses préchargements,
+//                                                        sa configuration et ses événements passent toujours.
 // Plusieurs régies peuvent la piloter (Conducteur, moniteur, autre machine) : la décision la plus récente gagne
 // (arbitrage.ts). Une vidéo introuvable s'affiche en clair et remonte aux régies (present.etat.absent).
 // Un message de régie illisible (autre version du protocole, scène inconnue) n'est PAS ignoré : la sortie renvoie un
 // `refus` sur le même transport et, si c'était une scène qu'elle ne peut pas montrer, affiche une carte plein écran
 // « Scène inconnue : <type> — recharger la sortie ». Le message `recharger` de la régie la recharge.
-//   options d'essai : &scene=accueil-qr|noir|streamer|titre|video|chrono  &titre=…  &adresse=…  &code=…  &asset=…
+//   options d'essai : &scene=accueil-qr|noir|streamer|titre|video|chrono|mur  &titre=…  &adresse=…  &code=…  &asset=…
 //                     &duree=…  &demo=1 (faux public sur le calque)
 // Touches : F plein écran · D faux public · W webcam de test · M dossier des médias.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EtatLecture, Projet } from '@studio-real/modele';
+import { transportWebSocket, type MsgFx } from '@studio-real/protocole';
 import { arbitrerScene, FiltreDoublons, type DecisionScene } from './arbitrage';
 import { transportLocal, type Transport } from './canal';
 import type { CalqueReactions } from './calque/calque';
+import {
+  ClientSortieSpectacle, lireSourceSpectacle, mediasBattement, rangerSourceSpectacle, sessionOnglet, type EtatClientSpectacle, type VueRecue,
+} from './client-spectacle';
 import { GestionFlux, type EtatFlux } from './flux';
 import { Horloge } from './horloge';
 import { BibliothequeMedias, type EtatMedias } from './medias';
+import { DonneesMur } from './mur';
 import {
-  adresseEntree, BATTEMENT_MS, BUILD_SORTIE, configParDefaut, examinerMessageRegie, FONDU_DEFAUT_MS, msgBonjour, msgPresent, PERTE_MS, TYPES_SCENE, VERSION_SORTIE,
-  type ConfigSortie, type EtatScene, type EtatSortie, type EvenementScene, type ExamenMessageRegie, type MessageSortie, type Scene, type TypeScene,
+  adresseEntree, BATTEMENT_MS, BUILD_SORTIE, configParDefaut, estAsset, examinerMessageRegie, FONDU_DEFAUT_MS, msgBonjour, msgPresent, PERTE_MS, TYPES_SCENE, VERSION_SORTIE,
+  type ConfigSortie, type EtatPrecharge, type EtatScene, type EtatSortie, type EvenementScene, type ExamenMessageRegie, type MessageSortie, type Scene,
+  type SourceSpectacle, type TypeScene,
 } from './protocole';
 import { salleDansAdresse, TransportSalle, type MessageSalleBrut } from './salle';
 import { ContexteServices, ContexteTemps, Fondus, Scene1080, type Services } from './scenes';
-import { traduire } from './traduction';
+import { SonDeSalle } from './son-salle';
+import { lireFxScene, traduire } from './traduction';
 import { PoolVideos } from './videos';
 
 type Liaison = 'attente' | 'connecte' | 'perdu';
@@ -36,6 +49,12 @@ type Refus = Extract<ExamenMessageRegie, { refus: unknown }>['refus'];
 interface CarteRefus { type: string; inconnue: boolean }
 /** Un même refus (même raison, même message) ne repart pas plus d'une fois par REFUS_MS (battements d'une vieille régie). */
 const REFUS_MS = 2000;
+
+/** Stockage de l'onglet (source de spectacle, session) ; null s'il est bloqué. */
+function stockageOnglet(): Storage | null {
+  try { return sessionStorage; } catch { return null; }
+}
+
 
 function idSortie(): string {
   try {
@@ -59,6 +78,7 @@ export function sceneDeDepart(q: URLSearchParams, c: ConfigSortie): Scene {
     case 'titre': return { type: 'titre', titre: q.get('texte') ?? c.titre };
     case 'video': case 'image': { const a = q.get('asset'); return a ? (t === 'video' ? { type: 'video', asset: a, ...(q.get('son') === '1' ? { son: true } : {}) } : { type: 'image', asset: a }) : { type: 'noir' }; }
     case 'chrono': return { type: 'chrono', duree: Number(q.get('duree')) || 60 };
+    case 'mur': { const t = q.get('texte'); return { type: 'mur', ...(t ? { titre: t } : {}) }; }
     default: return { type: 'noir' };
   }
 }
@@ -93,6 +113,16 @@ export function PageSortie() {
   const [carte, setCarte] = useState<CarteRefus | null>(null);
   const carteRef = useRef<CarteRefus | null>(null);
   carteRef.current = carte;
+  // serveur de spectacle : la source (fragment de l'adresse, onglet, ou message `source` de la régie) et la liaison
+  const [spectacle, setSpectacle] = useState<SourceSpectacle | null>(() =>
+    lireSourceSpectacle(location.hash, stockageOnglet(), () => { try { history.replaceState(null, '', location.pathname + location.search); } catch { /* bac à sable */ } }));
+  const [etatSpectacle, setEtatSpectacle] = useState<EtatClientSpectacle | null>(null);
+  const etatSpectacleRef = useRef<EtatClientSpectacle | null>(null);
+  const client = useRef<ClientSortieSpectacle | null>(null);
+  /** couche locale dont l'affichage doit être accusé au serveur (vseq de la vue) */
+  const aAccuser = useRef<{ n: number; vseq: number } | null>(null);
+  const configRef = useRef(config);
+  configRef.current = config;
 
   const horloge = useRef(new Horloge());
   const dernierRegie = useRef(0);
@@ -116,15 +146,26 @@ export function PageSortie() {
   const bib = useMemo(() => new BibliothequeMedias(), []);
   const pool = useMemo(() => new PoolVideos(bib), [bib]);
   const gestionFlux = useMemo(() => new GestionFlux(), []);
+  const donneesMur = useMemo(() => new DonneesMur(), []);
   const envoyer = useCallback((m: MessageSortie) => { for (const t of transports.current) t.envoyer(m); }, []);
+  /** médias annoncés et leur état (les introuvables signalés par les scènes compris) */
+  const precharges = useCallback((): Record<string, EtatPrecharge> => {
+    const r = pool.etats();
+    for (const a of absentsRef.current) r[a] = 'absent';
+    return r;
+  }, [pool]);
   const etatSortie = useCallback((): EtatSortie => {
     const a = absentsRef.current[absentsRef.current.length - 1];
+    const p = precharges();
+    const sp = etatSpectacleRef.current?.ligne;
     return {
       flux: gestionFlux.etat.statut === 'direct' ? 'direct' : gestionFlux.etat.statut === 'test' ? 'test' : 'aucun',
       secours: !!document.querySelector('.so-streamer .so-lecteur video'),
       medias: bib.etat.source, pleinEcran: !!document.fullscreenElement, ...(a ? { absent: a } : {}),
+      ...(Object.keys(p).length ? { precharges: p } : {}),
+      ...(sp && sp !== 'ferme' ? { spectacle: sp } : {}),
     };
-  }, [gestionFlux, bib]);
+  }, [gestionFlux, bib, precharges]);
   const presence = useCallback(() => {
     const s = sceneRef.current;
     // carte de refus à l'écran : la sortie ne montre AUCUNE scène demandée
@@ -136,14 +177,20 @@ export function PageSortie() {
   const absent = useCallback((asset: string, oui: boolean) => {
     setAbsents((l) => (oui ? (l.includes(asset) ? l : [...l, asset]) : l.filter((x) => x !== asset)));
   }, []);
+  // audio de salle du mur : repris à sa place (heure du serveur de spectacle, sinon heure locale)
+  const son = useMemo(() => new SonDeSalle(pool, () => client.current?.heureServeur() ?? Date.now(), { sonBloque: setSonBloque, absent }), [pool, absent]);
   // média absent, nouvelle scène, carte de refus : la régie le sait tout de suite, pas au battement suivant
   useEffect(() => { presence(); }, [absents, scene.n, carte, presence]);
   const services = useMemo<Services>(() => ({
-    medias: bib, pool, flux: gestionFlux, calque: () => calque.current,
-    finVideo: (asset) => envoyer({ t: 'fin-video', v: VERSION_SORTIE, id, heure: Date.now(), asset, n: sceneRef.current.nRegie }),
+    medias: bib, pool, flux: gestionFlux, calque: () => calque.current, mur: donneesMur,
+    finVideo: (asset) => {
+      envoyer({ t: 'fin-video', v: VERSION_SORTIE, id, heure: Date.now(), asset, n: sceneRef.current.nRegie });
+      // serveur de spectacle : signal `scene.fin-video` du lecteur
+      if (sceneRef.current.source === 'spectacle') client.current?.finVideo(asset);
+    },
     sonBloque: setSonBloque, secours: setSecours, absent,
     ...(config.secours ? { secoursDefaut: config.secours } : {}),
-  }), [bib, pool, gestionFlux, envoyer, id, config.secours, absent]);
+  }), [bib, pool, gestionFlux, donneesMur, envoyer, id, config.secours, absent]);
 
   useEffect(() => bib.abonner(setMedias), [bib]);
   useEffect(() => { void bib.demarrer(); }, [bib]);
@@ -205,6 +252,9 @@ export function PageSortie() {
     }
   }, [envoyer, id]);
 
+  /** Le serveur de spectacle tient la scène (liaison ouverte) : les scènes du canal local attendent (secours). */
+  const spectacleTient = useCallback(() => etatSpectacleRef.current?.ligne === 'ouvert', []);
+
   const recevoir = useCallback((brut: unknown, t: Transport | null = null) => {
     const ex = examinerMessageRegie(brut);
     if (!ex) return;
@@ -220,6 +270,7 @@ export function PageSortie() {
     setLiaison((l) => (l === 'connecte' ? l : 'connecte'));
     switch (m.t) {
       case 'scene': {
+        if (spectacleTient()) break;
         // plusieurs régies : la décision la plus récente gagne ; un renvoi plus ancien est ignoré
         const d = arbitrerScene(decision.current, m, local);
         if (!d) break;
@@ -232,8 +283,98 @@ export function PageSortie() {
       case 'config': setConfig(m.config); break;
       case 'precharger': pool.precharger(m.assets); break;
       case 'heure': break;
+      case 'source':
+        rangerSourceSpectacle(m.spectacle, stockageOnglet());
+        setSpectacle((s) => (JSON.stringify(s) === JSON.stringify(m.spectacle) ? s : m.spectacle));
+        break;
     }
-  }, [changerScene, evenement, pool, refuser]);
+  }, [changerScene, evenement, pool, refuser, spectacleTient]);
+
+  // ── serveur de spectacle : la sortie est l'acteur `scene` ──
+  const recevoirVue = useCallback((v: VueRecue) => {
+    const pre = v.params.precharger;
+    if (Array.isArray(pre)) pool.precharger(pre.filter(estAsset).slice(0, 8));
+    if ('refus' in v.resultat) {
+      // écran inconnu ou illisible : carte « Scène inconnue » et accusé avec refus
+      sceneRecue.current = null;
+      setCarte({ type: v.ecran ?? '?', inconnue: v.resultat.refus === 'capacite' });
+      client.current?.vueRefusee(v.vseq, v.resultat.refus);
+      return;
+    }
+    const s = v.resultat.scene;
+    const maintenant = Date.now();
+    decision.current = { source: 'spectacle', depuis: maintenant, local: maintenant };
+    sceneRecue.current = s;
+    // même scène que la couche du dessus (reconnexion, ou après une carte de refus qui la masquait) : pas de nouvelle couche
+    const deja = JSON.stringify(sceneRef.current.scene) === JSON.stringify(s);
+    setCarte(null);
+    if (deja) {
+      // déjà à l'écran (reconnexion, même scène) : accusée tout de suite
+      setScene((p) => ({ ...p, nRegie: v.vseq, source: 'spectacle' }));
+      client.current?.vueAffichee(v.vseq);
+      return;
+    }
+    const n = ++numero.current;
+    aAccuser.current = { n, vseq: v.vseq };
+    setScene({ scene: s, n, nRegie: v.vseq, fondu: FONDU_DEFAUT_MS, source: 'spectacle' });
+  }, [pool]);
+
+  const recevoirFx = useCallback((fx: MsgFx) => {
+    const e = lireFxScene(fx.kind, fx.p);
+    if (!e) return;
+    if ('message' in e) { donneesMur.ajouterMessage(e.message); return; }
+    if ('vote' in e) {
+      const { pseudo, index } = e.vote;
+      if (pseudo) calque.current?.recevoir({ type: 'pop', auteur: '@' + pseudo, texte: 'a voté', style: 'pop' });
+      if (index !== undefined) {
+        donneesMur.ajouterVoix(index);
+        const s = sceneRef.current.scene;
+        if (s.type === 'vote' && s.options[index]) evenement({ type: 'vote', option: s.options[index].cle });
+      }
+      return;
+    }
+    evenement(e.evenement);
+  }, [donneesMur, evenement]);
+
+  /** La couche `n` est à l'écran : accusé de la vue qu'elle montre. */
+  const surAffiche = useCallback((n: number) => {
+    const a = aAccuser.current;
+    if (a && a.n === n) { aAccuser.current = null; client.current?.vueAffichee(a.vseq); }
+  }, []);
+
+  useEffect(() => {
+    if (!spectacle) { etatSpectacleRef.current = null; setEtatSpectacle(null); return; }
+    const c = new ClientSortieSpectacle({
+      ouvrir: (hello) => transportWebSocket(spectacle.url, spectacle.jeton, { hello }),
+      config: () => configRef.current, session: sessionOnglet(stockageOnglet()), personne: id,
+      ...(spectacle.acteur ? { acteur: spectacle.acteur } : {}),
+    });
+    client.current = c;
+    const desabonner = [
+      c.surEtat((e) => { etatSpectacleRef.current = e; setEtatSpectacle(e); }),
+      c.surVue(recevoirVue),
+      c.surFx(recevoirFx),
+    ];
+    const battement = setInterval(() => {
+      const s = sceneRef.current.scene;
+      c.battre({
+        visible: document.visibilityState !== 'hidden',
+        media: mediasBattement(precharges(), (a) => pool.part(a), { ...(s.type === 'video' ? { video: s.asset } : {}), son: son.etat }),
+        ...(absentsRef.current.length ? { erreurs: absentsRef.current.map((a) => `absent:${a}`) } : {}),
+      });
+    }, BATTEMENT_MS);
+    return () => {
+      clearInterval(battement);
+      for (const f of desabonner) f();
+      c.fermer();
+      if (client.current === c) client.current = null;
+    };
+  }, [spectacle, id, recevoirVue, recevoirFx, precharges, pool, son]);
+
+  // données vivantes du mur et audio de salle : suivent la scène montrée
+  useEffect(() => { donneesMur.nouvelleVue(scene.scene); }, [donneesMur, scene.scene]);
+  useEffect(() => { son.jouer(!carte && scene.scene.type === 'mur' ? scene.scene.audio : null); }, [son, scene.scene, carte]);
+  useEffect(() => () => son.arreter(), [son]);
 
   // ── transports (canal local TOUJOURS, plus la salle de l'adresse), battement, reconnexion ──
   useEffect(() => {
@@ -260,7 +401,7 @@ export function PageSortie() {
       const silence = Date.now() - dernierRegie.current;
       if (dernierRegie.current && silence > PERTE_MS) setLiaison('perdu');
       if (silence > PERTE_MS && tic % 2 === 0) envoyer(bonjour());
-      if (projetSalle && lectureSalle && lectureVivante && silence > 5000) {
+      if (projetSalle && lectureSalle && lectureVivante && silence > 5000 && !spectacleTient()) {
         const r = traduire({ projet: projetSalle, lecture: lectureSalle, enLecture: true, config: configDepart });
         const p = sceneRef.current;
         if (JSON.stringify(p.scene) !== JSON.stringify(r.scene)) {
@@ -280,7 +421,7 @@ export function PageSortie() {
       for (const t of liste) t.fermer();
       transports.current = [];
     };
-  }, [recevoir, envoyer, presence, bonjour, id, salleParams, configDepart]);
+  }, [recevoir, envoyer, presence, bonjour, id, salleParams, configDepart, spectacleTient]);
 
   // témoin : visible 3 s après la connexion, toujours quand la liaison manque
   useEffect(() => {
@@ -308,8 +449,8 @@ export function PageSortie() {
   }, [q]);
 
   const typeScene = scene.scene.type;
-  const gabarit = scene.scene.type === 'streamer' ? scene.scene.gabarit : scene.scene.type === 'vote' ? 'vote' : undefined;
-  const calqueVisible = !carte && !['noir', 'accueil-qr', 'chrono', 'page'].includes(typeScene);
+  const gabarit = scene.scene.type === 'streamer' ? scene.scene.gabarit : scene.scene.type === 'vote' ? 'vote' : scene.scene.type === 'mur' ? 'chat' : undefined;
+  const calqueVisible = !carte && !['noir', 'accueil-qr', 'chrono', 'page', 'visio'].includes(typeScene);
   useEffect(() => { if (gabarit) calque.current?.gabarit(gabarit); }, [gabarit, calquePret]);
 
   // ── plein écran, curseur, touches ──
@@ -348,11 +489,19 @@ export function PageSortie() {
     if (!sonBloque) return;
     const s = sceneRef.current.scene;
     if (s.type === 'video' && s.son) document.querySelectorAll<HTMLVideoElement>('.so-lecteur video').forEach((v) => { v.muted = false; void v.play().catch(() => {}); });
+    son.debloquer();
     setSonBloque(false);
-  }, [sonBloque]);
+  }, [sonBloque, son]);
 
   const temps = useMemo(() => ({ etat: etat.etat, heureEtat: etat.heure, maintenantRegie: () => horloge.current.maintenant() }), [etat]);
-  const texteLiaison = liaison === 'connecte' ? 'régie connectée' : liaison === 'perdu' ? 'régie perdue · reconnexion…' : 'en attente de la régie';
+  // serveur de spectacle : le témoin dit SA liaison (la régie locale n'est plus que le secours)
+  const ligne = etatSpectacle?.ligne;
+  const temoin: Liaison = !spectacle ? liaison : ligne === 'ouvert' ? 'connecte' : ligne === 'connexion' ? 'attente' : 'perdu';
+  const texteLiaison = spectacle
+    ? (ligne === 'ouvert' ? 'serveur de spectacle' : ligne === 'refuse' ? 'serveur de spectacle : refusé' : ligne === 'connexion' ? 'connexion au serveur de spectacle…' : 'serveur de spectacle perdu · reconnexion…')
+      + (etatSpectacle?.rttMs !== undefined && ligne === 'ouvert' ? ` · ${etatSpectacle.rttMs} ms` : '')
+    : liaison === 'connecte' ? 'régie connectée' : liaison === 'perdu' ? 'régie perdue · reconnexion…' : 'en attente de la régie';
+  const refusSpectacle = etatSpectacle?.refus?.fatal ? etatSpectacle.refus : null;
   const nomMedias = medias?.source === 'dossier' ? `dossier ${medias.dossier} · ${medias.nombre}` : medias?.source === 'fichiers' ? `fichiers · ${medias.nombre}` : medias?.source === 'dev' ? `médias de dev · ${medias.nombre}` : 'aucun média';
 
   return (
@@ -361,7 +510,7 @@ export function PageSortie() {
         <div className={'so-page' + (repos ? ' repos' : '')} onDoubleClick={basculerPleinEcran} onPointerDown={debloquerSon}>
           <div ref={cadre} className="so-cadre">
             <Scene1080>
-              <Fondus scene={scene.scene} n={scene.n} fondu={scene.fondu} />
+              <Fondus scene={scene.scene} n={scene.n} fondu={scene.fondu} surAffiche={surAffiche} />
               <div ref={hoteCalque} className="so-calque" style={{ opacity: calqueVisible ? 1 : 0 }} />
               {carte && (
                 <div className="so-refus" role="alert">
@@ -372,11 +521,20 @@ export function PageSortie() {
                   <div className="so-refus-aide">touche F5 ici, ou « Recharger la sortie » dans la régie</div>
                 </div>
               )}
+              {refusSpectacle && (
+                <div className="so-refus" role="alert">
+                  <div className="so-micro so-refus-sur">Sortie écran scène · serveur de spectacle · {BUILD_SORTIE}</div>
+                  <div className="so-refus-titre">Connexion refusée : {refusSpectacle.code}</div>
+                  <div className="so-rampe" />
+                  <div className="so-refus-consigne">— {refusSpectacle.code === 'version' ? 'recharger la sortie' : 'vérifier le lien de la sortie'}</div>
+                  <div className="so-refus-aide">{refusSpectacle.message}</div>
+                </div>
+              )}
             </Scene1080>
           </div>
 
-          <div className={'so-temoin ' + liaison + (temoinVisible || !repos ? '' : ' cache')} role="status">
-            <i />{texteLiaison}{salleParams ? ' · canal local + salle' : ' · canal local'}{secours ? ' · secours' : ''}
+          <div className={'so-temoin ' + temoin + (temoinVisible || !repos || (spectacle && temoin !== 'connecte') ? '' : ' cache')} role="status">
+            <i />{texteLiaison}{spectacle ? ' · canal local en secours' : salleParams ? ' · canal local + salle' : ' · canal local'}{secours ? ' · secours' : ''}
           </div>
           {alerte && <div className="so-alerte" role="alert">{alerte}</div>}
 
