@@ -9,3 +9,4 @@ export * from './blocs-moteur';
 export * from './temps';
 export * from './lecteur';
 export * from './valider';
+export * from './acteurs';
