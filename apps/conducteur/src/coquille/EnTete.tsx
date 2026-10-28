@@ -1,21 +1,25 @@
-// L'en-tête (comme le design) : marque, fil (acte › moment › étape en cours, en accent), vues, modes PRÉPARER / JOUER,
-// scène verrouillée, annuler / rétablir, transport (début, lecture, vitesses ×1 ×20 ×60), horloge MM:SS / total,
-// top régie, recherche, pupitre, raccourcis, plein écran, thème. Tous les chiffres qui changent : largeur fixe, tabulaires.
+// L'en-tête (comme le design) : marque, fil (acte › moment › étape en cours, en accent), vues, modes RÉPÉTITION /
+// SPECTACLE (SPECTACLE = structure verrouillée, l'ancien verrou SCÈNE), annuler / rétablir, transport (début, lecture,
+// vitesses ×1 ×5 ×20 en RÉPÉTITION seulement), horloge MM:SS / total suivie du badge d'état de la représentation
+// (PRÊT, EN LECTURE, ATTENTE DU TOP, EN PAUSE, BLOQUÉ, TERMINÉ), GO, recherche, pupitre, raccourcis, plein écran,
+// thème. Tous les chiffres qui changent : largeur fixe, tabulaires.
 // Salle collaborative : pastilles de présence (chantier COLLAB) dans un bouton qui ouvre « Projet » (dépôt, serveur, fichier).
 // Le retard est affiché dans la barre de la conduite (comme le design).
-import { useMagasin, type ModeConducteur } from '../etat/magasin';
+import { VITESSES_REPETITION, useMagasin, type ModeConducteur } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
 import { mmss } from '../theme/format';
 import { useInterface } from './interface';
 import { situation } from './derive';
-import { IcoDebut, IcoLecture, IcoLoupe, IcoPause, IcoPleinEcran, IcoProjet, IcoPupitre, IcoTheme, IcoVerrou, VUES } from './icones';
+import { IcoDebut, IcoLecture, IcoLoupe, IcoPause, IcoPleinEcran, IcoProjet, IcoPupitre, IcoTheme, VUES } from './icones';
 import { Presence } from '../collab';
 import { basculerPleinEcran } from './raccourcis';
 import { BoutonSortieScene } from '../sortie';
+import { etatRepresentation } from './etat-scene';
+import { useGoRecent } from './useGoRecent';
 
 const MODES: [ModeConducteur, string, string][] = [
-  ['preparer', 'PRÉPARER', 'Écrire, régler et répéter avec la salle simulée : la caméra reste libre'],
-  ['jouer', 'JOUER', 'La caméra suit le spectacle'],
+  ['repetition', 'RÉPÉTITION', 'Écrire, régler, répéter (×1 ×5 ×20) : Espace = lecture / pause, T = GO, la caméra reste libre'],
+  ['spectacle', 'SPECTACLE', 'Représentation : structure verrouillée, vitesse ×1, Espace = GO, Maj+Espace = pause, la caméra suit'],
 ];
 
 export function EnTete() {
@@ -24,35 +28,26 @@ export function EnTete() {
   const enLecture = useMagasin(s => s.enLecture);
   const mode = useMagasin(s => s.mode);
   const vitesse = useMagasin(s => s.vitesse);
-  const verrou = useMagasin(s => s.verrou);
+  const enAttente = useMagasin(s => s.modificationsEnAttente);
   const nPasse = useMagasin(s => s.passe.length);
   const nFutur = useMagasin(s => s.futur.length);
-  const topArme = useMagasin(s => s.topArme);
   const sig = useMagasin(s => s.signaux)();
   const m = useMagasin.getState();
   const ui = useInterface();
+  const goRecent = useGoRecent();
 
   const sit = situation(projet, lecture, sig);
   const total = prevoir(projet).total;
   const t = lecture?.t ?? 0;
+  const spectacle = mode === 'spectacle';
 
   const pret = !!lecture?.attenteGo && sit.passageGo !== null;
-  const momentCourant = projet.ev[sit.index]?.id;
-  const goTxt = pret ? 'GO · P' + sit.passageGo
-    : sit.passageGo !== null ? (topArme && topArme === momentCourant ? 'P' + sit.passageGo + ' ARMÉ' : 'P' + sit.passageGo + ' ' + mmss(Math.ceil(sit.avantPret)))
-    : 'GO';
-  const goClasse = 'go' + (pret ? ' pret' : sit.passageGo !== null ? ' attend' : '');
-
-  const etat = !lecture ? ['PRÊT', 'var(--gt)', false]
-    : lecture.termine ? ['TERMINÉ', 'var(--gt)', false]
-    : lecture.attenteGo ? ['ATTENTE DU TOP', 'var(--ort)', true]
-    : lecture.bloque ? ['BLOQUÉ', 'var(--ort)', true]
-    : enLecture ? ['EN LECTURE', 'var(--rec)', true]
-    : ['EN PAUSE', 'var(--ink3)', false];
-
+  const goTxt = goRecent ? 'GO ✓' : pret ? 'GO · P' + sit.passageGo : 'GO';
+  const goClasse = 'go' + (lecture?.termine ? '' : pret ? ' pret' : ' attend');
+  const etat = etatRepresentation(lecture, enLecture);
 
   return (
-    <header className="ent">
+    <header className={'ent ' + (spectacle ? 'en-spectacle' : 'en-repetition')}>
       <div className="ent-logo">
         <span className="ent-carre"><span /></span>
         <span className="ent-titres">
@@ -79,13 +74,15 @@ export function EnTete() {
       </div>
       <div className="seg-groupe" role="group" aria-label="Modes">
         {MODES.map(([k, txt, tip]) => (
-          <button key={k} className={'seg' + (mode === k ? ' on' : '')} title={tip} onClick={() => m.changerMode(k)}>{txt}</button>
+          <button key={k} className={'seg mode-' + k + (mode === k ? ' on' : '')} title={tip} aria-pressed={mode === k}
+            onClick={() => m.changerMode(k)}>{txt}</button>
         ))}
       </div>
-      <button className={'verrou si-petit' + (verrou ? ' on' : '')} onClick={m.basculerVerrou}
-        title={verrou ? 'Mode scène · verrouillé. Cliquer pour déverrouiller' : 'Verrouiller la conduite (scène)'}>
-        <IcoVerrou ferme={verrou} /><span className="si-large">SCÈNE</span>
-      </button>
+      {spectacle && enAttente > 0 && (
+        <span className="pastille-attente" title="Modifications reçues de la salle : le lecteur les prendra à l’entrée du prochain moment">
+          {enAttente} MODIF. EN ATTENTE
+        </span>
+      )}
       <div className="histo si-large">
         <button className={nPasse ? 'actif' : ''} onClick={m.annuler} title="Annuler · Ctrl+Z">↶</button>
         <span className="n">{nPasse}</span>
@@ -94,21 +91,27 @@ export function EnTete() {
 
       <div className="ent-groupe">
         <button className="btn-carre" onClick={m.revenirAuDebut} title="Revenir au début"><IcoDebut /></button>
-        <button className={'lecture' + (enLecture ? ' on' : '')} onClick={m.basculerLecture} title="Lecture / pause · Espace">
+        <button className={'lecture' + (enLecture ? ' on' : '')} onClick={m.basculerLecture}
+          title={spectacle ? 'Lecture / pause · Maj+Espace' : 'Lecture / pause · Espace'}>
           {enLecture ? <IcoPause /> : <IcoLecture />}
         </button>
-        <div className="seg-groupe si-moyen" role="group" aria-label="Vitesse">
-          {[1, 20, 60].map(v => (
-            <button key={v} className={'seg vit' + (vitesse === v ? ' on' : '')} onClick={() => m.changerVitesse(v)}>×{v}</button>
-          ))}
-        </div>
-        <div className="horloge" title={etat[0] as string}>
+        {!spectacle && (
+          <div className="seg-groupe si-moyen" role="group" aria-label="Vitesse de répétition">
+            {VITESSES_REPETITION.map(v => (
+              <button key={v} className={'seg vit' + (vitesse === v ? ' on' : '')} onClick={() => m.changerVitesse(v)}>×{v}</button>
+            ))}
+          </div>
+        )}
+        {!spectacle && <span className={'pastille-repetition' + (vitesse !== 1 ? ' rapide' : ' si-moyen')}>RÉPÉTITION ×{vitesse}</span>}
+        <div className="horloge" title={etat.libelle}>
           <span className="num t">{mmss(t)}</span>
           <span className="tot">/ {mmss(total)}</span>
         </div>
+        <span className={'badge-etat ' + etat.ton + (etat.pulse ? ' pulse' : '')} role="status" aria-live="polite">{etat.libelle}</span>
       </div>
 
-      <button className={goClasse} onClick={m.top} title="Top régie · touche T">{goTxt}</button>
+      <button className={goClasse} onClick={() => m.go()} disabled={!!lecture?.termine}
+        title={spectacle ? 'GO · le cue suivant, maintenant · Espace' : 'GO · le cue suivant, maintenant · touche T'}>{goTxt}</button>
       <button className={'btn-carre si-moyen' + (ui.recherche ? ' on' : '')} onClick={() => ui.basculer('recherche')} title="Rechercher · Ctrl+K">
         <IcoLoupe />
       </button>

@@ -25,7 +25,7 @@ function Banc() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', color: 'var(--ink)' }}>
       <div style={{ display: 'flex', gap: 8, padding: 8 }}>
-        {(['preparer', 'jouer'] as const).map(m => <button key={m} onClick={() => useMagasin.getState().changerMode(m)} style={{ fontWeight: mode === m ? 700 : 400 }}>{m}</button>)}
+        {(['repetition', 'spectacle'] as const).map(m => <button key={m} onClick={() => useMagasin.getState().changerMode(m)} style={{ fontWeight: mode === m ? 700 : 400 }}>{m}</button>)}
         <button onClick={() => setMarche(v => !v)}>{marche ? 'arrêter' : 'lecture simulée'}</button>
       </div>
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}><Planche /></div>

@@ -11,7 +11,8 @@ import { actionsCollab } from './useCollab';
 import { jetonCouleur, raisonLisible, type Ack, type ModeSalle } from './protocole';
 import './collab.css';
 
-const MODES: Record<ModeSalle, string> = { ecrire: 'Écriture', repeter: 'Répétition', jouer: 'Scène' };
+// Scène ⇔ SPECTACLE du Conducteur, Écriture / Répétition ⇔ RÉPÉTITION (alignement : src/etat/serveur.ts, connecterSalle).
+const MODES: Record<ModeSalle, string> = { ecrire: 'Écriture', repeter: 'Répétition', jouer: 'Scène · SPECTACLE' };
 
 export interface PropsBoutonsVerrou {
   /** moment visé par « Tenir ce moment » (défaut : la sélection) */
@@ -60,7 +61,7 @@ export function BoutonsVerrou({ moment, compact = false, className = '' }: Props
         <span className="sr-co-mode pousse"><span className="sr-co-micro">Salle</span><span className={'val' + (enScene ? ' scene' : '')}>{MODES[mode]}</span></span>
         {enScene
           ? <button className="sr-co-bouton rec" disabled={!connecte || !peutQuitterScene} onClick={() => faire(actionsCollab.changerMode('repeter'))}>Quitter la Scène</button>
-          : <button className="sr-co-bouton plein" disabled={!connecte} onClick={() => faire(actionsCollab.changerMode('jouer'), 'Scène : le projet est gelé, vous avez la main.')}>Passer en Scène</button>}
+          : <button className="sr-co-bouton plein" disabled={!connecte} onClick={() => faire(actionsCollab.changerMode('jouer'), 'Scène : le projet est gelé, vous avez la main ; le Conducteur passe en SPECTACLE.')}>Passer en Scène</button>}
       </div>
       <div className="sr-co-ligne">
         {boutonVerrou('projet', vProjet, 'Prendre la main', 'Rendre la main')}

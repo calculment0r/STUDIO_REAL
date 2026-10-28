@@ -5,8 +5,8 @@
 // `pause`, `top`, `allerA`, `zoomerPlanche`, `zoomerConduite`, `basculerTheme`. CONDUITE et PLANCHE n'utilisent que ça.
 //
 // Ajouts (tous facultatifs pour les autres chantiers) : sélection étendue (sortie, passage, acte, piste, clip, note),
-// annuler / rétablir, vitesse de lecture, salle simulée, verrou « scène », versions locales, export / import JSON,
-// messages à la régie. La lecture passe par src/etat/moteur.ts (moteur du chantier MODÈLE, ou provisoire).
+// annuler / rétablir, vitesse de lecture, salle simulée, modes RÉPÉTITION / SPECTACLE (l'ancien verrou « scène »),
+// GO unique (`go`), versions locales, export / import JSON, messages à la régie. La lecture passe par src/etat/moteur.ts (moteur du chantier MODÈLE, ou provisoire).
 // Pupitre de la régie (chantier INTÉGRATION) : `poserMemoire`, `envoyerSignal`, `reprendreAuPoint` (entrées extérieures
 // du moteur) et `journalRegie` (commandes émises par les blocs, entrées reçues, alertes ; voir src/etat/regie.ts).
 import { create } from 'zustand';
@@ -22,13 +22,29 @@ import {
   type VersionLocale,
 } from './persistance';
 
-/** Les deux modes du design : PRÉPARER (écrire, régler, répéter avec la salle simulée ; la caméra reste libre) et
- *  JOUER (représentation : la caméra suit le spectacle). */
-export type ModeConducteur = 'preparer' | 'jouer';
-/** Anciennes valeurs (Écrire / Répéter), acceptées par `changerMode` et ramenées à 'preparer'. Le magasin ne les
- *  contient jamais ; elles restent dans le type pour que le code d'autres chantiers qui les compare compile encore. */
-export type ModeAncien = 'ecrire' | 'repeter';
-export const normaliserMode = (m: ModeConducteur | ModeAncien): ModeConducteur => (m === 'jouer' ? 'jouer' : 'preparer');
+/** Les deux modes (audit UX d'octobre 2026, §4.3, validé le 28/10) :
+ *  - RÉPÉTITION (défaut à l'ouverture) : structure modifiable (le lecteur se recrée en gardant sa place), vitesses
+ *    ×1 ×5 ×20, Espace = lecture / pause, T ou G = GO, caméra de la planche libre ;
+ *  - SPECTACLE : structure verrouillée (l'ancien verrou SCÈNE), lecteur jamais recréé pendant un moment (les
+ *    modifications reçues attendent le moment suivant), vitesse ×1 imposée, Espace = GO, Maj+Espace = lecture / pause,
+ *    la caméra suit le spectacle. */
+export type ModeConducteur = 'repetition' | 'spectacle';
+/** Anciennes valeurs (PRÉPARER / JOUER, et avant elles Écrire / Répéter), acceptées par `changerMode` et traduites :
+ *  JOUER → SPECTACLE, les autres → RÉPÉTITION. Le magasin ne les contient jamais. */
+export type ModeAncien = 'preparer' | 'jouer' | 'ecrire' | 'repeter';
+export const normaliserMode = (m: ModeConducteur | ModeAncien | string | null | undefined): ModeConducteur =>
+  (m === 'spectacle' || m === 'jouer' ? 'spectacle' : 'repetition');
+/** Migration de l'ancien état (mode PRÉPARER / JOUER + verrou SCÈNE) : le verrou SCÈNE (structure figée) devient
+ *  SPECTACLE ; sans verrou, l'ancien mode est traduit par `normaliserMode`. */
+export const migrerMode = (ancien: { mode?: string | null; verrou?: boolean | null } | null | undefined): ModeConducteur =>
+  (ancien?.verrou ? 'spectacle' : normaliserMode(ancien?.mode));
+
+/** Vitesses de répétition rapide (cachées en SPECTACLE, où ×1 est imposé). */
+export const VITESSES_REPETITION = [1, 5, 20] as const;
+/** Anti double GO : un second GO moins de 800 ms après le précédent est ignoré (règle 4.1-3). */
+export const DELAI_ANTI_DOUBLE_GO_MS = 800;
+/** Nombre maximal de tops forcés pour replacer un lecteur recréé au passage qu'il attendait. */
+const MAX_TOPS_REPLACEMENT = 64;
 
 /** Ce qui est choisi. `moment` + `etape` : une étape ; `moment` + `sortie` (index dans moment.tr) : une sortie ;
  *  `moment` + `passage` : le passage vers le moment suivant ; `moment` seul : le moment ; `acte` : un acte ;
@@ -44,8 +60,8 @@ interface EntreeHistorique { projet: Projet; etiquette: string; t: number }
 export interface Magasin {
   projet: Projet;
   selection: Selection;
-  /** Toujours 'preparer' ou 'jouer' (voir ModeAncien). */
-  mode: ModeConducteur | ModeAncien;
+  /** 'repetition' ou 'spectacle' (voir ModeConducteur ; les anciennes valeurs sont traduites par changerMode). */
+  mode: ModeConducteur;
   /** État du moteur de lecture ; null tant que rien n'est lancé. */
   lecture: EtatLecture | null;
   enLecture: boolean;
@@ -61,8 +77,16 @@ export interface Magasin {
   changerMode: (m: ModeConducteur | ModeAncien) => void;
   lancer: () => void;
   pause: () => void;
-  /** Top régie : franchit le passage « go » qui attend (ou l'arme s'il n'est pas encore prêt). */
+  /** GO : « le cue suivant, maintenant » (règle 4.1-2). Si un passage attend, il est franchi ; sinon, si l'étape en
+   *  cours mène à un passage « go » (cas d'Écho), l'étape est terminée de force PUIS le passage franchi, dans la même
+   *  action ; si la lecture était arrêtée, elle repart. Un appui = un cue ; rien n'est armé pour plus tard ; un second
+   *  GO moins de DELAI_ANTI_DOUBLE_GO_MS après le précédent est ignoré. Partagé par le TAP, les GO de l'en-tête, du
+   *  pupitre et du panneau, Espace (SPECTACLE) et T / G. */
+  go: () => void;
+  /** Ancien nom de `go` (contrat ARCHITECTURE.md) : même action. */
   top: () => void;
+  /** Instant (Date.now()) du dernier GO accepté : le bouton affiche « GO ✓ » pendant l'anti-rebond. */
+  dernierGo: number;
   allerA: (moment: string, etape?: string) => void;
   zoomerPlanche: (z: number) => void;
   zoomerConduite: (z: number) => void;
@@ -76,8 +100,6 @@ export interface Magasin {
   changerVitesse: (v: number) => void;
   basculerLecture: () => void;
   revenirAuDebut: () => void;
-  /** Passage « go » armé d'avance (id du moment) : il passera dès qu'il sera prêt. */
-  topArme: string | null;
   reglerSalle: (k: keyof SalleSimulee, v: number) => void;
   /** Signaux de la salle à l'instant (salle simulée). */
   signaux: () => Signaux;
@@ -90,8 +112,16 @@ export interface Magasin {
   annuler: () => void;
   retablir: () => void;
 
+  /** Lecture seule : vrai en SPECTACLE (structure verrouillée). Gardé pour le code qui lisait l'ancien verrou SCÈNE. */
   verrou: boolean;
+  /** Ancien bouton SCÈNE : bascule entre RÉPÉTITION et SPECTACLE. */
   basculerVerrou: () => void;
+  /** SPECTACLE : modifications reçues (salle collaborative) pas encore vues par le lecteur ; elles seront appliquées
+   *  à l'entrée du prochain moment. Toujours 0 en RÉPÉTITION. */
+  modificationsEnAttente: number;
+  /** Fin d'une vidéo jouée une seule fois sur la sortie : signal 'video.fin' au moteur, toujours transmis (même
+   *  pendant une attente du top ou une pause), sauf quand le spectacle est terminé. */
+  recevoirFinVideo: (asset: string) => void;
 
   message: string;
   signaler: (m: string) => void;
@@ -122,6 +152,12 @@ export interface Magasin {
 let lecteur: Lecteur | null = null;
 let revision = 0;          // change à chaque modification du projet (sauf la salle simulée)
 let revisionLecteur = -1;
+/** Mode et projet avec lesquels le lecteur courant a été créé (en SPECTACLE, le projet du magasin peut être plus
+ *  récent : ses modifications attendent le moment suivant). */
+let modeLecteur: ModeConducteur | null = null;
+let projetLecteur: Projet | null = null;
+/** Instant du dernier GO accepté (anti double GO). */
+let instantDernierGo = -Infinity;
 let decalT = 0, decalRetard = 0;   // continuité de l'horloge quand le lecteur est recréé après une modification
 let execution: Execution | null = null;
 let minuteurMessage: ReturnType<typeof setTimeout> | undefined;
@@ -141,7 +177,16 @@ const poserTheme = (t: 'sombre' | 'clair') => {
 const reprise = typeof localStorage !== 'undefined' ? lireCourant() : null;
 const themeInitial = lireTheme();
 poserTheme(themeInitial);
-const VERROU = 'Verrouillé · mode scène. Désactive SCÈNE en haut pour modifier.';
+const VERROU = 'SPECTACLE : la structure est verrouillée. Passe en RÉPÉTITION pour modifier.';
+
+/** Replace un lecteur (qui vient d'entrer dans `moment` par allerA) au passage de ce moment, comme s'il avait joué
+ *  ses étapes : tops forcés jusqu'à la phase 'passage' (bornés). Sert à la re-création en RÉPÉTITION quand on
+ *  attendait un passage : le nouveau lecteur se replace AU PASSAGE, pas au début du moment. */
+function placerAuPassage(l: Lecteur, moment: string): EtatLecture {
+  let e = l.etat();
+  for (let i = 0; i < MAX_TOPS_REPLACEMENT && !e.termine && e.moment === moment && e.etape !== null; i++) e = l.top();
+  return e;
+}
 
 export const useMagasin = create<Magasin>((set, get) => {
   const signaler = (m: string) => {
@@ -150,26 +195,52 @@ export const useMagasin = create<Magasin>((set, get) => {
     minuteurMessage = setTimeout(() => set({ message: '' }), 2800);
   };
 
-  /** Le lecteur du projet courant ; recréé (au même moment, à la même étape) quand le projet a changé. */
-  const assurerLecteur = (): Lecteur => {
-    if (lecteur && revisionLecteur === revision) return lecteur;
+  const lecteurAJour = () => !!lecteur && revisionLecteur === revision && modeLecteur === get().mode;
+
+  /** Le lecteur du projet courant. En RÉPÉTITION, il est recréé quand le projet (ou le mode) a changé, à la même
+   *  place : même moment, même étape, ou AU PASSAGE si l'on attendait un passage. En SPECTACLE, il n'est jamais
+   *  recréé ici (règle 4.1-9) : les modifications attendent l'entrée du prochain moment (`appliquerEnAttente`), un
+   *  retour au début ou un saut explicite (`forcer`). */
+  const assurerLecteur = (forcer = false): Lecteur => {
+    if (lecteur && lecteurAJour()) return lecteur;
+    if (lecteur && !forcer && get().mode === 'spectacle') return lecteur;
     const s = get(), avant = s.lecture;
-    lecteur = creerLecteur(s.projet, { mode: s.mode === 'jouer' ? 'scene' : 'repetition' });
+    const nouveau = creerLecteur(s.projet, { mode: s.mode === 'spectacle' ? 'scene' : 'repetition' });
+    lecteur = nouveau;
     revisionLecteur = revision;
+    modeLecteur = s.mode;
+    projetLecteur = s.projet;
     decalT = 0; decalRetard = 0;
     const m = avant && !avant.termine ? s.projet.ev.find(x => x.id === avant.moment) : undefined;
     if (avant && m) {
       const etape = avant.etape && m.st.some(x => x.id === avant.etape) ? avant.etape : undefined;
-      const e = lecteur.allerA(m.id, etape);
+      let e = nouveau.allerA(m.id, etape);
+      // on attendait le passage de ce moment : on s'y replace (sans rejouer l'étape depuis son début)
+      if (avant.etape === null && avant.phase !== 'fin') e = placerAuPassage(nouveau, m.id);
       decalT = avant.t - e.t; decalRetard = avant.retard - e.retard;
       // les mémoires de la soirée (blocs Mémoire, entrées de la régie) survivent à une modification du projet
-      for (const [k, v] of Object.entries(avant.memoires ?? {})) if (e.memoires[k] !== v) lecteur.poser(k, v);
+      for (const [k, v] of Object.entries(avant.memoires ?? {})) if (e.memoires[k] !== v) nouveau.poser(k, v);
     }
     // ce que le nouveau lecteur a émis en se replaçant n'est pas nouveau pour la régie
-    const e0 = lecteur.etat();
+    const e0 = nouveau.etat();
     vus = { c: e0.commandes?.length ?? 0, j: e0.journal?.length ?? 0, a: e0.alertes?.length ?? 0 };
-    return lecteur;
+    if (s.modificationsEnAttente) set({ modificationsEnAttente: 0 });
+    return nouveau;
   };
+
+  /** SPECTACLE : à l'entrée d'un nouveau moment, le lecteur prend les modifications en attente (il se recrée au
+   *  moment et à l'étape où il vient d'entrer). Renvoie le nouvel état, ou null s'il n'y avait rien à faire. */
+  const appliquerEnAttente = (momentAvant: string | null, e: EtatLecture): EtatLecture | null => {
+    if (lecteurAJour() || e.termine || !e.moment || e.moment === momentAvant) return null;
+    if (!get().projet.ev.some(x => x.id === e.moment)) return null;   // moment disparu : on garde l'ancien lecteur
+    const n = get().modificationsEnAttente;
+    const l = assurerLecteur(true);
+    if (n) signaler(n + (n > 1 ? ' modifications appliquées' : ' modification appliquée') + ' à l’entrée du moment.');
+    return l.etat();
+  };
+
+  /** Projet que lit le lecteur courant (celui du magasin, sauf modifications en attente en SPECTACLE). */
+  const projetLu = (): Projet => projetLecteur ?? get().projet;
 
   /** Relève les commandes, entrées et alertes nouvelles du lecteur pour le journal de régie (temps décalés). */
   const releverRegie = (e: EtatLecture): LigneRegie[] | null => {
@@ -199,7 +270,7 @@ export const useMagasin = create<Magasin>((set, get) => {
   };
   const ouvrirExecution = () => {
     if (execution) return;
-    execution = { id: 'x' + Date.now().toString(36), debut: Date.now(), mode: get().mode === 'jouer' ? 'scene' : 'repetition', evenements: [] };
+    execution = { id: 'x' + Date.now().toString(36), debut: Date.now(), mode: get().mode === 'spectacle' ? 'scene' : 'repetition', evenements: [] };
   };
   /** Ferme l'exécution en cours ; elle compte comme un soir joué si elle a duré plus d'une minute. */
   const fermerExecution = () => {
@@ -219,31 +290,91 @@ export const useMagasin = create<Magasin>((set, get) => {
     set({ passe: [...passe, { projet: avant, etiquette, t: now }].slice(-80), futur: [] });
   };
 
-  const remplacerProjet = (p: Projet) => { revision++; set({ projet: p }); };
+  /** Nouveau projet. En SPECTACLE, le lecteur ne le voit pas tout de suite : le compteur des modifications en
+   *  attente monte (elles seront appliquées à l'entrée du prochain moment). */
+  const remplacerProjet = (p: Projet) => {
+    revision++;
+    if (get().mode === 'spectacle' && lecteur) {
+      const n = get().modificationsEnAttente + 1;
+      set({ projet: p, modificationsEnAttente: n });
+      if (n === 1) signaler('1 modification en attente : appliquée au prochain moment.');
+    } else set({ projet: p });
+  };
 
+  // L'attente du top est un ÉTAT, pas une pause (règle 4.1-1) : l'horloge continue, `retard` et `attentes`
+  // s'accumulent (dans le moteur), la sortie reste « en lecture ». Rien n'est armé : seul un GO franchit un passage.
   avancerLecture = (dt) => {
     const l = assurerLecteur();
     let e = l.etat();
+    const momentAvant = e.moment;
     const avant = (e.moment ?? '') + '/' + (e.etape ?? '');
     let reste = dt;
     while (reste > 1e-6 && !e.termine) {
       const d = Math.min(0.5, reste);
       reste -= d;
       e = l.avancer(d, signauxSalle(get().projet.sens, e.tEtape));
-      const arme = get().topArme;
-      if (arme && e.attenteGo && e.moment === arme) { e = l.top(); set({ topArme: null }); journal('top', { moment: arme }); }
     }
     publier(e);
     const apres = (e.moment ?? '') + '/' + (e.etape ?? '');
     if (apres !== avant) journal(e.etape ? 'etape' : 'passage', { moment: e.moment, etape: e.etape });
-    if (e.termine) { set({ enLecture: false }); fermerExecution(); }
-    else if (e.attenteGo) set({ enLecture: false });   // pause automatique sur chaque passage (losange) : seul le TAP repart
+    if (e.termine) { set({ enLecture: false }); fermerExecution(); return; }
+    const applique = appliquerEnAttente(momentAvant, e);
+    if (applique) publier(applique);
+  };
+
+  /** Le GO (voir Magasin.go). */
+  const go = () => {
+    const maintenant = Date.now();
+    if (maintenant - instantDernierGo < DELAI_ANTI_DOUBLE_GO_MS) return;   // double appui : ignoré
+    const s = get(), l = assurerLecteur();
+    let e = l.etat();
+    if (e.termine) { signaler('Le spectacle est terminé.'); return; }
+    const accepter = (texte: string) => {
+      instantDernierGo = maintenant;
+      ouvrirExecution();
+      set({ enLecture: true, dernierGo: maintenant });
+      signaler(texte);
+    };
+    // Représentation pas encore commencée : le premier GO la lance (cue 1).
+    if (!execution || !s.lecture) {
+      if (!s.lecture) publier(e);
+      accepter('GO · le spectacle commence');
+      journal('go', { moment: e.moment, etape: e.etape });
+      return;
+    }
+    const p = projetLu();
+    const i = p.ev.findIndex(m => m.id === e.moment), m = p.ev[i];
+    if (!m) return;
+    const momentAvant = e.moment;
+    const dernier = i >= p.ev.length - 1;
+    if (e.etape === null) {
+      // un passage attend (le top, ou ses conditions) : GO le franchit
+      e = l.top();
+    } else {
+      // Pendant une étape. Dernier moment : l'étape qui termine le spectacle n'est pas un cue (on la laisse finir).
+      const versEtape = m.tr.some(o => o.a === e.etape && !!o.b && m.st.some(x => x.id === o.b));
+      if (dernier && !versEtape && !e.sequence) {
+        if (!s.enLecture) accepter('Lecture reprise · dernier moment, aucun cue après celui-ci');
+        else signaler('Dernier moment : aucun cue après celui-ci.');
+        return;
+      }
+      // fin de l'étape forcée ; si elle mène au passage « go » du moment (cas d'Écho), on le franchit aussitôt
+      e = l.top();
+      if (!e.termine && e.moment === momentAvant && e.etape === null && (m.gate.mode === 'go' || e.attenteGo)) e = l.top();
+    }
+    publier(e);
+    journal('go', { moment: e.moment, etape: e.etape });
+    const j = e.moment ? p.ev.findIndex(x => x.id === e.moment) : -1;
+    accepter(e.moment !== momentAvant ? 'GO · ' + (p.ev[j]?.name ?? 'moment ' + (j + 1)) : 'GO · étape suivante');
+    if (e.termine) { set({ enLecture: false }); fermerExecution(); return; }
+    const applique = appliquerEnAttente(momentAvant, e);
+    if (applique) publier(applique);
   };
 
   return {
     projet: reprise?.project ?? exempleDemo(),
     selection: {},
-    mode: 'jouer',
+    mode: 'repetition',   // RÉPÉTITION par défaut à l'ouverture (le mode n'est pas retenu d'une session à l'autre)
     lecture: null,
     enLecture: false,
     zoomPlanche: 1,
@@ -254,22 +385,30 @@ export const useMagasin = create<Magasin>((set, get) => {
 
     modifierProjet: (fn, etiquette = 'modification') => {
       const s = get();
-      if (s.verrou) { signaler(VERROU); return; }
+      if (s.mode === 'spectacle') { signaler(VERROU); return; }
       const copie = structuredClone(s.projet);
       fn(copie);
       pousserHistorique(s.projet, etiquette);
       remplacerProjet(copie);
     },
 
+    // Le lecteur n'est pas recréé au changement de mode : en RÉPÉTITION il le sera à la prochaine image (à la même
+    // place), en SPECTACLE à l'entrée du prochain moment (il passe alors en mode 'scene').
     changerMode: (m) => {
       const mode = normaliserMode(m);
       if (mode === get().mode) return;
-      revision++;   // le lecteur est recréé dans le bon mode (scène / répétition), à la même place
-      set({ mode });
+      if (mode === 'spectacle') {
+        set({ mode, verrou: true, vitesse: 1, modificationsEnAttente: lecteurAJour() ? 0 : Math.max(0, revision - revisionLecteur) });
+        signaler('SPECTACLE · structure verrouillée, vitesse ×1, Espace = GO, Maj+Espace = pause.');
+      } else {
+        set({ mode, verrou: false, modificationsEnAttente: 0 });
+        signaler('RÉPÉTITION · modifications autorisées, Espace = lecture / pause, T = GO.');
+      }
     },
 
     lancer: () => {
-      const l = assurerLecteur();
+      const s0 = get().lecture;
+      const l = assurerLecteur(!s0 || s0.termine);
       const e = get().lecture;
       if (!e || e.termine) { decalT = 0; decalRetard = 0; viderRegie(); publier(l.reinitialiser()); }
       ouvrirExecution();
@@ -277,26 +416,14 @@ export const useMagasin = create<Magasin>((set, get) => {
     },
     pause: () => set({ enLecture: false }),
 
-    top: () => {
-      const s = get(), l = assurerLecteur(), e = l.etat();
-      if (e.termine) { signaler('Le spectacle est terminé.'); return; }
-      const i = s.projet.ev.findIndex(m => m.id === e.moment), m = s.projet.ev[i];
-      if (!m) return;
-      const dernier = i >= s.projet.ev.length - 1;
-      if (!dernier && m.gate.mode === 'go' && (e.attenteGo || !e.etape)) {
-        publier(l.top());
-        journal('top', { moment: m.id });
-        set({ topArme: null });
-        signaler('Top donné · passage P' + (i + 1) + ' franchi');
-      } else if (!dernier && m.gate.mode === 'go') {
-        set({ topArme: m.id });
-        signaler('Top armé · P' + (i + 1) + ' passera dès que prêt');
-      } else signaler('Aucun passage n’attend de top.');
-    },
+    go,
+    top: go,
+    dernierGo: 0,
 
+    // Saut explicite : le lecteur prend les modifications en attente (on rentre de toute façon dans un moment).
     allerA: (moment, etape) => {
       set({ selection: { moment, etape } });
-      publier(assurerLecteur().allerA(moment, etape));
+      publier(assurerLecteur(true).allerA(moment, etape));
       journal('aller', { moment, etape });
     },
 
@@ -313,22 +440,25 @@ export const useMagasin = create<Magasin>((set, get) => {
     cadrage: null,
     cadrerMoment: (moment) => set(s => ({ selection: { moment }, cadrage: { moment, n: (s.cadrage?.n ?? 0) + 1 } })),
 
-    vitesse: 1,          // temps réel par défaut (spectacle) ; accélérer à la main pour répéter
-    changerVitesse: (vitesse) => set({ vitesse }),
+    vitesse: 1,          // temps réel par défaut ; ×5 / ×20 seulement en RÉPÉTITION
+    changerVitesse: (vitesse) => {
+      if (get().mode === 'spectacle' && vitesse !== 1) { signaler('SPECTACLE : vitesse ×1 imposée.'); return; }
+      set({ vitesse });
+    },
     basculerLecture: () => { if (get().enLecture) get().pause(); else get().lancer(); },
     revenirAuDebut: () => {
       fermerExecution();
-      const l = assurerLecteur();
+      const l = assurerLecteur(true);
       decalT = 0; decalRetard = 0;
       viderRegie();
       publier(l.reinitialiser());
-      set({ enLecture: false, topArme: null });
+      instantDernierGo = -Infinity;
+      set({ enLecture: false, dernierGo: 0 });
     },
-    topArme: null,
 
     reglerSalle: (k, v) => {
       const s = get();
-      if (s.verrou) { signaler(VERROU); return; }
+      if (s.mode === 'spectacle') { signaler(VERROU); return; }
       pousserHistorique(s.projet, 'salle');
       // la salle ne change pas la structure : le lecteur continue (les signaux sont relus à chaque image)
       set({ projet: { ...s.projet, sens: { ...s.projet.sens, [k]: Math.max(0, Math.min(100, Math.round(v))) } } });
@@ -342,6 +472,7 @@ export const useMagasin = create<Magasin>((set, get) => {
     futur: [],
     annuler: () => {
       const s = get(), h = s.passe[s.passe.length - 1];
+      if (s.mode === 'spectacle') { signaler(VERROU); return; }
       if (!h) { signaler('Rien à annuler.'); return; }
       set({ passe: s.passe.slice(0, -1), futur: [...s.futur, s.projet] });
       remplacerProjet(h.projet);
@@ -349,16 +480,19 @@ export const useMagasin = create<Magasin>((set, get) => {
     },
     retablir: () => {
       const s = get(), p = s.futur[s.futur.length - 1];
+      if (s.mode === 'spectacle') { signaler(VERROU); return; }
       if (!p) { signaler('Rien à rétablir.'); return; }
       set({ futur: s.futur.slice(0, -1), passe: [...s.passe, { projet: s.projet, etiquette: 'rétablir', t: 0 }] });
       remplacerProjet(p);
     },
 
     verrou: false,
-    basculerVerrou: () => {
-      const v = !get().verrou;
-      set({ verrou: v });
-      signaler(v ? 'Mode scène : la conduite est verrouillée. Top, pause et conditions restent actifs.' : 'Mode répétition : modifications autorisées.');
+    basculerVerrou: () => get().changerMode(get().mode === 'spectacle' ? 'repetition' : 'spectacle'),
+    modificationsEnAttente: 0,
+    recevoirFinVideo: (asset) => {
+      const l = get().lecture;
+      if (!l || l.termine) return;
+      get().envoyerSignal('video.fin', { valeur: asset, asset });
     },
 
     message: '',
@@ -375,7 +509,7 @@ export const useMagasin = create<Magasin>((set, get) => {
     ouvrirVersion: (i) => {
       const s = get(), v = s.versions[i];
       if (!v) return;
-      if (s.verrou) { signaler(VERROU); return; }
+      if (s.mode === 'spectacle') { signaler(VERROU); return; }
       try {
         const f = lireFichier(JSON.stringify(v.data));
         pousserHistorique(s.projet, 'version');
@@ -393,7 +527,7 @@ export const useMagasin = create<Magasin>((set, get) => {
     exporter: () => { const s = get(); telecharger(emballer(s.projet, s.assets, s.executions)); },
     importer: (texte) => {
       const s = get();
-      if (s.verrou) { signaler(VERROU); return; }
+      if (s.mode === 'spectacle') { signaler(VERROU); return; }
       try {
         const f = lireFichier(texte);
         pousserHistorique(s.projet, 'import');
@@ -404,19 +538,22 @@ export const useMagasin = create<Magasin>((set, get) => {
     },
     revenirDemo: () => {
       const s = get();
+      if (s.mode === 'spectacle') { signaler(VERROU); return; }
       pousserHistorique(s.projet, 'démonstration');
       oublierCourant();
       set({ selection: {}, assets: ASSETS_DEMO, executions: [] });
       remplacerProjet(exempleDemo());
     },
-    // Projet reçu de la salle collaborative (src/etat/serveur.ts) : nouvelle révision pour le lecteur, sans entrée
-    // d'annulation et sans tenir compte du verrou local de scène (ce sont les gestes des autres postes).
+    // Projet reçu de la salle collaborative (src/etat/serveur.ts) : nouvelle révision, sans entrée d'annulation et sans
+    // tenir compte du verrou local (ce sont les gestes des autres postes). Le projet du magasin suit toujours la salle
+    // (la synchronisation en dépend) ; en SPECTACLE, c'est le LECTEUR qui attend : modification comptée dans
+    // `modificationsEnAttente`, appliquée à l'entrée du prochain moment.
     remplacerProjetDistant: (p, o) => {
       if (o?.premier) set({ passe: [], futur: [] });
       remplacerProjet(p);
     },
 
-    // Pupitre de la régie : entrées extérieures, permises en mode scène (le verrou fige la conduite, pas la soirée).
+    // Pupitre de la régie : entrées extérieures, permises en SPECTACLE (le verrou fige la conduite, pas la soirée).
     poserMemoire: (nom, valeur) => {
       const n = nom.trim();
       if (!n) return;
@@ -437,6 +574,14 @@ export const useMagasin = create<Magasin>((set, get) => {
   };
 });
 
+/** Vitesse appliquée : ×1 en SPECTACLE quoi qu'il arrive. */
+const vitesseEffective = (s: Pick<Magasin, 'mode' | 'vitesse'>) => (s.mode === 'spectacle' ? 1 : s.vitesse);
+
+/** Fait avancer la lecture de `dt` secondes de spectacle, comme une image de la boucle (essais, outils). */
+export function avancerDe(dt: number): void {
+  if (useMagasin.getState().enLecture && dt > 0) avancerLecture(dt);
+}
+
 /** Démarre la boucle de lecture : requestAnimationFrame, relayé par setInterval quand l'onglet est caché
  *  (la représentation continue). Renvoie la fonction d'arrêt. */
 export function demarrerBoucle(): () => void {
@@ -446,13 +591,13 @@ export function demarrerBoucle(): () => void {
     const dt = dernier ? Math.min(0.1, (ts - dernier) / 1000) : 0;
     dernier = ts;
     const s = useMagasin.getState();
-    if (s.enLecture && dt > 0) avancerLecture(dt * s.vitesse);
+    if (s.enLecture && dt > 0) avancerLecture(dt * vitesseEffective(s));
   };
   raf = requestAnimationFrame(image);
   const relais = setInterval(() => {
     const now = performance.now(), s = useMagasin.getState();
     if (document.hidden) {
-      if (s.enLecture) avancerLecture(Math.min(1, (now - dernierCache) / 1000) * s.vitesse);
+      if (s.enLecture) avancerLecture(Math.min(1, (now - dernierCache) / 1000) * vitesseEffective(s));
       dernier = 0;
     }
     dernierCache = now;
