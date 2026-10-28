@@ -6,15 +6,16 @@ Un seul processus Node (≥ 20, seule dépendance : `ws`) : pages statiques + We
 
 ```
 cd prototypes/figurants/serveur && npm install
-node index.mjs                      # puis http://localhost:8787/ (redirige vers la régie)
+node index.mjs                      # puis http://localhost:8788/ (redirige vers la régie)
 node test-bout-en-bout.mjs          # banque sans réseau, puis ollama si OLLAMA_URL répond (ou : banque | ollama)
 node mesures.mjs [journal.jsonl]    # p50/p95/p99 par étape et fournisseur, rejets, quasi-doublons
 ```
 Depuis un PC sans Ollama local : `ssh -N -L 11434:localhost:11434 dgx2` dans un autre terminal.
+Le port par défaut est **8788** ; le port **8787** reste réservé à `wrangler dev` du Worker `apps/serveur`. Si le port est déjà pris, le serveur quitte (code 2) avec une suggestion : `PORT=… node index.mjs`.
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `PORT`, `HOTE` | `8787`, `0.0.0.0` | écoute HTTP + WS |
+| `PORT`, `HOTE` | `8788`, `0.0.0.0` | écoute HTTP + WS (8787 gardé par `wrangler dev`, `apps/serveur`) |
 | `OLLAMA_URL`, `MODELE_OLLAMA` | `http://localhost:11434`, `qwen3:8b` | fournisseur local |
 | `OLLAMA_MODE` | `multi` | `multi` = 1 appel → N répliques ; `parallele` = N appels d'une réplique (gabarits `n2.qwen.*`) |
 | `ANTHROPIC_API_KEY` | absente | active Haiku 5.5 (lue dans l'environnement seulement, jamais journalisée) |
@@ -42,7 +43,7 @@ de la voix, première réplique IA 1,2 à 1,5 s après.
 ssh -N -L 8795:localhost:8795 dgx2
 ASR_URL=http://localhost:8795 node index.mjs
 ```
-Test sans téléphone : `node test-micro-serveur.mjs <phrase.wav 16 kHz mono> ws://localhost:8787/ws <jeton>`.
+Test sans téléphone : `node test-micro-serveur.mjs <phrase.wav 16 kHz mono> ws://localhost:8788/ws <jeton>`.
 
 ### Mode spectacle (les soirs de représentation, les 3 machines sont réservées au spectacle)
 
