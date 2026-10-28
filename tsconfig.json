@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/modele" },
+    { "path": "./apps/serveur/tsconfig.json" },
+    { "path": "./apps/serveur/tsconfig.tests.json" },
+    { "path": "./apps/conducteur/tsconfig.app.json" },
+    { "path": "./apps/conducteur/tsconfig.node.json" },
+    { "path": "./projets" }
+  ]
+}

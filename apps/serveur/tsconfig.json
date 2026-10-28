@@ -1,15 +1,11 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/serveur.tsbuildinfo",
     "lib": ["ES2023"],
     "types": ["@cloudflare/workers-types"],
-    "strict": true,
     "noUncheckedIndexedAccess": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
     "noEmit": true
   },
   "include": ["src"]
