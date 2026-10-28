@@ -16,8 +16,10 @@ export { VERSION_PROTOCOLE };
 export type Lu<T> = { message: T; raison?: undefined } | { message: null; raison: string };
 
 /** Refus interne (levé pendant la lecture, rendu en `raison`). */
+// (sans propriété de paramètre : le paquet est aussi compilé par le Conducteur, en syntaxe effaçable seulement)
 class Refus extends Error {
-  constructor(public readonly code: string, detail: string) { super(`${code} : ${detail}`); }
+  readonly code: string;
+  constructor(code: string, detail: string) { super(`${code} : ${detail}`); this.code = code; }
 }
 
 type Brut = Record<string, unknown>;
