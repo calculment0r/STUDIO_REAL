@@ -303,8 +303,18 @@ export function libelleCondition(g: Condition): string {
     }
     default:
       if (g.k.startsWith('mem:')) return `mémoire « ${g.k.slice(4)} » ${op} ${v}`;
-      return `${g.k} ${op} ${v}`;
+      return libelleSignal(g) ?? `${g.k} ${op} ${v}`;
   }
+}
+
+/** Condition sur le signal d'un acteur ('sig:ministre.raccroche' ≥ 1 → « signal ministre.raccroche reçu ») ; null sinon. */
+export function libelleSignal(g: Condition): string | null {
+  if (g.k.startsWith('sig:')) {
+    const nom = g.k.slice(4);
+    return g.op === '≥' && Number(g.v) === 1 ? `signal ${nom} reçu` : `signal ${nom} ${g.op} ${g.v}`;
+  }
+  if (g.k.startsWith('sigv:')) return `${g.k.slice(5)} ${g.op} ${g.v}`;
+  return null;
 }
 
 /** Règle lisible d'une sortie ; une sortie sans condition est le « sinon » (ou « à la fin » si elle est seule). */
