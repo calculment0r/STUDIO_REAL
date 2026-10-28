@@ -51,11 +51,8 @@ export function brancherRelaisSortie(o: { salle?: boolean } = {}): () => void {
   surRelache(calculer);
   calculer();
 
-  // fin d'une vidéo jouée une seule fois → signal au moteur
-  const finVideo = surFinVideo((asset) => {
-    const s = useMagasin.getState();
-    if (s.enLecture) s.envoyerSignal('video.fin', { valeur: asset, asset });
-  });
+  // fin d'une vidéo jouée une seule fois → signal au moteur, toujours (même pendant une attente du top ou une pause)
+  const finVideo = surFinVideo((asset) => useMagasin.getState().recevoirFinVideo(asset));
 
   // autre machine : la salle du serveur, ouverte quand la coquille y est connectée
   let salle: { id: string; t: TransportSalle; retirer: () => void } | null = null;

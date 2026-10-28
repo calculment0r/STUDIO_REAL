@@ -386,10 +386,11 @@ function OuEnEstOn() {
   const projet = useMagasin(s => s.projet);
   const lecture = useMagasin(s => s.lecture);
   const sig = useMagasin(s => s.signaux)();
-  const top = useMagasin(s => s.top);
+  const go = useMagasin(s => s.go);
   const sit = situation(projet, lecture, sig);
   const compte = sit.passageGo !== null && !lecture?.attenteGo && sit.avantPret > 0 && sit.avantPret <= 10 && !!lecture;
-  const goPossible = sit.peutGo || !!lecture?.attenteGo;
+  // le GO (magasin.go) est toujours possible tant que le spectacle n'est pas terminé : un appui = un cue
+  const goPossible = !!lecture && !lecture.termine;
   return (
     <div className="pn-bloc large">
       <div className="pn-tete"><span className="pn-tag">OÙ EN EST-ON</span><span className="pn-droite">{sit.tag}</span></div>
@@ -410,7 +411,7 @@ function OuEnEstOn() {
           <span className="barre"><span style={{ width: (l.progres * 100).toFixed(1) + '%', background: l.ok ? 'var(--gt)' : 'var(--ort)' }} /></span>
         </div>
       ))}
-      {goPossible && <button className="ou-go" onClick={top}>TOP · GO</button>}
+      {goPossible && <button className="ou-go" onClick={() => go()}>TOP · GO</button>}
       <ApercuSortie />
     </div>
   );

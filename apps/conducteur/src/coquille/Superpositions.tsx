@@ -9,6 +9,7 @@ import { useInterface } from './interface';
 import { situation } from './derive';
 import { PupitreRegie } from './Regie';
 import { chargerEcho, chargerLive } from './projet-live';
+import { useGoRecent } from './useGoRecent';
 
 /** Une alerte du moteur reste au bandeau ce temps-là (horloge murale) si personne ne l'accuse. */
 const DUREE_ALERTE_MS = 9000;
@@ -116,13 +117,15 @@ export function Pupitre() {
   const projet = useMagasin(s => s.projet);
   const lecture = useMagasin(s => s.lecture);
   const enLecture = useMagasin(s => s.enLecture);
-  const verrou = useMagasin(s => s.verrou);
+  const mode = useMagasin(s => s.mode);
   const sig = useMagasin(s => s.signaux)();
   const m = useMagasin.getState();
+  const goRecent = useGoRecent();
   if (!ouvert) return null;
+  const spectacle = mode === 'spectacle';
   const sit = situation(projet, lecture, sig);
   const pret = !!lecture?.attenteGo && sit.passageGo !== null;
-  const go = pret ? 'GO · P' + sit.passageGo : sit.passageGo !== null ? 'P' + sit.passageGo + ' ' + mmss(Math.ceil(sit.avantPret)) : 'GO';
+  const go = goRecent ? 'GO ✓' : pret ? 'GO · P' + sit.passageGo : 'GO';
   return (
     <div className="pupitre" role="dialog" aria-label="Pupitre de représentation">
       <div className="pup-tete">
@@ -131,8 +134,11 @@ export function Pupitre() {
           {(sit.acte + ' › ' + sit.moment).toUpperCase()}
         </span>
         <div style={{ flex: 1 }} />
-        <button className={'pup-btn' + (enLecture ? ' on' : '')} onClick={m.basculerLecture}>{enLecture ? 'PAUSE · ESPACE' : 'LECTURE · ESPACE'}</button>
-        <button className={'pup-btn' + (verrou ? ' on' : '')} onClick={m.basculerVerrou}>SCÈNE</button>
+        <button className={'pup-btn' + (enLecture ? ' on' : '')} onClick={m.basculerLecture}>
+          {(enLecture ? 'PAUSE · ' : 'LECTURE · ') + (spectacle ? 'MAJ+ESPACE' : 'ESPACE')}
+        </button>
+        <button className={'pup-btn' + (spectacle ? ' on' : '')} onClick={() => m.changerMode(spectacle ? 'repetition' : 'spectacle')}
+          title="SPECTACLE : structure verrouillée, vitesse ×1, Espace = GO">SPECTACLE</button>
         <button className="pup-btn" onClick={() => basculer('pupitre')}>QUITTER · ÉCHAP</button>
       </div>
       <div className="pup-grille avec-regie">
@@ -163,7 +169,7 @@ export function Pupitre() {
             </div>
           ))}
           <div style={{ flex: 1 }} />
-          <button className={'pup-go' + (pret ? ' pret' : sit.passageGo !== null ? ' attend' : '')} onClick={m.top}>{go}</button>
+          <button className={'pup-go' + (pret ? ' pret' : ' attend')} onClick={() => m.go()} disabled={!!lecture?.termine}>{go}</button>
         </div>
         <div className="pup-col pup-regie">
           <span className="mono" style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--ort)' }}>RÉGIE · ENTRÉES ET COMMANDES</span>
@@ -175,7 +181,8 @@ export function Pupitre() {
 }
 
 const RACCOURCIS: [string, string][] = [
-  ['Espace', 'Lecture / pause'], ['T', 'Top régie'], ['P', 'Pupitre de représentation'], ['Ctrl + Espace', 'Tiroir des assets'],
+  ['Espace', 'SPECTACLE : GO · RÉPÉTITION : lecture / pause'], ['Maj + Espace', 'SPECTACLE : lecture / pause'],
+  ['T / G', 'GO (le cue suivant, maintenant)'], ['P', 'Pupitre de représentation'], ['Ctrl + Espace', 'Tiroir des assets'],
   ['Ctrl + Z', 'Annuler'], ['Ctrl + Maj + Z', 'Rétablir'], ['M', 'Nouveau moment'], ['K', 'Note de régie à la tête de lecture'],
   ['+ / −', 'Zoom de la conduite'], ['F', 'Plein écran (sur la planche : recadrer)'], ['V / C', 'Outils de la conduite : sélection / couper'], ['Ctrl + K', 'Rechercher'],
   ['Échap', 'Fermer / désélectionner'], ['?', 'Raccourcis'],

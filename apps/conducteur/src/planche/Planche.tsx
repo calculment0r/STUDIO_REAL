@@ -56,7 +56,7 @@ export function Planche() {
   const zoomerPlanche = useMagasin(s => s.zoomerPlanche);
   const vueUi = useInterface(s => s.vue);
   const theme: ThemePlanche = themeMagasin === 'clair' ? 'clair' : 'sombre';
-  // Comme le design : on modifie dans les deux modes ; seul le verrou « scène » fige la planche.
+  // RÉPÉTITION : planche modifiable ; SPECTACLE : structure verrouillée (verrou = mode spectacle), la caméra suit.
   const editable = !verrou;
 
   const refBoite = useRef<HTMLDivElement>(null);
@@ -157,7 +157,7 @@ export function Planche() {
   useEffect(() => {
     if (premierCadrage.current || taille.l < 50) return;
     premierCadrage.current = true;
-    const r = rectFocus(mode === 'jouer' ? lecture : null);
+    const r = rectFocus(mode === 'spectacle' ? lecture : null);
     if (r) setCam(cadrer(r, taille.l, taille.h));
     // cadrage initial seulement
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,7 +167,7 @@ export function Planche() {
   useEffect(() => {
     if (selectionInterne.current) { selectionInterne.current = false; return; }
     const { taille: T, parId: P, cam: c } = etat.current;
-    if (T.l < 50 || !selection.moment || (mode === 'jouer' && etat.current.suivre)) return;
+    if (T.l < 50 || !selection.moment || (mode === 'spectacle' && etat.current.suivre)) return;
     const f = P.get(selection.moment);
     if (!f) return;
     const p = selection.etape ? f.P[selection.etape] : undefined;
@@ -190,8 +190,8 @@ export function Planche() {
   }, [cadrage]);
 
   // ── Mode Jouer : la caméra suit l'étape en cours et cadre le moment ──
-  useEffect(() => { if (mode === 'jouer') setSuivre(true); }, [mode]);
-  const cleSuivi = mode === 'jouer' && suivre && lecture?.moment ? `${lecture.moment}|${lecture.attenteGo ? 1 : 0}|${taille.l}x${taille.h}|${cadresBase.length}` : '';
+  useEffect(() => { if (mode === 'spectacle') setSuivre(true); }, [mode]);
+  const cleSuivi = mode === 'spectacle' && suivre && lecture?.moment ? `${lecture.moment}|${lecture.attenteGo ? 1 : 0}|${taille.l}x${taille.h}|${cadresBase.length}` : '';
   useEffect(() => {
     if (!cleSuivi) return;
     const r = rectFocus(useMagasin.getState().lecture);
@@ -353,7 +353,7 @@ export function Planche() {
       if (s.moment !== moment || s.etape !== etape) {
         selectionInterne.current = true;
         // Préparer : la tête de lecture va à l'étape (cue), comme le design. Sinon : on la choisit seulement.
-        if (useMagasin.getState().mode !== 'jouer') useMagasin.getState().allerA(moment, etape);
+        if (useMagasin.getState().mode !== 'spectacle') useMagasin.getState().allerA(moment, etape);
         else choisir({ moment, etape });
       }
       geste.current = { type: 'etape', moment, etape, x0: e.clientX, y0: e.clientY, bouge: false, poignee };
@@ -362,7 +362,7 @@ export function Planche() {
       if (e.button !== 0) return;
       e.stopPropagation();
       refBoite.current?.focus({ preventScroll: true });
-      if (!etat.current.editable) { dire('Mode scène : la planche est verrouillée.'); return; }
+      if (!etat.current.editable) { dire('SPECTACLE : la planche est verrouillée.'); return; }
       geste.current = { type: 'lien' };
       setLien({ moment, a: etape, sx: x, sy: y, mx: x, my: y });
     },
@@ -407,7 +407,7 @@ export function Planche() {
 
   const surDoubleClic = (e: RMouseEvent<HTMLDivElement>) => {
     if ((e.target as Element).closest('[data-ui],[data-etape]')) return;
-    if (!editable) { dire('Mode scène : la planche est verrouillée.'); return; }
+    if (!editable) { dire('SPECTACLE : la planche est verrouillée.'); return; }
     const p = relatif(e.clientX, e.clientY), w = ecranVersMonde(cam, p.x, p.y);
     const f = cadreAuPoint(cadres, w.x, w.y);
     if (!f) return;
@@ -429,7 +429,7 @@ export function Planche() {
 
   /** Crée une étape (type et rotatifs donnés) dans le moment, au point du monde ; la relie depuis `depuis` s'il y a lieu. */
   const poserEtape = (moment: string, wx: number, wy: number, b: EntreeBibliotheque | null, depuis: string | null) => {
-    if (!editable) { dire('Mode scène : la planche est verrouillée.'); return; }
+    if (!editable) { dire('SPECTACLE : la planche est verrouillée.'); return; }
     const f = parId.get(moment);
     if (!f) return;
     let id: string | null = null;
@@ -528,7 +528,7 @@ export function Planche() {
   };
   const zoomerDe = (k: number) => { setCam(c => zoomerAutour(c, c.z * k, taille.l / 2, taille.h / 2)); setSuivre(false); };
   const recadrer = () => {
-    if (mode === 'jouer') { setSuivre(true); return; }
+    if (mode === 'spectacle') { setSuivre(true); return; }
     const r = rectFocus(null);
     if (r) setCam(cadrer(r, taille.l, taille.h));
   };
@@ -619,7 +619,7 @@ export function Planche() {
           return (
             <MomentPlanche key={m.id} cadre={f} niveau={niveau} detail={!vue || intersecte(f.r, vue)} theme={theme}
               statuts={sigStatuts} parcours={(parcoursParMoment.get(m.id) ?? []).join('|')} actif={actif}
-              vif={vif} enAttenteTop={!!lecture?.attenteGo && lecture.moment === m.id} terne={mode === 'jouer' && !!lecture?.moment && !vif}
+              vif={vif} enAttenteTop={!!lecture?.attenteGo && lecture.moment === m.id} terne={mode === 'spectacle' && !!lecture?.moment && !vif}
               selMoment={selection.moment === m.id && !selection.etape} selEtape={selection.moment === m.id ? selection.etape ?? null : null}
               selSortie={sortieSel && sortieSel.moment === m.id ? sortieSel.i : -1}
               lienDepuis={lien && lien.moment === m.id ? lien.a : null} editable={editable}
@@ -666,12 +666,12 @@ export function Planche() {
       </div>
 
       {/* Mode Jouer : la caméra suit (ou le suivi est en pause) */}
-      {mode === 'jouer' && !suivre && (
+      {mode === 'spectacle' && !suivre && (
         <button type="button" className="planche-suivi" data-ui="1" onPointerDown={e => e.stopPropagation()} onClick={() => setSuivre(true)}>
           <span className="planche-point" style={{ width: 6, height: 6, background: 'var(--ort)' }} />SUIVI EN PAUSE · REPRENDRE (F)
         </button>
       )}
-      {mode === 'jouer' && suivre && enLecture && (
+      {mode === 'spectacle' && suivre && enLecture && (
         <span className="planche-suivi planche-suivi--on">
           <span className="planche-point planche-pulse" style={{ width: 6, height: 6, background: 'var(--gt)' }} />LA CAMÉRA SUIT LE SPECTACLE
         </span>

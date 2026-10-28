@@ -1,5 +1,6 @@
 // Raccourcis clavier globaux de la coquille.
-//   Espace lecture / pause · T (ou G) top régie · M nouveau moment · K note de régie · + / − zoom de la conduite ·
+//   Espace : GO en SPECTACLE (Maj+Espace lecture / pause), lecture / pause en RÉPÉTITION · T (ou G) GO ·
+//   M nouveau moment · K note de régie · + / − zoom de la conduite ·
 //   Ctrl+Z annuler · Ctrl+Maj+Z (ou Ctrl+Y) rétablir · F plein écran · P pupitre · ? raccourcis · Ctrl+Espace assets ·
 //   Échap fermer / désélectionner.
 // Convention avec PLANCHE et CONDUITE : une touche qu'ils traitent eux-mêmes est marquée `preventDefault()` (ou
@@ -9,6 +10,7 @@ import { useMagasin } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
 import { ajouterMoment, ajouterNote } from '../etat/operations';
 import { useInterface } from './interface';
+import { actionTouche } from './etat-scene';
 
 export function basculerPleinEcran(): void {
   const d = document;
@@ -57,8 +59,8 @@ export function useRaccourcis(): void {
       if (ctrl && (k === 'z' || k === 'Z')) { e.preventDefault(); if (e.shiftKey) s.retablir(); else s.annuler(); return; }
       if (ctrl && (k === 'y' || k === 'Y')) { e.preventDefault(); s.retablir(); return; }
       if (ctrl || e.altKey) return;
-      if (e.code === 'Space') { e.preventDefault(); s.basculerLecture(); }
-      else if (k === 't' || k === 'T' || k === 'g' || k === 'G') s.top();
+      const lecture = actionTouche(e, s.mode);
+      if (lecture) { e.preventDefault(); if (e.repeat) return; if (lecture === 'go') s.go(); else s.basculerLecture(); }
       else if (k === 'm' || k === 'M') nouveauMoment();
       else if (k === 'k' || k === 'K') nouvelleNote();
       else if (k === '+' || k === '=') { e.preventDefault(); s.zoomerConduite(s.zoomConduite * 1.5); }

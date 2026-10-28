@@ -16,7 +16,7 @@ const PROJETS: Record<ProjetEmbarque, { nom: string; charger: () => Promise<{ de
 export async function chargerProjetEmbarque(id: ProjetEmbarque): Promise<boolean> {
   const { nom, charger } = PROJETS[id];
   const s = useMagasin.getState();
-  if (s.verrou) { s.signaler('Verrouillé · mode scène. Désactive SCÈNE en haut pour ouvrir un autre projet.'); return false; }
+  if (s.mode === 'spectacle') { s.signaler('SPECTACLE : structure verrouillée. Passe en RÉPÉTITION pour ouvrir un autre projet.'); return false; }
   try {
     const module = await charger();
     if (useSalle.getState().salle) deconnecterSalle(true);

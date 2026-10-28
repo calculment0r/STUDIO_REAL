@@ -717,12 +717,37 @@ export function connecterSalle(projet: string, jeton?: string, o: Partial<Option
     if (e.vous?.role === 'poste' && e.lecture && !s.enLecture && e.lecture.etat !== s.lecture) useMagasin.setState({ lecture: e.lecture.etat as EtatLecture });
   });
 
+  // Mode de la salle ⇔ mode du Conducteur (audit UX §4.3) : Scène = SPECTACLE, Écriture / Répétition = RÉPÉTITION.
+  // - La salle entre en Scène : ce poste passe en SPECTACLE. La salle QUITTE la Scène (geste d'un autre poste) : ce
+  //   poste reste en SPECTACLE et le dit (la régie sort elle-même du SPECTACLE, jamais à distance pendant le jeu).
+  // - Ce poste (auteur ou régie) passe en SPECTACLE : il demande la Scène à la salle ; il en sort : il demande la
+  //   Répétition. Un refus du serveur (verrou tenu par un autre) est affiché, le mode local reste celui choisi.
+  let modeSalleVu: ModeSalle | null = null;
+  const alignerDepuisSalle = salle.abonner((e) => {
+    if (e.statut !== 'connecte' || e.mode === modeSalleVu) return;
+    const avant = modeSalleVu;
+    modeSalleVu = e.mode;
+    const m = useMagasin.getState();
+    if (e.mode === 'jouer' && m.mode !== 'spectacle') m.changerMode('spectacle');
+    else if (avant === 'jouer' && m.mode === 'spectacle') m.signaler('La salle a quitté la Scène : ce poste reste en SPECTACLE.');
+  });
+  const alignerVersSalle = useMagasin.subscribe((s, p) => {
+    if (s.mode === p.mode || salle.etat.statut !== 'connecte' || salle.etat.vous?.role === 'poste') return;
+    const enScene = salle.etat.mode === 'jouer';
+    const cible: ModeSalle | null = s.mode === 'spectacle' ? (enScene ? null : 'jouer') : (enScene ? 'repeter' : null);
+    if (!cible) return;
+    salle.mode(cible).then(
+      (a) => { if (a.statut === 'refus') useMagasin.getState().signaler('Salle : ' + raisonLisible(a.raison ?? 'refus')); },
+      () => { /* hors ligne : la salle sera réalignée au prochain changement */ },
+    );
+  });
+
   // les médias et catégories (assets) ne passent pas par la salle : on les lit une fois par l'API
   const api = new ClientApi(o.base !== undefined ? { base: o.base } : {});
   api.lireProjet(projet).then((r) => { if (r.assets?.length && useSalle.getState().salle === salle) useMagasin.setState({ assets: r.assets }); }, () => { /* hors ligne */ });
 
   salle.ouvrir();
-  arretSalle = () => { lecture(); suivre(); desabonner(); salle.fermer(); };
+  arretSalle = () => { lecture(); suivre(); alignerDepuisSalle(); alignerVersSalle(); desabonner(); salle.fermer(); };
   return salle;
 }
 
