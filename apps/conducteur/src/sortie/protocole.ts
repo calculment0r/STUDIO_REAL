@@ -13,12 +13,20 @@
 //   config     titre du spectacle, adresse d'entrée du public, consigne, code de représentation
 //   precharger vidéos annoncées (assets) : la sortie les met en mémoire avant la bascule
 //   heure      battement (1 par seconde) : témoin de connexion et synchro
+//   recharger  la sortie se recharge (location.reload) ; lu QUELLE QUE SOIT la version, pour rattraper une sortie périmée
 // Messages sortie → régie (MessageSortie) :
 //   bonjour    la sortie s'ouvre (ou se reconnecte) : la régie renvoie config + scène + état
-//   present    battement (1 par seconde) avec la scène montrée, l'état du flux, du secours et des médias (dont la
-//              vidéo introuvable : etat.absent) et la régie dont la scène est montrée (source)
+//   present    battement (1 par seconde) avec la scène montrée (type, et la scène complète `vue`), l'état du flux, du
+//              secours et des médias (dont la vidéo introuvable : etat.absent) et la régie dont la scène est montrée
 //   fin-video  une vidéo jouée « une seule fois » est finie (la régie peut en faire un signal 'video.fin')
+//   refus      la sortie n'a pas su lire un message de régie (autre version, scène inconnue) : elle le dit au lieu de
+//              l'ignorer, et affiche une carte « Scène inconnue » si c'était une scène qu'elle ne peut pas montrer
 //   au-revoir  la fenêtre se ferme
+//
+// VERSIONS : `bonjour` et `present` portent `version` (VERSION_SORTIE) et `build` (empreinte du code, __BUILD__) et la
+// régie les lit QUELLE QUE SOIT leur version : elle repère ainsi une sortie périmée (fenêtre restée ouverte sur un
+// ancien code) et propose de la recharger. Tout changement du protocole (nouveau type de scène, nouveau champ requis)
+// DOIT incrémenter VERSION_SORTIE (v2 : scène « page », refus, recharger, present.vue).
 //
 // PLUSIEURS RÉGIES (Conducteur, moniteur du flux, autre machine par la salle) pilotent la même sortie : chaque scène
 // porte `source` (identifiant de la régie) et `depuis` (heure de la DÉCISION, horloge de la régie ; un renvoi garde
@@ -27,7 +35,9 @@
 // (heure - depuis, même horloge) est retranché de l'heure d'arrivée locale. La sortie écoute TOUJOURS le canal local,
 // plus la salle si son adresse en donne une ; un message arrivé par les deux chemins n'est traité qu'une fois.
 
-export const VERSION_SORTIE = 1;
+export const VERSION_SORTIE = 2;
+/** Empreinte du code (hash git court ou date ISO du build, posée par Vite : define __BUILD__) ; 'dev' à défaut. */
+export const BUILD_SORTIE: string = typeof __BUILD__ === 'string' && __BUILD__ ? __BUILD__ : 'dev';
 /** Nom du BroadcastChannel (même origine, même navigateur). */
 export const NOM_CANAL = 'studio-real-sortie';
 /** Nom fixe de la fenêtre de sortie : window.open le réutilise. */
@@ -152,13 +162,32 @@ export type MessageRegie =
   | { t: 'evenement'; v: number; heure: number; evenement: EvenementScene }
   | { t: 'config'; v: number; heure: number; config: ConfigSortie }
   | { t: 'precharger'; v: number; heure: number; assets: string[] }
-  | { t: 'heure'; v: number; heure: number };
+  | { t: 'heure'; v: number; heure: number }
+  | { t: 'recharger'; v: number; heure: number };
+
+/** Pourquoi la sortie refuse un message : autre version du protocole, ou forme / scène qu'elle ne connaît pas. */
+export type RaisonRefus = 'version' | 'invalide';
 
 export type MessageSortie =
-  | { t: 'bonjour'; v: number; id: string; heure: number }
-  | { t: 'present'; v: number; id: string; heure: number; scene: TypeScene | null; n: number; etat?: EtatSortie; source?: string }
+  | { t: 'bonjour'; v: number; id: string; heure: number; version?: number; build?: string }
+  | {
+      t: 'present'; v: number; id: string; heure: number; scene: TypeScene | null; n: number; etat?: EtatSortie; source?: string;
+      version?: number; build?: string;
+      /** la scène montrée, telle que reçue (null : aucune, ou carte de refus) ; absente avant la version 2 */
+      vue?: Scene | null;
+    }
   | { t: 'fin-video'; v: number; id: string; heure: number; asset: string; n: number }
+  | {
+      t: 'refus'; v: number; id: string; heure: number; raison: RaisonRefus; version: number;
+      /** ce qui a été reçu, en clair (« scene:cinema », « heure v3 ») */
+      recu?: string;
+      /** version et régie du message refusé (une régie ne retient que les refus qui la concernent) */
+      versionRecue?: number; source?: string;
+    }
   | { t: 'au-revoir'; v: number; id: string };
+
+/** Types des messages ÉMIS par une sortie : une sortie qui les reçoit (autre fenêtre de sortie) les ignore. */
+const TYPES_MESSAGE_SORTIE = ['bonjour', 'present', 'fin-video', 'refus', 'au-revoir'];
 
 // ── adresse et configuration ─────────────────────────────────────────────────────────────────────────────────────
 
@@ -215,6 +244,17 @@ export const msgEvenement = (evenement: EvenementScene, heure = Date.now()): Mes
   ({ t: 'evenement', v: VERSION_SORTIE, heure, evenement });
 export const msgConfig = (config: ConfigSortie, heure = Date.now()): MessageRegie => ({ t: 'config', v: VERSION_SORTIE, heure, config });
 export const msgHeure = (heure = Date.now()): MessageRegie => ({ t: 'heure', v: VERSION_SORTIE, heure });
+export const msgRecharger = (heure = Date.now()): MessageRegie => ({ t: 'recharger', v: VERSION_SORTIE, heure });
+
+/** Messages de la sortie qui l'annoncent : version du protocole et build du code toujours joints. */
+export const msgBonjour = (id: string, heure = Date.now()): MessageSortie =>
+  ({ t: 'bonjour', v: VERSION_SORTIE, version: VERSION_SORTIE, build: BUILD_SORTIE, id, heure });
+export const msgPresent = (
+  o: { id: string; vue: Scene | null; n: number; etat?: EtatSortie; source?: string }, heure = Date.now(),
+): MessageSortie => ({
+  t: 'present', v: VERSION_SORTIE, version: VERSION_SORTIE, build: BUILD_SORTIE, id: o.id, heure,
+  scene: o.vue ? o.vue.type : null, vue: o.vue, n: o.n, ...(o.etat ? { etat: o.etat } : {}), ...(o.source ? { source: o.source } : {}),
+});
 
 /** Clé d'identité d'une scène : deux scènes de même clé ne déclenchent pas de fondu. */
 export const cleScene = (s: Scene): string => JSON.stringify(s);
@@ -288,8 +328,9 @@ function configValide(x: unknown): x is ConfigSortie {
     && (f === undefined || (estObjet(f) && estTexte(f.serveur, 500) && estTexte(f.projet, 100) && estTexte(f.jeton, 200)));
 }
 
-/** Message régie reçu par la sortie, validé ; null si invalide ou d'une autre version. */
+/** Message régie reçu par la sortie, validé ; null si invalide ou d'une autre version (sauf `recharger`, lu toujours). */
 export function lireMessageRegie(x: unknown): MessageRegie | null {
+  if (estObjet(x) && x.t === 'recharger' && estNombre(x.heure)) return { t: 'recharger', v: estNombre(x.v) ? x.v : VERSION_SORTIE, heure: x.heure };
   if (!estObjet(x) || x.v !== VERSION_SORTIE || !estNombre(x.heure)) return null;
   switch (x.t) {
     case 'etat': return etatValide(x.etat) ? (x as unknown as MessageRegie) : null;
@@ -306,16 +347,69 @@ export function lireMessageRegie(x: unknown): MessageRegie | null {
   return null;
 }
 
-/** Message sortie reçu par la régie, validé ; null sinon. */
+/** Verdict de la sortie sur un message reçu : à traiter, à refuser (en le disant), ou à ignorer (pas pour elle). */
+export type ExamenMessageRegie =
+  | { message: MessageRegie }
+  | {
+      refus: {
+        raison: RaisonRefus; recu: string; versionRecue?: number; source?: string;
+        /** type de la scène refusée (message `scene`) */
+        typeScene?: string;
+        /** la sortie ne peut pas montrer la scène demandée : carte « Scène inconnue » à la place de l'ancienne scène.
+         *  Pas pour un message d'une régie PLUS ANCIENNE (c'est elle qu'il faut recharger : la scène en cours reste). */
+        carte: boolean;
+      };
+    }
+  | null;
+
+/** Texte reçu rendu inoffensif et court (lettres, chiffres, _ . : -). */
+const lisible = (x: unknown, max = 40): string => (typeof x === 'string' ? x.replace(/[^\p{L}\p{N}_.:-]/gu, '').slice(0, max) || '?' : '?');
+
+/**
+ * Examine un message reçu par la sortie. Un message d'une autre fenêtre de sortie (bonjour, present…) ou qui n'est
+ * pas un objet est ignoré (null) ; un message de régie illisible n'est PLUS ignoré en silence : il donne un refus.
+ */
+export function examinerMessageRegie(x: unknown): ExamenMessageRegie {
+  if (!estObjet(x) || TYPES_MESSAGE_SORTIE.includes(x.t as string)) return null;
+  const m = lireMessageRegie(x);
+  if (m) return { message: m };
+  const t = lisible(x.t, 20);
+  const typeScene = x.t === 'scene' ? (estObjet(x.scene) ? lisible(x.scene.type) : '?') : undefined;
+  const versionRecue = estNombre(x.v) ? x.v : undefined;
+  const source = typeof x.source === 'string' && RE_SOURCE.test(x.source) ? x.source : undefined;
+  const raison: RaisonRefus = versionRecue !== undefined && versionRecue !== VERSION_SORTIE ? 'version' : 'invalide';
+  const recu = (typeScene ? `${t}:${typeScene}` : t) + (raison === 'version' ? ` v${versionRecue}` : '');
+  const carte = x.t === 'scene' && (raison === 'invalide' || (versionRecue ?? 0) > VERSION_SORTIE);
+  return {
+    refus: {
+      raison, recu, carte,
+      ...(versionRecue !== undefined ? { versionRecue } : {}), ...(source ? { source } : {}), ...(typeScene ? { typeScene } : {}),
+    },
+  };
+}
+
+/** Message sortie reçu par la régie, validé ; null sinon. `bonjour`, `present`, `refus` et `au-revoir` sont lus
+ *  QUELLE QUE SOIT leur version (repérer une sortie périmée) ; une `vue` invalide est retirée (pas le message). */
 export function lireMessageSortie(x: unknown): MessageSortie | null {
-  if (!estObjet(x) || x.v !== VERSION_SORTIE || !estTexte(x.id, 80)) return null;
+  if (!estObjet(x) || !estNombre(x.v) || !estTexte(x.id, 80)) return null;
+  const versionOk = (x.version === undefined || estNombre(x.version)) && (x.build === undefined || estTexte(x.build, 80));
   switch (x.t) {
-    case 'bonjour': return estNombre(x.heure) ? (x as unknown as MessageSortie) : null;
-    case 'present':
-      return estNombre(x.heure) && estNombre(x.n) && (x.scene === null || TYPES_SCENE.includes(x.scene as TypeScene))
+    case 'bonjour': return estNombre(x.heure) && versionOk ? (x as unknown as MessageSortie) : null;
+    case 'present': {
+      if (!(estNombre(x.heure) && estNombre(x.n) && versionOk && (x.scene === null || TYPES_SCENE.includes(x.scene as TypeScene)))) return null;
+      if (x.vue === undefined || x.vue === null || sceneValide(x.vue)) return x as unknown as MessageSortie;
+      const { vue: _vue, ...reste } = x;
+      void _vue;
+      return reste as unknown as MessageSortie;
+    }
+    case 'refus':
+      return estNombre(x.heure) && (x.raison === 'version' || x.raison === 'invalide') && estNombre(x.version) && texteOpt(x.recu, 80)
+        && (x.versionRecue === undefined || estNombre(x.versionRecue)) && (x.source === undefined || (typeof x.source === 'string' && RE_SOURCE.test(x.source)))
         ? (x as unknown as MessageSortie) : null;
-    case 'fin-video': return estNombre(x.heure) && estTexte(x.asset) && estNombre(x.n) ? (x as unknown as MessageSortie) : null;
     case 'au-revoir': return x as unknown as MessageSortie;
   }
+  // le reste suit la version exacte
+  if (x.v !== VERSION_SORTIE) return null;
+  if (x.t === 'fin-video') return estNombre(x.heure) && estTexte(x.asset) && estNombre(x.n) ? (x as unknown as MessageSortie) : null;
   return null;
 }
