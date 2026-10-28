@@ -10,8 +10,7 @@
   },
   "references": [{ "path": "../packages/modele" }],
   "include": [
-    "echo/generer-echo-simple.ts"
-    // à inclure quand le lot generateurs-echo est fusionné :
-    // "echo/generer-echo-complet.ts"
+    "echo/generer-echo-simple.ts",
+    "echo/generer-echo-complet.ts"
   ]
 }
