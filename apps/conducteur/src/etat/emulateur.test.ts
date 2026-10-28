@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import echo from '../../../../projets/echo/echo.conducteur.json';
 import { DELAI_ANTI_DOUBLE_GO_MS, useMagasin } from './magasin';
 import { signauxSalle } from './moteur';
+import { testerVue } from './acteurs';
 import { arreterEmulateur, demarrerEmulateur, emulateurCourant, sourceSignaux, useEmulateur } from './emulateur';
 
 const s = () => useMagasin.getState();
@@ -131,5 +132,20 @@ describe('GO du magasin → conduite{op:\'top\'} de la salle émulée', () => {
     expect(emulateurCourant()!.salle.rep.projet.ev[0]!.name).toBe('Entrée (modifiée)');
     await emu.avancer(2000);
     expect(emu.signaux().pres).toBe(4);   // les téléphones sont revenus (hello) sur le nouveau noyau
+  });
+});
+
+describe('bouton « Tester » (planche des acteurs) : le témoin de etat/acteurs.ts est branché sur la salle émulée', () => {
+  it('sans émulateur : rien ne part ; avec : la vue est forcée dans la salle émulée ; à l’arrêt : débranché', async () => {
+    const vue = { acteur: 'public', ecran: 'noir', params: {} };
+    expect(testerVue(vue).envoye).toBe(false);
+    const emu = demarrer(4);
+    await emu.avancer(3000);
+    expect(testerVue(vue)).toMatchObject({ envoye: true });
+    expect(emu.vueDe('public')).toMatchObject({ ecran: 'noir' });
+    expect(testerVue({ acteur: 'public', params: {} }).envoye).toBe(false);   // un effet sans écran n'est pas une vue
+    expect(testerVue({ acteur: 'inconnu', ecran: 'noir', params: {} }).envoye).toBe(false);
+    arreterEmulateur();
+    expect(testerVue(vue).envoye).toBe(false);
   });
 });

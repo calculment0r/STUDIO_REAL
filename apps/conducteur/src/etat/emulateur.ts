@@ -20,6 +20,7 @@ import {
   creerEmulateur, type BilanSalle, type EmulateurSalle, type EvenementSalle, type TelephoneSalle,
 } from '@studio-real/emulateur';
 import { brancherSignaux, useMagasin, type Magasin } from './magasin';
+import { brancherTemoin } from './acteurs';
 import { signauxSalle } from './moteur';
 
 export type SourceSignaux = 'simulee' | 'emulee' | 'reelle';
@@ -87,6 +88,8 @@ let emu: EmulateurSalle | null = null;
 let abonnements: (() => void)[] = [];
 let minuteurProjet: ReturnType<typeof setTimeout> | undefined;
 let minuteurVue: ReturnType<typeof setInterval> | undefined;
+/** débranchement du bouton « Tester » de l'inspecteur Envois (etat/acteurs.ts : brancherTemoin) */
+let debrancherTemoin: (() => void) | null = null;
 /** heure émulée du démarrage (fil des événements) */
 let origine = 0;
 
@@ -171,6 +174,13 @@ export function demarrerEmulateur(o: Partial<ReglagesEmulateur> & { boucle?: boo
   if (L?.moment && L.moment !== e.salle.lecture()?.moment) e.conduite(L.etape ? { op: 'allerA', moment: L.moment, etape: L.etape } : { op: 'allerA', moment: L.moment });
   if (!m.enLecture) e.conduite({ op: 'pause', pause: true });
   brancherSignaux((sens, t) => sourceSignaux(sens, t).signaux);
+  // bouton « Tester » (planche des acteurs) : la vue est FORCÉE dans la salle émulée, jamais vers le vrai public
+  // (l'émulateur est refusé en SPECTACLE). Elle touche les téléphones émulés de cet acteur, pas seulement le témoin épinglé.
+  debrancherTemoin?.();
+  debrancherTemoin = brancherTemoin(vue => {
+    if (!emu || !vue.ecran) return false;
+    return emu.conduite({ op: 'forcer', acteur: vue.acteur, vue: { ecran: vue.ecran, params: vue.params } }).statut === 'ok';
+  });
 
   abonnements.push(e.surEvenement(ev => { const t = decrire(ev); if (t) noter(t); }));
   abonnements.push(useMagasin.subscribe((s, p) => {
@@ -216,6 +226,8 @@ export function arreterEmulateur(): void {
   for (const f of abonnements) f();
   abonnements = [];
   brancherSignaux(null);
+  debrancherTemoin?.();
+  debrancherTemoin = null;
   const e = emu;
   emu = null;
   if (e) void e.arreter();

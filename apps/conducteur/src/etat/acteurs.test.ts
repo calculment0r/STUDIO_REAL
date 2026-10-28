@@ -3,8 +3,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   agregatsFoule, chuteConnectes, diagnosticActeur, etatActeurs, libelleBarre, oublierActeurs, poserEtatActeur, poserResumeSalle,
-  resumeSalle, ECART_AMBRE_MS, ECART_ROUGE_MS, PERTE_ACTEUR_MS,
+  resumeSalle, brancherTemoin, pastilleDiagnostic, testerVue, ECART_AMBRE_MS, ECART_ROUGE_MS, PERTE_ACTEUR_MS,
 } from './acteurs';
+import { vignettesSorties } from './spectacle';
 
 const T = 1_793_000_000_000;
 const PUBLIC = { id: 'public', cardinalite: 'n' as const, type: 'public' as const };
@@ -102,5 +103,47 @@ describe('chute des connectés', () => {
     expect(chuteConnectes([{ t: T, n: 100 }, { t: T + 5000, n: 90 }], T + 5000)).toBeNull();
     expect(chuteConnectes([{ t: T, n: 120 }, { t: T + 12_000, n: 100 }], T + 12_000)).toBeNull();
     expect(chuteConnectes([], T)).toBeNull();
+  });
+});
+
+describe('planche des acteurs : pastille, témoin', () => {
+  const local = { fenetre: 'fermee' as const, demande: null, affiche: null, ecartDepuis: 0, perimee: false, vuLe: 0 };
+  const projet = { acteurs: [{ id: 'franck', nom: 'Franck', type: 'comedien', cardinalite: 1 }, { id: 'public', nom: 'Public', type: 'public', cardinalite: 'n' }] };
+
+  it('la bande se colore quand poserEtatActeur / poserResumeSalle sont appelés (diagnostic du rail → pastilleDiagnostic)', () => {
+    const pastilles = (maintenant: number) => Object.fromEntries(
+      vignettesSorties({ projet: projet as never, acteurs: resumeSalle(), local, spectacle: true, maintenant }).map(v => [v.id, pastilleDiagnostic(v.diag, v.agregats)]),
+    );
+    // rien posé : gris « inconnu »
+    expect(pastilles(T).franck).toEqual({ texte: 'inconnu', couleur: 'rgba(var(--lr), .35)' });
+    poserResumeSalle({ acteurs: { franck: { presents: 1, enLigne: 1 }, public: { presents: 12, enLigne: 12, prets: 12, parEcran: { noir: 12 } } } } as never, T);
+    poserEtatActeur('franck', { ecran: { vseq: 1, ecran: 'noir', depuis: T }, visible: true, recu: T });
+    const p = pastilles(T + 500);
+    expect(p.franck).toEqual({ texte: 'connecté', couleur: 'var(--gt)' });
+    expect(p.public).toEqual({ texte: '12 présents', couleur: 'var(--gt)' });
+    // Franck se tait : rouge
+    expect(pastilles(T + PERTE_ACTEUR_MS + 1000).franck.couleur).toBe('var(--rec)');
+  });
+
+  it('pastilleDiagnostic : ambre avec la première alerte, rouge avec la cause, gris sans diagnostic', () => {
+    expect(pastilleDiagnostic(undefined)).toEqual({ texte: 'inconnu', couleur: 'rgba(var(--lr), .35)' });
+    expect(pastilleDiagnostic({ pastille: 'ambre', liaison: 'reliee', affiche: null, demande: null, ecartMs: 0, alertes: ['écran masqué'] })).toEqual({ texte: 'écran masqué', couleur: 'var(--amb)' });
+    expect(pastilleDiagnostic({ pastille: 'rouge', liaison: 'perdue', affiche: null, demande: null, ecartMs: 0, alertes: ['hors ligne'] })).toEqual({ texte: 'hors ligne', couleur: 'var(--rec)' });
+  });
+
+  it('testerVue : sans témoin rien ne part ; avec témoin la vue part ; débranché ou refus : message', () => {
+    const vue = { acteur: 'public', ecran: 'noir', params: {} };
+    expect(testerVue(vue).envoye).toBe(false);
+    const recu: unknown[] = [];
+    const debrancher = brancherTemoin(v => { recu.push(v); });
+    expect(testerVue(vue)).toMatchObject({ envoye: true });
+    expect(recu).toEqual([vue]);
+    oublierActeurs();   // la déliaison du serveur ne débranche pas l'émulateur
+    expect(testerVue(vue).envoye).toBe(true);
+    debrancher();
+    expect(testerVue(vue).envoye).toBe(false);
+    const refus = brancherTemoin(() => false);
+    expect(testerVue(vue)).toMatchObject({ envoye: false, message: expect.stringContaining('refusé') });
+    refus();
   });
 });
