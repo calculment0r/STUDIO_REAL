@@ -64,6 +64,8 @@ export interface MsgHello {
   app?: AppClient;
   /** ce que le client sait faire : 'video', 'son', 'vibrer', 'visio', 'camera', 'plein-ecran'… */
   capacites?: string[];
+  /** pseudo choisi par la personne (téléphone du public), 2 à 20 caractères : il signe ses textes sur le mur */
+  pseudo?: string;
 }
 
 /** Ordres de la régie. `reprendre` = repartir d'un point de reprise (lecteur.reprendre) ; `pause{pause:false}` relance. */

@@ -157,6 +157,11 @@ function lireHello(m: Brut): MsgHello {
     vseq: opt(m.vseq, v => entier(v, 'vseq')),
     cseq: opt(m.cseq, v => entier(v, 'cseq')),
     app, capacites,
+    pseudo: opt(m.pseudo, v => {
+      const p = texte(v, 'pseudo', 20);
+      if (p.trim().length < 2) throw new Refus('champ-invalide', 'pseudo : 2 à 20 caractères');
+      return p;
+    }),
   });
 }
 
