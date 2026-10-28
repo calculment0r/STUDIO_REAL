@@ -10,3 +10,8 @@ dist/
 
 # vidéos précalculées et médias lourds : en local, jamais dans le dépôt
 medias-locales/
+
+# serveur de spectacle : jetons (créés au premier lancement), instantanés et journaux des représentations
+exploitation/spectacle.secrets.json
+exploitation/etat/
+exploitation/journaux/

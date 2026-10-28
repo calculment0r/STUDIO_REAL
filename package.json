@@ -9,14 +9,15 @@
   "scripts": {
     "dev": "npm run dev -w conducteur",
     "build": "npm run build -w @studio-real/modele && npm run build -w conducteur",
-    "test": "vitest run --project modele --project protocole --project conducteur-rapide --project serveur-logique --project figurants --project outils-medias --project outils-banc-media",
+    "test": "vitest run --project modele --project protocole --project conducteur-rapide --project serveur-logique --project figurants --project outils-medias --project outils-banc-media --project serveur-spectacle",
     "test:lent": "vitest run --project conducteur-lent --project serveur-integration",
     "test:tout": "vitest run",
     "verifier-projets": "npm run verifier -w @studio-real/modele",
     "typecheck": "tsc -b",
     "lint": "npm run lint -w conducteur",
     "pages": "npm run pages -w conducteur",
-    "dev:spectacle": "node prototypes/figurants/serveur/index.mjs",
+    "dev:spectacle": "npm start -w @studio-real/serveur-spectacle",
+    "dev:figurants": "node prototypes/figurants/serveur/index.mjs",
     "dev:serveur": "npm run dev -w serveur"
   }
 }

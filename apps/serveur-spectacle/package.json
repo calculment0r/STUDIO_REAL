@@ -1,0 +1,27 @@
+{
+  "name": "@studio-real/serveur-spectacle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Serveur de spectacle unique : fait tourner le lecteur en représentation, tient l'état officiel, calcule la vue de chaque acteur et parle à tous avec le protocole v2. Noyau pur (hébergeable dans un Durable Object) + hôte Node (HTTP, ws, disque).",
+  "main": "src/noyau/index.ts",
+  "types": "src/noyau/index.ts",
+  "exports": {
+    ".": "./src/noyau/index.ts"
+  },
+  "scripts": {
+    "start": "node --import tsx src/hote/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.noyau.json"
+  },
+  "dependencies": {
+    "@studio-real/modele": "*",
+    "@studio-real/protocole": "*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "~5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
