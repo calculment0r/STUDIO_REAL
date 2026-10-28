@@ -1,7 +1,8 @@
-/* Thème du conducteur : un seul point d'entrée, importé par src/main.tsx.
-   Ordre : polices → jetons du portail (port de tokens.css) → couche conducteur → base → composants communs. */
-@import './polices.css';
-@import './jetons-portail.css';
-@import './jetons.css';
-@import './base.css';
-@import './composants.css';
+/* Thème du Conducteur : un seul point d'entrée, importé par src/main.tsx, sortie/main.tsx, streamer/main.ts et la planche.
+   Le thème n'est plus copié ici : tout vient du paquet @studio-real/theme (packages/theme), l'unique source.
+   - noyau.css : polices → jetons du portail → couche Studio Real → jetons dérivés → base → composants ;
+   - jetons-apercus.css : les couleurs des aperçus de blocs (lues aussi par src/theme/jetons.ts) ;
+   - plein-ecran.css : html, body et #root à 100 % sans défilement (le Conducteur occupe toute la fenêtre). */
+@import '@studio-real/theme/noyau.css';
+@import '@studio-real/theme/jetons-apercus.css';
+@import '@studio-real/theme/plein-ecran.css';

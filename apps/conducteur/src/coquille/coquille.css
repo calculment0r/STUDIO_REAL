@@ -411,5 +411,5 @@
   background: var(--tile2); color: var(--ink3); box-shadow: inset 0 0 0 1px var(--filet-20); cursor: not-allowed; }
 .tap-geant b { font-family: var(--f-disp); font-weight: 700; font-size: 30px; letter-spacing: .2em; }
 .tap-geant span { font-size: 13px; max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tap-geant.pret { background: var(--ort); color: var(--on-ort); cursor: pointer; box-shadow: 0 6px 30px rgba(0,0,0,.5); }
+.tap-geant.pret { background: var(--ort); color: var(--on-ort); cursor: pointer; box-shadow: 0 6px 30px var(--ombre-tap); }
 .tap-geant.pret:active { transform: translateX(-50%) scale(.97); }

@@ -9,7 +9,7 @@ Application web (Vite + React 19 + TypeScript + zustand) qui reproduit **fidèle
 | Dossier | Contenu | Chantier |
 |---|---|---|
 | `packages/modele/src/` | format du projet (`types.ts`), contrat du moteur (`moteur.ts`), exemple de démonstration, moteur de lecture, validation, tests | MODÈLE |
-| `src/theme/` | jetons CSS (port de `tokens.css`, thème clair), polices, styles de base | COQUILLE |
+| `src/theme/` | `index.css` (importe le paquet `@studio-real/theme` : jetons, polices, base, composants), `jetons.ts` (lit les jetons pour les canvas), `polices.ts` (Venus Rising), `format.ts` | COQUILLE |
 | `src/etat/` | magasin zustand (`magasin.ts`) : projet, sélection, mode, lecture, zoom ; persistance locale ; annuler/rétablir | COQUILLE |
 | `src/coquille/` | mise en page générale, en-tête (chiffres à largeur fixe), panneau de droite à 3 niveaux, tiroir des assets, salle simulée, export/import JSON, raccourcis clavier, plein écran | COQUILLE |
 | `src/conduite/` | la conduite (bas) : actes → moments → passages, pistes, zoom et défilement façon Premiere, tête de lecture | CONDUITE |
