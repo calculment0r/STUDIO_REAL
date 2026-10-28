@@ -22,9 +22,9 @@ Application web (Vite + React 19 + TypeScript + zustand) qui reproduit **fidèle
 - **Format** : `@studio-real/modele` → `types.ts` (ne pas le modifier sans le dire dans son rapport ; un ajout de champ optionnel est permis).
 - **Moteur** : `@studio-real/modele` → `moteur.ts` (signatures). Le chantier MODÈLE exporte `creerLecteur` et `signauxSalle` depuis `index.ts`.
 - **Magasin** (`src/etat/magasin.ts`, chantier COQUILLE) : `useMagasin` (zustand) expose au minimum
-  `projet`, `selection: { moment?: string; etape?: string }` (étendue : `sortie`, `passage`, `acte`, `piste`…), `mode: 'preparer' | 'jouer'` (les modes du design ; `changerMode` accepte encore 'ecrire' / 'repeter', ramenés à 'preparer'),
+  `projet`, `selection: { moment?: string; etape?: string }` (étendue : `sortie`, `passage`, `acte`, `piste`…), `mode: 'repetition' | 'spectacle'` (audit UX d'octobre 2026 : RÉPÉTITION par défaut, SPECTACLE = structure verrouillée, lecteur stable, ×1, Espace = GO ; `changerMode` accepte encore 'preparer' / 'ecrire' / 'repeter' → 'repetition' et 'jouer' → 'spectacle'),
   `lecture: EtatLecture | null`, `zoomPlanche`, `zoomConduite`, et les actions `selectionner`, `modifierProjet(fn)`,
-  `lancer()`, `pause()`, `top()`, `allerA()`. CONDUITE et PLANCHE lisent et appellent ces actions, rien d'autre.
+  `lancer()`, `pause()`, `go()` (le GO unique : un appui = un cue ; `top()` en est l'ancien nom), `allerA()`. CONDUITE et PLANCHE lisent et appellent ces actions, rien d'autre.
 - **Blocs** (chantier BLOCS) : `src/blocs/index.ts` exporte `CATALOGUE` (familles, blocs, réglages, sorties nommées) et
   le composant `<ApercuBloc ty={…} k={…} t={…} actif={…} />` (aperçu animé dans le bloc). PLANCHE l'utilise.
 - **Composants exportés** : `src/conduite/Conduite.tsx` (`<Conduite />`), `src/planche/Planche.tsx` (`<Planche />`),
