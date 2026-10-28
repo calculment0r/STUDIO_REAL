@@ -50,7 +50,7 @@ Un jeton par rôle (et par acteur nommé). Le jeton n'est jamais conservé dans 
 
 | `t` | Rôle | Champs | Réponse |
 |---|---|---|---|
-| `hello` | tous | `v` (= 2), `role`, `acteur?` (obligatoire pour `acteur` et `agent`), `personne?`, `session`, `jeton`, `vseq?`, `cseq?`, `app?{version, build}`, `capacites?[]` | `bienvenue`, ou `refus` |
+| `hello` | tous | `v` (= 2), `role`, `acteur?` (obligatoire pour `acteur` et `agent`), `personne?`, `session`, `jeton`, `vseq?`, `cseq?`, `app?{version, build}`, `capacites?[]`, `pseudo?` (2 à 20 caractères, téléphone du public) | `bienvenue`, ou `refus` |
 | `conduite` | regie | `cseq`, `op` + champs de l'op (tableau suivant) | `ack` ; puis `lecture` |
 | `in` | acteur | `cseq`, `k`, `q?` (question), `data`, `heure?` (tableau suivant) | `ack` |
 | `etat` | acteur | battement : `heure`, `ecran` (`{vseq, ecran, cle?, depuis}` ou `null`), `visible`, `enLigne?`, `rttMs?`, `decalageMs?`, `media?[]{asset, pret 0→1, lecture}`, `batterie?` (0→100), `erreurs?[]` | — |

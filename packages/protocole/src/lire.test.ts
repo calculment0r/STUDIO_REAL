@@ -37,6 +37,13 @@ describe('lireMessageClient', () => {
     expect(VERSION_PROTOCOLE).toBe(2);
   });
 
+  it('hello : pseudo du téléphone du public (2 à 20 caractères)', () => {
+    const base = { t: 'hello', v: 2, role: 'acteur', acteur: 'public', session: SESSION, jeton: 'j' };
+    expect(ok({ ...base, pseudo: 'lea_42' })).toMatchObject({ pseudo: 'lea_42' });
+    expect(lireMessageClient({ ...base, pseudo: 'x' }).raison).toMatch(/pseudo/);
+    expect(lireMessageClient({ ...base, pseudo: 'x'.repeat(21) }).raison).toMatch(/pseudo/);
+  });
+
   it('hello refusé : version, rôle, acteur manquant, session, jeton', () => {
     const base = { t: 'hello', v: 2, role: 'regie', session: SESSION, jeton: 'j' };
     expect(ok(base)).toEqual(base);

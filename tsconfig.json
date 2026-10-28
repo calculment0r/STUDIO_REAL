@@ -3,6 +3,8 @@
   "references": [
     { "path": "./packages/modele" },
     { "path": "./packages/protocole" },
+    { "path": "./packages/ui-telephone" },
+    { "path": "./apps/telephone" },
     { "path": "./apps/serveur/tsconfig.json" },
     { "path": "./apps/serveur-spectacle/tsconfig.json" },
     { "path": "./apps/serveur-spectacle/tsconfig.noyau.json" },

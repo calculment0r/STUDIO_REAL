@@ -1,0 +1,30 @@
+{
+  "name": "@studio-real/ui-telephone",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L'application téléphone unique de STUDIO_REAL (public et téléphones nommés) : machine d'état pure, écrans React purs, transports WebSocket et mémoire. Réutilisée telle quelle par l'émulateur du Conducteur.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./telephone.css": "./src/telephone.css"
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@studio-real/modele": "*",
+    "@studio-real/protocole": "*",
+    "@studio-real/theme": "*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "typescript": "~5.8.3",
+    "vitest": "^3.1.1"
+  }
+}
