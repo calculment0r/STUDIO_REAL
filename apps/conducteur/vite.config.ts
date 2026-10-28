@@ -1,5 +1,6 @@
 import { defineConfig, type Connect, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { execSync } from 'node:child_process'
 import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -86,8 +87,19 @@ const ICI = fileURLToPath(new URL('.', import.meta.url))
 const PAGES: Record<string, string> = { main: resolve(ICI, 'index.html'), sortie: resolve(ICI, 'sortie.html') }
 if (existsSync(resolve(ICI, 'streamer.html'))) PAGES.streamer = resolve(ICI, 'streamer.html')
 
+// Empreinte du code (__BUILD__) : annoncée par la sortie écran scène dans `bonjour` / `present` (src/sortie/protocole.ts),
+// pour repérer une fenêtre restée ouverte sur un ancien code. Hash git court, sinon date ISO du build.
+function empreinteBuild(): string {
+  try {
+    const h = execSync('git rev-parse --short HEAD', { cwd: ICI, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    if (/^[0-9a-f]{4,40}$/.test(h)) return h
+  } catch { /* pas de git */ }
+  return new Date().toISOString().slice(0, 16) + 'Z'
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), policesPrivees(), mediasLocales()],
+  define: { __BUILD__: JSON.stringify(empreinteBuild()) },
   build: { rollupOptions: { input: PAGES } },
 })

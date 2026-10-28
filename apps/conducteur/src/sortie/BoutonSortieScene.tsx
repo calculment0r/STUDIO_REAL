@@ -1,15 +1,22 @@
 // Bouton de la régie : ouvre (ou ramène) la fenêtre de sortie écran scène et montre son état (et, dans sa bulle,
-// une vidéo introuvable sur la sortie ou une autre régie qui a pris la main).
+// une vidéo introuvable sur la sortie, un écart, un refus ou une autre régie qui a pris la main).
 //   fermée    → pastille éteinte
 //   ouverte   → pastille ambre (la fenêtre existe mais ne répond pas encore)
-//   connectée → pastille verte (battement reçu il y a moins de 3,5 s)
+//   ecart     → pastille ambre (la sortie répond mais ne montre pas la scène publiée depuis plus de 2 s)
+//   perimee   → pastille rouge (la sortie annonce une autre version du protocole : un clic la recharge)
+//   connectée → pastille verte : battement reçu il y a moins de 3,5 s ET pas d'écart ET bonne version
 import { ouvrirSortieScene } from './fenetre';
+import { VERSION_SORTIE } from './protocole';
 import { useSortie, type EtatFenetre } from './relais';
 import './sortie.css';
 
-const LIBELLES: Record<EtatFenetre, string> = {
+type EtatBouton = EtatFenetre | 'ecart' | 'perimee';
+
+const LIBELLES: Record<EtatBouton, string> = {
   fermee: 'Sortie écran scène fermée · ouvrir la fenêtre à glisser sur le projecteur',
   ouverte: 'Sortie écran scène ouverte · en attente de connexion',
+  ecart: 'Sortie écran scène connectée · ⚠ elle ne montre pas la scène demandée',
+  perimee: 'Sortie écran scène PÉRIMÉE (ancien code) · cliquer pour la recharger',
   connectee: 'Sortie écran scène connectée · ramener la fenêtre',
 };
 
@@ -24,14 +31,25 @@ export function BoutonSortieScene({ ecran = 'secondaire', className = 'btn-carre
   const salle = useSortie((s) => s.salle);
   const absent = useSortie((s) => (s.fenetre === 'connectee' ? s.sortie?.absent : undefined));
   const autre = useSortie((s) => s.fenetre === 'connectee' && s.autreRegie);
-  const titre = LIBELLES[fenetre] + (salle === 'connecte' ? ' · relais par la salle actif' : '')
+  const ecart = useSortie((s) => s.fenetre === 'connectee' && s.ecart);
+  const version = useSortie((s) => s.versionSortie);
+  const refus = useSortie((s) => (s.fenetre === 'connectee' ? s.refus?.recu : undefined));
+  const perimee = fenetre !== 'fermee' && version !== null && version !== VERSION_SORTIE;
+  // vert seulement si tout concorde : sortie vivante, scène suivie, même version du protocole
+  const etat: EtatBouton = perimee ? 'perimee'
+    : fenetre !== 'connectee' ? fenetre
+    : ecart ? 'ecart'
+    : version === VERSION_SORTIE ? 'connectee' : 'ouverte';
+  const titre = LIBELLES[etat] + (salle === 'connecte' ? ' · relais par la salle actif' : '')
+    + (perimee ? ` · protocole v${version} au lieu de v${VERSION_SORTIE}` : '')
+    + (refus ? ` · la sortie refuse : ${refus}` : '')
     + (autre ? ' · une autre régie a la main (moniteur, autre machine)' : '')
     + (absent ? ` · ⚠ ${absent} introuvable sur la sortie : choisir le dossier médias (touche M sur la sortie)` : '');
   return (
     <button
       type="button"
       className={className + ' so-bouton' + (fenetre === 'connectee' ? ' on' : '')}
-      data-etat={fenetre}
+      data-etat={etat}
       data-alerte={absent ? 'media-absent' : undefined}
       onClick={() => ouvrirSortieScene({ ecran })}
       title={titre}

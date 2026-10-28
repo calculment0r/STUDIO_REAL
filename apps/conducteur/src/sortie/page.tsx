@@ -7,6 +7,9 @@
 //                                                        la sortie écoute TOUJOURS le canal local en plus de la salle
 // Plusieurs régies peuvent la piloter (Conducteur, moniteur, autre machine) : la décision la plus récente gagne
 // (arbitrage.ts). Une vidéo introuvable s'affiche en clair et remonte aux régies (present.etat.absent).
+// Un message de régie illisible (autre version du protocole, scène inconnue) n'est PAS ignoré : la sortie renvoie un
+// `refus` sur le même transport et, si c'était une scène qu'elle ne peut pas montrer, affiche une carte plein écran
+// « Scène inconnue : <type> — recharger la sortie ». Le message `recharger` de la régie la recharge.
 //   options d'essai : &scene=accueil-qr|noir|streamer|titre|video|chrono  &titre=…  &adresse=…  &code=…  &asset=…
 //                     &duree=…  &demo=1 (faux public sur le calque)
 // Touches : F plein écran · D faux public · W webcam de test · M dossier des médias.
@@ -19,8 +22,8 @@ import { GestionFlux, type EtatFlux } from './flux';
 import { Horloge } from './horloge';
 import { BibliothequeMedias, type EtatMedias } from './medias';
 import {
-  adresseEntree, BATTEMENT_MS, configParDefaut, FONDU_DEFAUT_MS, lireMessageRegie, PERTE_MS, TYPES_SCENE, VERSION_SORTIE,
-  type ConfigSortie, type EtatScene, type EtatSortie, type EvenementScene, type MessageSortie, type Scene, type TypeScene,
+  adresseEntree, BATTEMENT_MS, BUILD_SORTIE, configParDefaut, examinerMessageRegie, FONDU_DEFAUT_MS, msgBonjour, msgPresent, PERTE_MS, TYPES_SCENE, VERSION_SORTIE,
+  type ConfigSortie, type EtatScene, type EtatSortie, type EvenementScene, type ExamenMessageRegie, type MessageSortie, type Scene, type TypeScene,
 } from './protocole';
 import { salleDansAdresse, TransportSalle, type MessageSalleBrut } from './salle';
 import { ContexteServices, ContexteTemps, Fondus, Scene1080, type Services } from './scenes';
@@ -28,6 +31,11 @@ import { traduire } from './traduction';
 import { PoolVideos } from './videos';
 
 type Liaison = 'attente' | 'connecte' | 'perdu';
+type Refus = Extract<ExamenMessageRegie, { refus: unknown }>['refus'];
+/** Carte affichée à la place d'une scène que la sortie ne sait pas montrer. */
+interface CarteRefus { type: string; inconnue: boolean }
+/** Un même refus (même raison, même message) ne repart pas plus d'une fois par REFUS_MS (battements d'une vieille régie). */
+const REFUS_MS = 2000;
 
 function idSortie(): string {
   try {
@@ -82,6 +90,9 @@ export function PageSortie() {
   const [medias, setMedias] = useState<EtatMedias | null>(null);
   const [flux, setFlux] = useState<EtatFlux | null>(null);
   const [calquePret, setCalquePret] = useState(false);
+  const [carte, setCarte] = useState<CarteRefus | null>(null);
+  const carteRef = useRef<CarteRefus | null>(null);
+  carteRef.current = carte;
 
   const horloge = useRef(new Horloge());
   const dernierRegie = useRef(0);
@@ -96,6 +107,9 @@ export function PageSortie() {
   const cadre = useRef<HTMLDivElement>(null);
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
+  /** la scène telle que reçue (sans les votes ajoutés ici) : renvoyée dans `present.vue`, comparée par la régie */
+  const sceneRecue = useRef<Scene | null>(null);
+  const refusEnvoyes = useRef(new Map<string, number>());
   const fichiers = useRef<HTMLInputElement>(null);
 
   // ── services ──
@@ -113,13 +127,17 @@ export function PageSortie() {
   }, [gestionFlux, bib]);
   const presence = useCallback(() => {
     const s = sceneRef.current;
-    envoyer({ t: 'present', v: VERSION_SORTIE, id, heure: Date.now(), scene: s.scene.type, n: s.nRegie, etat: etatSortie(), ...(s.source ? { source: s.source } : {}) });
+    // carte de refus à l'écran : la sortie ne montre AUCUNE scène demandée
+    const montre = carteRef.current ? null : (sceneRecue.current ?? s.scene);
+    envoyer(msgPresent({ id, vue: montre, n: s.nRegie, etat: etatSortie(), ...(s.source ? { source: s.source } : {}) }));
   }, [envoyer, etatSortie, id]);
+  const bonjour = useCallback(() => msgBonjour(id), [id]);
   // média introuvable (ou retrouvé) : la régie le sait tout de suite, pas au battement suivant
   const absent = useCallback((asset: string, oui: boolean) => {
     setAbsents((l) => (oui ? (l.includes(asset) ? l : [...l, asset]) : l.filter((x) => x !== asset)));
   }, []);
-  useEffect(() => { presence(); }, [absents, presence]);
+  // média absent, nouvelle scène, carte de refus : la régie le sait tout de suite, pas au battement suivant
+  useEffect(() => { presence(); }, [absents, scene.n, carte, presence]);
   const services = useMemo<Services>(() => ({
     medias: bib, pool, flux: gestionFlux, calque: () => calque.current,
     finVideo: (asset) => envoyer({ t: 'fin-video', v: VERSION_SORTIE, id, heure: Date.now(), asset, n: sceneRef.current.nRegie }),
@@ -138,6 +156,8 @@ export function PageSortie() {
 
   // ── messages de la régie ──
   const changerScene = useCallback((s: Scene, nRegie: number, fondu: number, source: string) => {
+    sceneRecue.current = s;
+    setCarte(null);
     setScene((p) => (JSON.stringify(p.scene) === JSON.stringify(s)
       ? (p.source === source && p.nRegie === nRegie ? p : { ...p, nRegie, source })
       : { scene: s, n: ++numero.current, nRegie, fondu, source }));
@@ -163,9 +183,35 @@ export function PageSortie() {
     calque.current?.recevoir(ev);
   }, []);
 
-  const recevoir = useCallback((brut: unknown) => {
-    const m = lireMessageRegie(brut);
-    if (!m) return;
+  /** Refus d'un message illisible : renvoyé sur le transport d'arrivée (au plus une fois par REFUS_MS et par message),
+   *  et carte plein écran si c'était une scène que la sortie ne peut pas montrer. */
+  const refuser = useCallback((r: Refus, t: Transport | null) => {
+    const maintenant = Date.now();
+    const cle = r.raison + '|' + r.recu + '|' + (r.source ?? '');
+    const avant = refusEnvoyes.current.get(cle);
+    if (avant === undefined || maintenant - avant > REFUS_MS) {
+      refusEnvoyes.current.set(cle, maintenant);
+      if (refusEnvoyes.current.size > 50) refusEnvoyes.current.clear();
+      const m: MessageSortie = {
+        t: 'refus', v: VERSION_SORTIE, id, heure: maintenant, raison: r.raison, version: VERSION_SORTIE, recu: r.recu,
+        ...(r.versionRecue !== undefined ? { versionRecue: r.versionRecue } : {}), ...(r.source ? { source: r.source } : {}),
+      };
+      if (t) t.envoyer(m); else envoyer(m);
+    }
+    if (r.carte) {
+      const type = r.typeScene ?? '?';
+      const inconnue = r.raison === 'version' || !TYPES_SCENE.includes(type as TypeScene);
+      setCarte((c) => (c && c.type === type && c.inconnue === inconnue ? c : { type, inconnue }));
+    }
+  }, [envoyer, id]);
+
+  const recevoir = useCallback((brut: unknown, t: Transport | null = null) => {
+    const ex = examinerMessageRegie(brut);
+    if (!ex) return;
+    if ('refus' in ex) { refuser(ex.refus, t); return; }
+    const m = ex.message;
+    // la régie demande un rechargement (sortie périmée, refus) : quelle que soit la version
+    if (m.t === 'recharger') { location.reload(); return; }
     const local = Date.now();
     // le même message arrivé par le canal local ET par la salle : traité une fois
     if (!filtre.current.nouveau(m, local)) return;
@@ -187,7 +233,7 @@ export function PageSortie() {
       case 'precharger': pool.precharger(m.assets); break;
       case 'heure': break;
     }
-  }, [changerScene, evenement, pool]);
+  }, [changerScene, evenement, pool, refuser]);
 
   // ── transports (canal local TOUJOURS, plus la salle de l'adresse), battement, reconnexion ──
   useEffect(() => {
@@ -199,8 +245,8 @@ export function PageSortie() {
     transports.current = liste;
     const desabonner: (() => void)[] = [];
     for (const t of liste) {
-      desabonner.push(t.ecouter(recevoir));
-      desabonner.push(t.statut((st) => { if (st === 'connecte') t.envoyer({ t: 'bonjour', v: VERSION_SORTIE, id, heure: Date.now() }); }));
+      desabonner.push(t.ecouter((m) => recevoir(m, t)));
+      desabonner.push(t.statut((st) => { if (st === 'connecte') t.envoyer(bonjour()); }));
     }
     if (salle) desabonner.push(salle.ecouterSalle((m: MessageSalleBrut) => {
       if (m.t === 'bienvenue') { projetSalle = (m.projet as Projet | null) ?? projetSalle; lectureSalle = ((m.lecture as { etat?: EtatLecture } | null)?.etat) ?? lectureSalle; }
@@ -213,13 +259,15 @@ export function PageSortie() {
       presence();
       const silence = Date.now() - dernierRegie.current;
       if (dernierRegie.current && silence > PERTE_MS) setLiaison('perdu');
-      if (silence > PERTE_MS && tic % 2 === 0) envoyer({ t: 'bonjour', v: VERSION_SORTIE, id, heure: Date.now() });
+      if (silence > PERTE_MS && tic % 2 === 0) envoyer(bonjour());
       if (projetSalle && lectureSalle && lectureVivante && silence > 5000) {
         const r = traduire({ projet: projetSalle, lecture: lectureSalle, enLecture: true, config: configDepart });
         const p = sceneRef.current;
         if (JSON.stringify(p.scene) !== JSON.stringify(r.scene)) {
           const maintenant = Date.now();
           decision.current = { source: 'secours', depuis: maintenant, local: maintenant };
+          sceneRecue.current = r.scene;
+          setCarte(null);
           setScene({ scene: r.scene, n: ++numero.current, nRegie: 0, fondu: FONDU_DEFAUT_MS, source: 'secours' });
         }
       }
@@ -232,7 +280,7 @@ export function PageSortie() {
       for (const t of liste) t.fermer();
       transports.current = [];
     };
-  }, [recevoir, envoyer, presence, id, salleParams, configDepart]);
+  }, [recevoir, envoyer, presence, bonjour, id, salleParams, configDepart]);
 
   // témoin : visible 3 s après la connexion, toujours quand la liaison manque
   useEffect(() => {
@@ -261,7 +309,7 @@ export function PageSortie() {
 
   const typeScene = scene.scene.type;
   const gabarit = scene.scene.type === 'streamer' ? scene.scene.gabarit : scene.scene.type === 'vote' ? 'vote' : undefined;
-  const calqueVisible = !['noir', 'accueil-qr', 'chrono', 'page'].includes(typeScene);
+  const calqueVisible = !carte && !['noir', 'accueil-qr', 'chrono', 'page'].includes(typeScene);
   useEffect(() => { if (gabarit) calque.current?.gabarit(gabarit); }, [gabarit, calquePret]);
 
   // ── plein écran, curseur, touches ──
@@ -315,6 +363,15 @@ export function PageSortie() {
             <Scene1080>
               <Fondus scene={scene.scene} n={scene.n} fondu={scene.fondu} />
               <div ref={hoteCalque} className="so-calque" style={{ opacity: calqueVisible ? 1 : 0 }} />
+              {carte && (
+                <div className="so-refus" role="alert">
+                  <div className="so-micro so-refus-sur">Sortie écran scène · protocole v{VERSION_SORTIE} · {BUILD_SORTIE}</div>
+                  <div className="so-refus-titre">{carte.inconnue ? 'Scène inconnue' : 'Scène illisible'} : {carte.type}</div>
+                  <div className="so-rampe" />
+                  <div className="so-refus-consigne">— recharger la sortie</div>
+                  <div className="so-refus-aide">touche F5 ici, ou « Recharger la sortie » dans la régie</div>
+                </div>
+              )}
             </Scene1080>
           </div>
 
