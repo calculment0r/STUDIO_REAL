@@ -1,13 +1,19 @@
-// Générateur du projet ÉCHO (projets/echo/echo.conducteur.json).
+// Générateur du projet ÉCHO, version DÉTAILLÉE (projets/echo/echo-complet.conducteur.json) : la version embarquée dans le
+// Conducteur depuis le 27/10 est la SIMPLE (generer-echo-simple.ts, echo.conducteur.json) ; ce générateur ne l'écrase plus.
 // Les textes de l'auteur sont EXTRAITS de DEROULE-AUTEUR.md (jamais retapés) : mot pour mot garanti.
 // Usage (depuis la racine du dépôt) : npx tsx projets/echo/generer-echo-complet.ts
-// Il réécrit echo.conducteur.json : à relancer si l'auteur modifie DEROULE-AUTEUR.md (les modifications faites à la main
-// dans le Conducteur seraient écrasées : exporter d'abord).
-import { readFileSync, writeFileSync } from 'node:fs';
+//   --verifier : régénère en mémoire et compare au fichier sur disque (« identique » → code 0, « différent » → code 1) ;
+//   n'écrit jamais.
+// Valide AVANT d'écrire : une erreur de validation bloque l'écriture (code 1, fichier inchangé) ; les avertissements
+// s'affichent mais n'empêchent pas l'écriture. À relancer si l'auteur modifie DEROULE-AUTEUR.md (les modifications faites à
+// la main dans le Conducteur seraient écrasées : exporter d'abord).
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { planifier, validerProjet, formatMMSS, type Projet, type Etape, type Sortie, type Moment, type Condition, type Piste } from '../../packages/modele/src/index.ts';
 
 const RACINE = fileURLToPath(new URL('.', import.meta.url));
+const NOM_FICHIER = 'echo-complet.conducteur.json';
+const VERIFIER = process.argv.includes('--verifier');
 const MD = readFileSync(RACINE + 'DEROULE-AUTEUR.md', 'utf8').replace(/\r\n/g, '\n');
 const L = MD.split('\n');
 
@@ -98,7 +104,7 @@ interface MomentDef { m: Moment; defs: Def[] }
 
 const ACTES = [{ n: 'Le fil' }, { n: 'Écho' }, { n: 'Le reflet' }];
 const moments: MomentDef[] = [];
-let courant: MomentDef;
+let courant!: MomentDef;
 let col = 0;
 
 function moment(id: string, act: number, name: string, gate: 'auto' | 'go', g: Condition[] = []) {
@@ -312,7 +318,7 @@ fin('s5_synthese');
 
 // Ping-pong : 4 blocs de questions
 let followers = F_DEPART + F_VIRAL;
-const blocs: { id: string; nom: string; qs: number[]; story: { f: string; nom: string; apres?: number }[] }[] = [
+const blocs: { id: string; nom: string; qs: number[]; story: { nom: string; role: string }[] }[] = [
   { id: 's6a', nom: 'Séquence 6 · Ping-pong I · questions 1 à 4', qs: [1, 2, 3, 4], story: [{ nom: 'Story en direct · Jim promeut Écho', role: 'Jim promeut Écho 2.0 (après les questions 1 à 4)' }] },
   { id: 's6b', nom: 'Séquence 6 · Ping-pong II · questions 5 à 8', qs: [5, 6, 7, 8], story: [{ nom: 'Story en direct · ses changements', role: 'Jim promeut Écho 2.0 et ses changements positifs (après les questions 5 à 8)' }] },
   { id: 's6c', nom: 'Séquence 6 · Ping-pong III · questions 9 à 12', qs: [9, 10, 11, 12], story: [{ nom: 'Story en direct · excuses', role: 'story d’excuses (question 12 : « Poste une story d’excuses »)' }] },
@@ -614,10 +620,27 @@ for (const md of moments) for (const s of md.m.st) {
   const sc = s.params?.sortie as Record<string, unknown> | undefined;
   if (sc && typeof sc === 'object' && sc.type === 'video' && !nomsAssets.has(String(sc.asset))) throw new Error('vidéo absente : ' + sc.asset);
 }
-writeFileSync(RACINE + 'echo.conducteur.json', JSON.stringify(fichier, null, 2) + '\n', 'utf8');
+const serialise = JSON.stringify(fichier, null, 2) + '\n';
+
+// --verifier : compare la régénération en mémoire au fichier sur disque (même sérialisation) ; n'écrit jamais.
+if (VERIFIER) {
+  const surDisque = existsSync(RACINE + NOM_FICHIER) ? readFileSync(RACINE + NOM_FICHIER, 'utf8') : null;
+  if (surDisque === serialise) { console.log(NOM_FICHIER + ' : identique'); process.exit(0); }
+  console.log(NOM_FICHIER + ' : différent' + (surDisque === null ? ' (fichier absent)' : ' (relancer sans --verifier pour réécrire)'));
+  process.exit(1);
+}
+
+// Valide AVANT d'écrire : une erreur bloque (code 1, fichier inchangé) ; les avertissements s'affichent mais n'empêchent pas.
+const pb = validerProjet(projet);
+const erreurs = pb.filter(p => p.niveau === 'erreur');
+if (erreurs.length) {
+  console.error('problèmes :', pb.length, pb.map(p => p.niveau + ' ' + p.message));
+  console.error(erreurs.length + ' erreur(s) : ' + NOM_FICHIER + ' n’a PAS été écrit.');
+  process.exit(1);
+}
+writeFileSync(RACINE + NOM_FICHIER, serialise, 'utf8');
 
 // rapport
-const pb = validerProjet(projet);
 console.log('problèmes :', pb.length, pb.map(p => p.niveau + ' ' + p.message));
 const nSt = moments.reduce((a, m) => a + m.m.st.length, 0), nTr = moments.reduce((a, m) => a + m.m.tr.length, 0);
 console.log(`moments ${moments.length} · étapes ${nSt} · sorties ${nTr} · catalogue ${assets.reduce((a, c) => a + c.items.length, 0)} · clips vidéo ${clips.video.length} tel ${clips.tel.length} son ${clips.son.length} lx ${clips.lx.length} txt ${clips.txt.length}`);
