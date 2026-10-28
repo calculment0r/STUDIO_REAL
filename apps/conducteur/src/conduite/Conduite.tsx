@@ -1,5 +1,5 @@
 // LA CONDUITE (bas de l'écran, pleine largeur) : actes → moments → passages, puis les pistes.
-// Zoom et défilement façon Premiere : molette = défilement horizontal, Alt (ou Ctrl) + molette = zoom centré sur la souris,
+// Zoom et défilement façon Premiere : molette = défilement horizontal, Ctrl + molette (ou pincement) = zoom centré sur la souris,
 // barre de zoom à poignées en bas, touches + / − (zoom centré sur la tête), bouton TOUT.
 // Clic (ou glisser) sur la règle ou dans le vide = aller à ce temps ; clic sur un moment = le choisir ; double-clic = la
 // planche cadre ce moment ; clic droit = nouveau moment ici, couper ici, nouvel acte à partir d'ici.
@@ -29,6 +29,7 @@ import { TeteDeLecture } from './TeteDeLecture';
 import { BarreZoom } from './BarreZoom';
 import { CartePassage } from './CartePassage';
 import { glisser } from './glisser';
+import { gesteMolette, pixelsMolette } from '../planche/gestes';
 import { CurseursDistants, useEmettreCurseur } from '../collab';
 import { PastillesConduite } from './collab-conduite';
 import './conduite.css';
@@ -172,10 +173,9 @@ export function Conduite() {
     const el = corps.current;
     if (!el) return;
     const roue = (e: WheelEvent) => {
-      const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
-      const dx = e.deltaX * k, dy = e.deltaY * k;
-      const mod = e.altKey || e.ctrlKey || e.metaKey;
-      if (mod) {
+      // mêmes gestes que la planche (voir planche/gestes.ts) : molette = défiler, Ctrl + molette ou pincement = zoomer
+      const { dx, dy } = pixelsMolette(e);
+      if (gesteMolette(e) === 'zoomer') {
         e.preventDefault();
         const r = el.getBoundingClientRect();
         zoomer(zoomMolette(vue.current.pps, dy || dx), Math.max(0, e.clientX - r.left - LBL));
