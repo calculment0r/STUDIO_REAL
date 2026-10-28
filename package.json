@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "npm run dev -w conducteur",
     "build": "npm run build -w @studio-real/modele && npm run build -w conducteur",
-    "test": "npm test -w @studio-real/modele -w @studio-real/protocole",
-    "verifier-projets": "npm run verifier -w @studio-real/modele"
+    "test": "npm test -w @studio-real/modele -w @studio-real/protocole -w @studio-real/serveur-spectacle",
+    "verifier-projets": "npm run verifier -w @studio-real/modele",
+    "dev:spectacle": "npm start -w @studio-real/serveur-spectacle",
+    "dev:figurants": "node prototypes/figurants/serveur/index.mjs"
   }
 }

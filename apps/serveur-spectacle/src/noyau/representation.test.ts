@@ -155,6 +155,13 @@ describe('votes, salle et passage au quorum', () => {
     expect(b.voter('pub_s1', 0)[0]!.m).toMatchObject({ t: 'ack', statut: 'refus' });
   });
 
+  it('seule la foule vote : l’écran scène et la ministre sont refusés', () => {
+    const b = auVote();
+    expect(b.voter('scene_1', 0)[0]!.m).toMatchObject({ t: 'ack', statut: 'refus' });
+    expect(b.voter('mini_1', 0)[0]!.m).toMatchObject({ t: 'ack', statut: 'refus' });
+    expect(b.rep.signaux().quorum).toBe(0);
+  });
+
   it('un vote accepté met à jour la salle de la régie (question, reçus, parts)', () => {
     const b = auVote();
     const out = b.voter('pub_s1', 1);

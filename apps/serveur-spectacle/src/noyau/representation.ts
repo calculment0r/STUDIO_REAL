@@ -316,7 +316,13 @@ export class Representation {
   private envoyer(a: Destination, m: MessageServeur) { this.sorties.push({ a, m }); }
 
   private journaliser(type: TypeEvenement, detail: Record<string, unknown> = {}) {
-    this.aJournaliser.push({ ts: this.horloge(), run: this.e.run?.id ?? null, src: 'serveur', type, ...detail });
+    // Les champs fixes gardent leur valeur même si un détail porte le même nom.
+    const e: EvenementJournal = { ts: 0, run: null, src: 'serveur', type, ...detail };
+    e.ts = this.horloge();
+    e.run = this.e.run?.id ?? null;
+    e.src = 'serveur';
+    e.type = type;
+    this.aJournaliser.push(e);
   }
 
   /** Entrée du lecteur : journalisée (pour la reprise), puis jouée. Les `avancer` identiques consécutifs sont comptés. */
@@ -493,6 +499,7 @@ export class Representation {
     const journal = (detail: Record<string, unknown>) => this.journaliser('entree', { k: m.k, acteur, personne: cleP, ...detail });
     switch (m.k) {
       case 'vote': {
+        if (!this.foule.includes(acteur)) return refus(`vote-reserve : seule la foule vote (${acteur})`);
         const q = m.q ?? this.e.question;
         if (!q) return refus('aucun-vote : pas de question ouverte');
         if (!this.e.voteOuvert || q !== this.e.question) return refus(`vote-ferme : ${q}`);
@@ -578,7 +585,7 @@ export class Representation {
     if (moment) c.moment = moment;
     this.e.commandes.push(c);
     this.envoyer({ acteur: agent }, this.messageCommande(c));
-    this.journaliser('agent.cmd', { n: c.n, agent, type: c.type, etape: c.etape, source: c.source, ...(c.nLecteur !== undefined ? { nLecteur: c.nLecteur } : {}) });
+    this.journaliser('agent.cmd', { n: c.n, agent, commande: c.type, etape: c.etape, source: c.source, ...(c.nLecteur !== undefined ? { nLecteur: c.nLecteur } : {}) });
   }
 
   // ── Vues, effets, commandes : recalcul après chaque entrée ────────────────────────────────────────────────────
