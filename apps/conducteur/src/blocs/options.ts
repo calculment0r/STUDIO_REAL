@@ -2,7 +2,7 @@
 // comme le faisait la planche du design (objet `PV[key]`).
 import { dureeEtape } from '@studio-real/modele';
 import type { OptionsApercu } from './apercus';
-import type { ThemeApercu } from './palette';
+import { couleurFamille, type ThemeApercu } from './palette';
 import { VOIX } from './simulation';
 import type { DefBloc } from './types';
 
@@ -38,7 +38,7 @@ export function construireOptions(def: DefBloc | undefined, e: EntreeApercu, the
   const chosen = typeof params?.choisie === 'boolean' ? params.choisie : run || fini;
   const pct = nombre(params?.pct) ?? (issue === 'B' ? VOIX.B : issue === 'A' ? VOIX.A : VOIX.C);
 
-  const couleur = typeof params?.couleur === 'string' ? params.couleur : def ? def.couleur[theme] : '#8fa5ad';
+  const couleur = typeof params?.couleur === 'string' ? params.couleur : def ? def.couleur[theme] : couleurFamille('deroule', theme);
   const gst = typeof params?.etatArret === 'string' ? params.etatArret : run ? 'ARMÉ' : fini ? 'PASSAGE' : 'RETENU';
   return {
     k: couleur, run, live: run, cur: run, p, prog, rem, dur, te, val, lab, chosen, pct,

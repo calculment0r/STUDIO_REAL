@@ -1,12 +1,12 @@
-/* @studio-real/theme : polices. Copie de apps/conducteur/src/theme/polices.css, chemins rendus RELATIFS (./polices/)
-   pour qu'une page statique, sans build, les trouve ; Vite les résout et les copie de même.
+/* @studio-real/theme : polices, SOURCE UNIQUE (le Conducteur les importe depuis ce paquet). Chemins RELATIFS (./polices/)
+   pour qu'une page statique, sans build, les trouve ; Vite les résout, les nomme avec une empreinte et les copie dans dist/.
    Toutes libres (OFL, licences à côté des fichiers, dans polices/) :
    - Chakra Petch 400 · 500 · 600 · 700 (latin, latin-ext) ; 300 : chakra-petch-light.ttf ;
    - Azeret Mono, variable 100 → 900.
-   Venus Rising (titres et chiffres) n'a pas de licence connue : elle n'est JAMAIS copiée ici. Deux voies pour l'avoir
-   quand elle est présente sur la machine, sinon on reste sur le repli Chakra Petch 700 (--f-disp) :
-   1. installée dans le système : la face ci-dessous la prend par local() ;
-   2. le fichier hors git conception/conducteur/source/uploads/ : venus.js le charge à l'exécution (voir README). */
+   Venus Rising (titres et chiffres) est VERSIONNÉE dans polices/venus-rising.otf, à la demande du propriétaire (commit
+   88e2925). Elle est chargée à l'exécution : par polices.ts dans le Conducteur, par venus.js dans une page statique.
+   Installée dans le système, la face ci-dessous la prend aussi par local(). Si le fichier manque, on reste sur le
+   repli Chakra Petch 700 (les éléments en --f-disp portent font-weight: 700). */
 
 @font-face {
   font-family: 'Chakra Petch';

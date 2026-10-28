@@ -7,22 +7,23 @@ import {
   TY_MEMOIRE, TY_MESSAGE, TY_REPRISE, TY_SEQUENCE, TY_SIGNAL, TY_TIRAGE,
 } from '@studio-real/modele';
 import { fm } from './dessin';
-import { COULEURS_FAMILLES, versClair } from './palette';
+import { couleurFamille, palette } from './palette';
 import type { Catalogue, CouleurTheme, DefBloc, Famille, IdFamille, Port, Reglage, TypePort } from './types';
 
-const coul = (hex: string): CouleurTheme => ({ sombre: hex, clair: versClair(hex) });
+/** La couleur d'une famille dans les deux thèmes : ce sont les jetons --fam-* du thème (jamais une valeur écrite ici). */
+const coul = (id: IdFamille): CouleurTheme => ({ sombre: couleurFamille(id, 'sombre'), clair: couleurFamille(id, 'clair') });
 
 /** Familles, dans l'ordre de la bibliothèque du design (GRP). Glyphes : FAM de blocs.js. */
 export const FAMILLES: Famille[] = [
-  { id: 'deroule', nom: 'Le déroulé', description: 'les étapes de base du spectacle', ref: 'DR', icone: 'M4 6h16M4 12h10M4 18h13', couleur: coul(COULEURS_FAMILLES.deroule) },
-  { id: 'trig', nom: 'Quand', description: 'ce qui déclenche une action', ref: 'FA—01', icone: 'M13 2 4 14h7l-1 8 9-12h-7z', couleur: coul(COULEURS_FAMILLES.trig) },
-  { id: 'flow', nom: 'Comment', description: 'aiguillages, attentes, tirages', ref: 'FA—02', icone: 'M12 3l9 9-9 9-9-9z', couleur: coul(COULEURS_FAMILLES.flow) },
-  { id: 'data', nom: 'Combien', description: 'votes, comptes, scores', ref: 'FA—03', icone: 'M5 20v-8M10 20V5M15 20v-6M20 20V9', couleur: coul(COULEURS_FAMILLES.data) },
-  { id: 'cible', nom: 'Qui', description: 'quelle partie du public', ref: 'FA—04', icone: 'M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 21c.8-4 3.6-6 7-6s6.2 2 7 6', couleur: coul(COULEURS_FAMILLES.cible) },
-  { id: 'fx', nom: 'Effets téléphone', description: 'lumière, vibration, son', ref: 'FA—05', icone: 'M2 12h4l3-7 4 14 3-9 2 2h4', couleur: coul(COULEURS_FAMILLES.fx) },
-  { id: 'ui', nom: 'Écrans du public', description: 'ce que voit le téléphone', ref: 'FA—06', icone: 'M8 2h8v20H8zM11 18h2', couleur: coul(COULEURS_FAMILLES.ui) },
-  { id: 'scene', nom: 'Scène et régie', description: 'écran, streamer, console', ref: 'FA—07', icone: 'M3 8h11v8H3zM14 11l7-3v8l-7-3', couleur: coul(COULEURS_FAMILLES.scene) },
-  { id: 'gate', nom: 'Points d’arrêt', description: 'attendre une décision humaine', ref: 'FA—08', icone: 'M9 2h6v20H9zM11 6h2v2h-2zM11 11h2v2h-2zM11 16h2v2h-2z', couleur: coul(COULEURS_FAMILLES.gate) },
+  { id: 'deroule', nom: 'Le déroulé', description: 'les étapes de base du spectacle', ref: 'DR', icone: 'M4 6h16M4 12h10M4 18h13', couleur: coul('deroule') },
+  { id: 'trig', nom: 'Quand', description: 'ce qui déclenche une action', ref: 'FA—01', icone: 'M13 2 4 14h7l-1 8 9-12h-7z', couleur: coul('trig') },
+  { id: 'flow', nom: 'Comment', description: 'aiguillages, attentes, tirages', ref: 'FA—02', icone: 'M12 3l9 9-9 9-9-9z', couleur: coul('flow') },
+  { id: 'data', nom: 'Combien', description: 'votes, comptes, scores', ref: 'FA—03', icone: 'M5 20v-8M10 20V5M15 20v-6M20 20V9', couleur: coul('data') },
+  { id: 'cible', nom: 'Qui', description: 'quelle partie du public', ref: 'FA—04', icone: 'M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 21c.8-4 3.6-6 7-6s6.2 2 7 6', couleur: coul('cible') },
+  { id: 'fx', nom: 'Effets téléphone', description: 'lumière, vibration, son', ref: 'FA—05', icone: 'M2 12h4l3-7 4 14 3-9 2 2h4', couleur: coul('fx') },
+  { id: 'ui', nom: 'Écrans du public', description: 'ce que voit le téléphone', ref: 'FA—06', icone: 'M8 2h8v20H8zM11 18h2', couleur: coul('ui') },
+  { id: 'scene', nom: 'Scène et régie', description: 'écran, streamer, console', ref: 'FA—07', icone: 'M3 8h11v8H3zM14 11l7-3v8l-7-3', couleur: coul('scene') },
+  { id: 'gate', nom: 'Points d’arrêt', description: 'attendre une décision humaine', ref: 'FA—08', icone: 'M9 2h6v20H9zM11 6h2v2h-2zM11 11h2v2h-2zM11 16h2v2h-2z', couleur: coul('gate') },
 ];
 
 /** Ports au format court du design : 'exec:' , 'num:votes'… */
@@ -43,30 +44,30 @@ const reglages = (a: ReglageCourt[]): Reglage[] => a.map(([nom, d, min, max, uni
 
 const BLOCS: DefBloc[] = [];
 
-/** Étape de base du déroulé (CK de conducteur-core.js). */
-function K(ty: string, nom: string, cle: string, apercu: string, hex: string, description: string, sets: ReglageCourt[]) {
+/** Étape de base du déroulé (CK de conducteur-core.js). Sa teinte est celle d'une famille de blocs (jeton --fam-*). */
+function K(ty: string, nom: string, cle: string, apercu: string, teinte: IdFamille, description: string, sets: ReglageCourt[]) {
   BLOCS.push({
     ty, nom, cle, apercu, description, base: true,
     famille: ty === 'k:issue' ? 'flow' : 'deroule',
-    couleur: coul(hex), reglages: reglages(sets), entrees: ports(['exec:']), sorties: ports(['exec:']),
+    couleur: coul(teinte), reglages: reglages(sets), entrees: ports(['exec:']), sorties: ports(['exec:']),
   });
 }
 const ST = (a: number, b: number): ReglageCourt[] => [['intensité', a, 0, 100, ' %', 0], ['fondu', b, 0, 10, ' s', 1]];
 
-K('k:attente', 'attente du public', 'ATTENTE', 'k:attente', '#b9cfd8', 'On attend la salle. L’étape se termine dès qu’une condition de sortie est remplie.', ST(.4, .3));
-K('k:calage', 'calage salle', 'CALAGE', 'k:calage', '#d9a486', 'Dernier calage son et lumière. On passe quand la salle s’est calmée.', ST(.5, .4));
-K('k:scene', 'scène jouée', 'SCÈNE', 'k:scene', '#d47a5c', 'Les comédiens jouent. La suite part à la fin de la durée prévue ou au top.', ST(.7, .4));
-K('k:son', 'son en salle', 'SON', 'k:son', '#e59578', 'Lecture d’une piste sur la sono de la salle.', [['volume', .75, 0, 100, ' %', 0], ['fondu', .3, 0, 10, ' s', 1]]);
-K('k:lum', 'lumière', 'LUMIÈRE', 'k:lumiere', '#f0b49b', 'Conduite lumière vers l’intensité choisie, avec un temps de montée.', [['intensité', .6, 0, 100, ' %', 0], ['montée', .4, 0, 10, ' s', 1]]);
-K('k:fondu', 'fondu', 'FONDU', 'k:fondu', '#8fa5ad', 'Fondu enchaîné entre deux états du plateau.', ST(.1, .6));
-K('k:passage', 'liaison', 'LIAISON', 'k:passage', '#8fa5ad', 'Étape de liaison, sans action propre.', ST(.3, .5));
-K('k:issue', 'issue', 'ISSUE', 'k:issue', '#78b08f', 'Une des issues possibles. Elle est jouée si le public la choisit.', ST(.7, .4));
+K('k:attente', 'attente du public', 'ATTENTE', 'k:attente', 'flow', 'On attend la salle. L’étape se termine dès qu’une condition de sortie est remplie.', ST(.4, .3));
+K('k:calage', 'calage salle', 'CALAGE', 'k:calage', 'cible', 'Dernier calage son et lumière. On passe quand la salle s’est calmée.', ST(.5, .4));
+K('k:scene', 'scène jouée', 'SCÈNE', 'k:scene', 'gate', 'Les comédiens jouent. La suite part à la fin de la durée prévue ou au top.', ST(.7, .4));
+K('k:son', 'son en salle', 'SON', 'k:son', 'trig', 'Lecture d’une piste sur la sono de la salle.', [['volume', .75, 0, 100, ' %', 0], ['fondu', .3, 0, 10, ' s', 1]]);
+K('k:lum', 'lumière', 'LUMIÈRE', 'k:lumiere', 'ui', 'Conduite lumière vers l’intensité choisie, avec un temps de montée.', [['intensité', .6, 0, 100, ' %', 0], ['montée', .4, 0, 10, ' s', 1]]);
+K('k:fondu', 'fondu', 'FONDU', 'k:fondu', 'scene', 'Fondu enchaîné entre deux états du plateau.', ST(.1, .6));
+K('k:passage', 'liaison', 'LIAISON', 'k:passage', 'scene', 'Étape de liaison, sans action propre.', ST(.3, .5));
+K('k:issue', 'issue', 'ISSUE', 'k:issue', 'data', 'Une des issues possibles. Elle est jouée si le public la choisit.', ST(.7, .4));
 
 /** Bloc du canvas (S de blocs.js). */
 function S(ty: string, famille: IdFamille, nom: string, cle: string, ins: string[], outs: string[], sets: ReglageCourt[], apercu: string, description: string) {
   BLOCS.push({
     ty, famille, nom, cle, apercu, description,
-    couleur: coul(COULEURS_FAMILLES[famille]), reglages: reglages(sets), entrees: ports(ins), sorties: ports(outs),
+    couleur: coul(famille), reglages: reglages(sets), entrees: ports(ins), sorties: ports(outs),
   });
 }
 
@@ -93,7 +94,7 @@ S('c1', 'cible', 'cible', '17', [], ['cible:joueurs'], [], 'cible', 'a_voté:"A"
 S('c2', 'cible', 'équipes', '4 ÉQ.', [], ['equipe:équipes'], [], 'teams', 'Couleur + emblème + effectif ; capitaine marqué.');
 S('c3', 'cible', 'zone / siège', 'RANGS C–F', [], ['cible:zone'], [['rayon', .4, 0, 1, '', 1]], 'seats', 'Le plan de salle ; les zones ciblées s’allument.');
 S('c4', 'cible', 'sans réponse', '17', [], ['cible:retardataires'], [], 'noresp', 'Ceux qui n’ont pas encore voté.');
-S('x1', 'fx', 'couleur', '#7D5BD6', ['exec:', 'cible:qui'], ['exec:'], [['durée', .25, 0, 20, ' s', 1]], 'color', 'Allume les téléphones ciblés d’une couleur pleine.');
+S('x1', 'fx', 'couleur', palette('sombre')['--tel-demo'].toUpperCase(), ['exec:', 'cible:qui'], ['exec:'], [['durée', .25, 0, 20, ' s', 1]], 'color', 'Allume les téléphones ciblés d’une couleur pleine.');
 S('x2', 'fx', 'vague', 'G → D', ['exec:', 'cible:qui'], ['exec:'], [['vitesse', .5, 0, 4, ' s', 1]], 'wave', 'Un front de couleur traverse les rangs.');
 S('x3', 'fx', 'stroboscope', 'HZ', ['exec:', 'cible:qui'], ['exec:'], [['fréquence', .8, 0, 5, ' Hz', 1]], 'strobe', 'Limité à 3 Hz (photosensibilité) : au-delà, refusé.');
 S('x4', 'fx', 'vibrer', 'BATTEMENT', ['exec:', 'cible:qui'], ['exec:'], [['intensité', .7, 0, 1, '', 1]], 'vibe', 'Le motif en créneaux ; repli iPhone : flash + clic.');
@@ -131,7 +132,7 @@ export const TY_FIGURANTS_IA = {
 function N(ty: string, famille: IdFamille, nom: string, cle: string, outs: string[], sets: ReglageCourt[], description: string, siProbleme: string, origine = 'étude des 10 blocs') {
   BLOCS.push({
     ty, famille, nom, cle, apercu: ty, description, siProbleme, nouveau: true, origine,
-    couleur: coul(COULEURS_FAMILLES[famille]), reglages: reglages(sets), entrees: ports(['exec:']), sorties: ports(outs),
+    couleur: coul(famille), reglages: reglages(sets), entrees: ports(['exec:']), sorties: ports(outs),
   });
 }
 const liste = (l: readonly string[]): string[] => [...l];

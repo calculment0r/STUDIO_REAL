@@ -1,6 +1,6 @@
-/* @studio-real/theme : styles de base. Copie de apps/conducteur/src/theme/base.css, à UNE différence près :
-   la règle « html, body, #root { height: 100%; overflow: hidden } » (propre à une application plein écran) est
-   sortie dans plein-ecran.css ; une page qui défile n'en veut pas. Jetons seulement. */
+/* @studio-real/theme : styles de base, SOURCE UNIQUE (le Conducteur les importe depuis ce paquet). La règle
+   « html, body, #root { height: 100%; overflow: hidden } », propre à une application plein écran, est dans
+   plein-ecran.css : une page qui défile n'en veut pas. Jetons seulement. */
 
 *, *::before, *::after { box-sizing: border-box; }
 

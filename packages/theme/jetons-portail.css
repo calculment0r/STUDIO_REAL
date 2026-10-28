@@ -1,5 +1,4 @@
-/* @studio-real/theme : copie FIDÈLE de apps/conducteur/src/theme/jetons-portail.css (27/10/2026). Aucune valeur changée ;
-   un écart avec le Conducteur se corrige des deux côtés, ou le Conducteur pointe ici. */
+/* @studio-real/theme : jetons du portail, SOURCE UNIQUE (le Conducteur les importe depuis ce paquet). */
 
 /* Port tel quel de conception/conducteur/source/studio-real/tokens.css (jetons du portail SHOWRUNNER TOOLS).
    Ne pas modifier ici : la couche propre au conducteur (valeurs du design, palette des familles, pistes, assets)

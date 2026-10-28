@@ -1,0 +1,127 @@
+/* ============================================================
+   @studio-real/theme : jetons des APERÇUS DE BLOCS du Conducteur (les petits dessins sur <canvas> de la
+   bibliothèque, de la galerie et des cartes de la planche).
+
+   Port fidèle de pal() et de la table LIGHT de conducteur-core.js (design). Les aperçus se dessinent sur un canvas :
+   ils ne lisent pas le CSS d'une page, apps/conducteur/src/theme/jetons.ts lit CE fichier (sombre ET clair, quel que
+   soit le thème de la page) et en fait la palette de chaque aperçu. Les couleurs des familles de blocs ne sont pas
+   ici : ce sont les jetons --fam-* de jetons.css. Aucune couleur n'est écrite ailleurs que dans les jetons.
+
+   Même règle des deux blocs que jetons.css : tout nom posé sous :root est redonné sous [data-theme="light"].
+   Valeurs en hexadécimal minuscule ou rgba(), sans var() : le lecteur de jetons.ts ne résout pas les références.
+   ============================================================ */
+
+:root,
+[data-theme="dark"] {
+  --apercu-bg: #070a08;
+  --apercu-panel: #0f1311;
+  --apercu-panel2: #141a17;
+  --apercu-panel3: #222a26;
+  --apercu-ink: #e6eae7;
+  --apercu-ink2: #a3aea8;
+  --apercu-ink3: #7f8b86;
+  --apercu-cy: #b9cfd8;
+  --apercu-or: #e0674a;
+  --apercu-grn: #2f6b4a;
+  --apercu-grn2: #78b08f;
+  --apercu-amb: #f0b49b;
+  --apercu-rouge: #e0674a;
+  --apercu-line: rgba(185,207,216,.2);
+  --apercu-line-amb: rgba(229,149,120,.6);
+  --apercu-line-cy: rgba(185,207,216,.5);
+  --apercu-dot: rgba(185,207,216,.1);
+  --apercu-dot-hi: rgba(185,207,216,.28);
+  --apercu-coral-1: #f0b49b;
+  --apercu-coral-2: #e59578;
+  --apercu-coral-3: #d47a5c;
+  --apercu-spec-1: #24543b;
+  --apercu-spec-2: #2f6b4a;
+  --apercu-spec-3: #78b08f;
+  --apercu-spec-4: #f0b49b;
+  --apercu-black: #000;
+  --apercu-veil: rgba(10,13,11,.75);
+  --apercu-on-or: #170c08;
+  --apercu-on-amb: #170c08;
+  --apercu-on-grn: #e6f1ea;
+  --apercu-on-rouge: #fdf3ee;
+  --apercu-salle-noir: #050706;
+  --apercu-titre-clair: #f3efe8;
+  --apercu-titre-sombre: #170c08;
+  --apercu-exec: #e6eae7;
+  --apercu-t-num: #78b08f;
+  --apercu-t-txt: #b9cfd8;
+  --apercu-t-bool: #f0b49b;
+  --apercu-t-cible: #d9a486;
+  --apercu-t-media: #d47a5c;
+  --apercu-nd-ryt: #b9cfd8;
+  --apercu-tel-demo: #7d5bd6;
+  --apercu-pseudo-1: #f0b49b;
+  --apercu-pseudo-2: #e59578;
+  --apercu-pseudo-3: #d47a5c;
+  --apercu-pseudo-4: #a3502f;
+  --apercu-pseudo-5: #78b08f;
+  --apercu-pseudo-6: #3f9a6a;
+  --apercu-pseudo-7: #2f6b4a;
+  --apercu-pseudo-8: #b9cfd8;
+  --apercu-pseudo-9: #8fa5ad;
+  --apercu-pseudo-10: #d9a486;
+  --apercu-pseudo-11: #c98b6b;
+  --apercu-pseudo-12: #9fc4ae;
+}
+
+[data-theme="light"] {
+  --apercu-bg: #dcdbd3;
+  --apercu-panel: #f5f4f0;
+  --apercu-panel2: #cfcec5;
+  --apercu-panel3: #bdbcb2;
+  --apercu-ink: #141a17;
+  --apercu-ink2: #3a4440;
+  --apercu-ink3: #59635e;
+  --apercu-cy: #2c5363;
+  --apercu-or: #b8492e;
+  --apercu-grn: #24613f;
+  --apercu-grn2: #24613f;
+  --apercu-amb: #a3502f;
+  --apercu-rouge: #a3502f;
+  --apercu-line: rgba(24,34,29,.22);
+  --apercu-line-amb: rgba(229,149,120,.6);
+  --apercu-line-cy: rgba(185,207,216,.5);
+  --apercu-dot: rgba(24,34,29,.1);
+  --apercu-dot-hi: rgba(24,34,29,.25);
+  --apercu-coral-1: #f0b49b;
+  --apercu-coral-2: #e59578;
+  --apercu-coral-3: #d47a5c;
+  --apercu-spec-1: #24543b;
+  --apercu-spec-2: #2f6b4a;
+  --apercu-spec-3: #78b08f;
+  --apercu-spec-4: #f0b49b;
+  --apercu-black: #000;
+  --apercu-veil: rgba(233,232,226,.75);
+  --apercu-on-or: #fdf3ee;
+  --apercu-on-amb: #fdf3ee;
+  --apercu-on-grn: #e6f1ea;
+  --apercu-on-rouge: #fdf3ee;
+  --apercu-salle-noir: #1a1f1c;
+  --apercu-titre-clair: #f3efe8;
+  --apercu-titre-sombre: #170c08;
+  --apercu-exec: #141a17;
+  --apercu-t-num: #78b08f;
+  --apercu-t-txt: #b9cfd8;
+  --apercu-t-bool: #f0b49b;
+  --apercu-t-cible: #d9a486;
+  --apercu-t-media: #d47a5c;
+  --apercu-nd-ryt: #b9cfd8;
+  --apercu-tel-demo: #7d5bd6;
+  --apercu-pseudo-1: #f0b49b;
+  --apercu-pseudo-2: #e59578;
+  --apercu-pseudo-3: #d47a5c;
+  --apercu-pseudo-4: #a3502f;
+  --apercu-pseudo-5: #78b08f;
+  --apercu-pseudo-6: #3f9a6a;
+  --apercu-pseudo-7: #2f6b4a;
+  --apercu-pseudo-8: #b9cfd8;
+  --apercu-pseudo-9: #8fa5ad;
+  --apercu-pseudo-10: #d9a486;
+  --apercu-pseudo-11: #c98b6b;
+  --apercu-pseudo-12: #9fc4ae;
+}

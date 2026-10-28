@@ -5,6 +5,6 @@ export { ApercuBloc, type ProprietesApercu } from './ApercuBloc';
 export { IconeBloc, type ProprietesIcone } from './IconeBloc';
 export { Galerie } from './Galerie';
 export { APERCUS, LARGEUR_APERCU, HAUTEUR_APERCU, type DessinApercu, type OptionsApercu } from './apercus';
-export { palette, versClair, COULEURS_FAMILLES, type Palette, type ThemeApercu } from './palette';
+export { palette, couleurFamille, COULEURS_FAMILLES, type Palette, type ThemeApercu } from './palette';
 export { simulation, abonner } from './boucle';
 export type { Catalogue, CouleurTheme, DefBloc, Famille, IdFamille, Port, Reglage, TypePort } from './types';
