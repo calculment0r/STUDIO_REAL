@@ -4,14 +4,26 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import type { Duplex } from 'node:stream';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer, WebSocket, type RawData } from 'ws';
 import { chargerFichier, type Projet } from '@studio-real/modele';
 import { LIMITES, lireMessageClient, type MessageServeur, type MsgRefus } from '@studio-real/protocole';
 import { Representation, correspond, empreinteDe, type EvenementJournal, type InfoSession, type Sortie } from '../noyau';
 import { ROLES_JETON, chemin, configPublique, type ConfigSpectacle, type RoleJeton } from './config';
 import { Persistance, type FichierInstantane } from './persistance';
-import { servirStatique, type Montage } from './statique';
+import { SondeTunnel, construireSante, type Sonde } from './sante';
+import { servirFichier, servirStatique, type Montage } from './statique';
+
+/** Pages d'exploitation et thème : fichiers du CODE (pas de la configuration), trouvés à partir de ce module. */
+const DEPOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
+const PAGES = join(DEPOT, 'apps', 'serveur-spectacle', 'pages');
+const PAGES_FIXES: Record<string, string> = {
+  '/sante.html': join(PAGES, 'sante.html'),
+  '/checklist.html': join(PAGES, 'checklist.html'),
+  '/checklist.md': join(DEPOT, 'exploitation', 'CHECKLIST.md'),
+};
 
 /** Battement ping/pong des sockets : une socket qui n'a pas répondu au précédent ping est coupée. */
 export const BATTEMENT_MS = 15_000;
@@ -33,6 +45,15 @@ export interface OptionsServeur {
   version?: string | null;
   /** où écrire les messages d'exploitation (défaut : console) */
   console?: (ligne: string) => void;
+  /** sonde de l'adresse publique (défaut : GET <adresse>/sante) ; les tests en passent une fausse */
+  sondeTunnel?: Sonde;
+  /** intervalle de la sonde du tunnel (défaut 30 s) */
+  intervalleSondeMs?: number;
+  /**
+   * Appelée après `POST /arret` (jeton de la régie, depuis cette machine seulement) : sur Windows aucun signal ne
+   * demande un arrêt PROPRE à un processus Node, c'est la voie du script `arreter-spectacle.ps1`.
+   */
+  surDemandeArret?: () => void;
 }
 
 export interface ServeurSpectacle {
@@ -198,6 +219,7 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
   const montages: Montage[] = [
     { prefixe: '/conducteur/', dossier: chemin(o.racine, config.clients.conducteur), spa: true },
     { prefixe: '/medias/', dossier: chemin(o.racine, config.medias.dossier) },
+    { prefixe: '/theme/', dossier: join(DEPOT, 'packages', 'theme') },
     { prefixe: '/', dossier: chemin(o.racine, config.clients.telephone), spa: true },
   ];
   const json = (res: ServerResponse, code: number, x: unknown) => {
@@ -205,16 +227,34 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
     res.end(JSON.stringify(x));
   };
 
+  const tunnel = new SondeTunnel({ config, demarre, ...(o.sondeTunnel ? { sonde: o.sondeTunnel } : {}), ...(o.intervalleSondeMs ? { intervalleMs: o.intervalleSondeMs } : {}) });
   const sante = () => {
     const parRole: Record<string, number> = { regie: 0, acteur: 0, agent: 0 };
     for (const c of clients) if (c.info) parRole[c.info.role] = (parRole[c.info.role] ?? 0) + 1;
-    return {
-      ok: true, version, demarre, depuisS: Math.round((Date.now() - demarre) / 1000), redemarrages,
-      connexions: { total: clients.size, parRole }, representation: rep.resume(), persistance: persistance.etat(),
-    };
+    return construireSante({
+      version, demarre, redemarrages, parRole, total: clients.size, resume: rep.resume(), persistance: persistance.etat(),
+      tunnel: tunnel.etat(), maintenant: Date.now(),
+    });
+  };
+
+  /** Une requête passée par un tunnel ou un relais n'est JAMAIS « de cette machine » (cloudflared arrive en loopback). */
+  const viaRelais = (req: IncomingMessage) => ['cf-connecting-ip', 'cf-ray', 'x-forwarded-for', 'x-forwarded-host', 'forwarded', 'x-real-ip'].some(h => req.headers[h] !== undefined);
+  const depuisCetteMachine = (req: IncomingMessage) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '') && !viaRelais(req);
+  const jetonRegieDe = (req: IncomingMessage): string => {
+    const a = req.headers.authorization;
+    return typeof a === 'string' && a.startsWith('Bearer ') ? a.slice(7).trim() : '';
   };
 
   const http: Server = createServer((req: IncomingMessage, res: ServerResponse) => {
+    if (req.method === 'POST' && (req.url ?? '').split('?')[0] === '/arret') {
+      if (!o.surDemandeArret) { json(res, 404, { ok: false, erreur: 'introuvable' }); return; }
+      if (!depuisCetteMachine(req)) { json(res, 403, { ok: false, erreur: 'cette machine seulement' }); return; }
+      const jeton = jetonRegieDe(req);
+      if (!jeton || !jetonValide('regie', jeton)) { json(res, 401, { ok: false, erreur: 'jeton refusé' }); return; }
+      json(res, 202, { ok: true, arret: 'demande' });
+      setImmediate(o.surDemandeArret);
+      return;
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405, { allow: 'GET, HEAD', 'content-type': 'text/plain; charset=utf-8' });
       res.end('méthode non permise');
@@ -227,6 +267,7 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
       return;
     }
     if (p === '/sante') { json(res, 200, sante()); return; }
+    if (PAGES_FIXES[p]) { servirFichier(req, res, PAGES_FIXES[p]!); return; }
     if (p === '/config.json') { json(res, 200, configPublique(config, { version, run: rep.run?.id ?? null })); return; }
     if (servirStatique(req, res, p, montages)) return;
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' });
@@ -253,6 +294,7 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
   ecrireJournal(rep.journal());
   persistance.ecrire(instantane());
   dire(annonce);
+  tunnel.demarrer();
 
   // ── Alarme 1 Hz : le lecteur avance d'un nombre entier de secondes (rattrape un retard éventuel) ──────────────────
   let dernierTick = Date.now();
@@ -272,6 +314,7 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
       arrete = true;
       if (alarme) clearInterval(alarme);
       clearInterval(battement);
+      tunnel.arreter();
       for (const c of clients) {
         if (c.info && !c.ignoree && parSession.get(c.info.session) === c) distribuer(rep.fermer(c.info.session));
         c.ignoree = true;

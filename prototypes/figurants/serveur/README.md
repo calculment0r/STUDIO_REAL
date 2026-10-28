@@ -47,6 +47,11 @@ Test sans téléphone : `node test-micro-serveur.mjs <phrase.wav 16 kHz mono> ws
 
 ### Mode spectacle (les soirs de représentation, les 3 machines sont réservées au spectacle)
 
+> **Lancement du spectacle** : le serveur de spectacle (`apps/serveur-spectacle`) se lance, se supervise et s'arrête avec
+> `exploitation/lancer-spectacle.ps1` et `exploitation/arreter-spectacle.ps1` (mode d'emploi : `exploitation/LISEZMOI.md`, check-list :
+> `exploitation/CHECKLIST.md`). La variable `MODE_SPECTACLE` ci-dessous ne concerne que CE serveur des figurants (l'IA) ; le serveur
+> de spectacle ne la lit pas.
+
 ```
 MODE_SPECTACLE=1 OLLAMA_MACHINES="3090=http://100.74.134.89:11434,dgx2=http://<dgx2>:11434,dgx1=http://<dgx1>:11434" node index.mjs
 ```
