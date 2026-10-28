@@ -8,6 +8,7 @@ import {
   enNombre, lireValeur, memoiresRegie, signauxAttendus, type LigneRegie, type MemoireRegie, type SignalAttendu, type ValeurMemoire,
 } from '../etat/regie';
 import { mmss } from '../theme/format';
+import { SectionSorties } from './RailSorties';
 
 const arreter = (e: KeyboardEvent) => e.stopPropagation();
 const affiche = (v: ValeurMemoire | undefined) => (v === undefined || v === '' ? '—' : typeof v === 'boolean' ? (v ? 'oui' : 'non') : String(v));
@@ -120,6 +121,7 @@ export function PupitreRegie({ large = false }: { large?: boolean }) {
 
   return (
     <div className="rg">
+      <SectionSorties />
       <div className="pn-tete">
         <span className="pn-micro">MÉMOIRES · <span className="num">{liste.filter(m => m.ici).length}</span> ICI</span>
         {(cachees > 0 || (toutes && !large)) && (

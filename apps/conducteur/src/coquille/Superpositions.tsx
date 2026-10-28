@@ -1,5 +1,6 @@
-// Ce qui se pose par-dessus la mise en page : cadre « en lecture », alerte de sécurité (repères de la piste Sécurité et
-// alertes du moteur), pupitre de représentation (avec le pupitre de la régie), ouverture de projet, raccourcis.
+// Ce qui se pose par-dessus la mise en page : cadre « en lecture », alerte de sécurité (repères de la piste Sécurité,
+// alertes du moteur et alertes des sorties : acteur perdu, sortie périmée, chute des connectés, écart, serveur muet),
+// pupitre de représentation (avec le pupitre de la régie), ouverture de projet (onglets PROJET, SPECTACLE, LIENS), raccourcis.
 import { useMagasin } from '../etat/magasin';
 import { prevoir } from '../etat/moteur';
 import { deconnecterSalle, useSalle } from '../etat/serveur';
@@ -10,6 +11,9 @@ import { situation } from './derive';
 import { PupitreRegie } from './Regie';
 import { chargerEcho, chargerLive } from './projet-live';
 import { useGoRecent } from './useGoRecent';
+import { useSpectacle } from '../etat/spectacle';
+import { OngletsProjet, SpectacleProjet } from './LiensActeurs';
+import { useOngletProjet } from './rail-etat';
 
 /** Une alerte du moteur reste au bandeau ce temps-là (horloge murale) si personne ne l'accuse. */
 const DUREE_ALERTE_MS = 9000;
@@ -32,6 +36,7 @@ export function AlerteSecurite() {
   const accuses = useInterface(s => s.accuses);
   const poser = useInterface(s => s.poser);
   const journal = useMagasin(s => s.journalRegie);
+  const alertesSorties = useSpectacle(s => s.alertes);
   if (t === null) return null;
   const prev = prevoir(projet);
   const debut = (ev: string) => prev.moments.find(x => x.id === ev)?.debut ?? 0;
@@ -48,6 +53,18 @@ export function AlerteSecurite() {
         </div>
       );
     }
+  }
+  // Alertes des sorties (serveur de spectacle, rail) : tant que la condition dure, à accuser ; une nouvelle
+  // occurrence de la même condition revient au bandeau.
+  const sortie = alertesSorties.find(a => !accuses.includes('spec:' + a.cle));
+  if (sortie) {
+    return (
+      <div className="alerte" role="alert">
+        <span className="p" />
+        <span className="t"><span className="q">SORTIES · {sortie.code.toUpperCase()}</span><span className="x">{sortie.texte}</span></span>
+        <button onClick={() => poser({ accuses: [...accuses, 'spec:' + sortie.cle] })}>BIEN REÇU</button>
+      </div>
+    );
   }
   // Alertes du moteur (garde-fou échu, machine sans réponse, consigne non lue, étape bloquée…) : la plus récente,
   // quelques secondes, à accuser ; toutes restent dans le journal de régie.
@@ -73,6 +90,7 @@ export function Projets() {
   const ouvert = useInterface(s => s.projets);
   const basculer = useInterface(s => s.basculer);
   const titre = useMagasin(s => s.projet.titre);
+  const onglet = useOngletProjet(s => s.onglet);
   if (!ouvert) return null;
   const fermer = () => useInterface.getState().poser({ projets: false });
   const demo = () => {
@@ -90,6 +108,8 @@ export function Projets() {
           <span className="pn-droite pj-courant">{titre ?? 'Sans titre'}</span>
           <button className="pn-fermer" onClick={fermer}>ÉCHAP POUR FERMER</button>
         </div>
+        <OngletsProjet />
+        {onglet !== 'projet' ? <SpectacleProjet /> : <>
         <span className="pn-micro">PROJETS DU DÉPÔT · EN LOCAL</span>
         <div className="pj-cartes">
           <button className="pj-carte" onClick={() => void chargerLive().then(ok => { if (ok) fermer(); })}>
@@ -106,6 +126,7 @@ export function Projets() {
           </button>
         </div>
         <OuvrirProjet onOuvert={fermer} />
+        </>}
       </div>
     </div>
   );

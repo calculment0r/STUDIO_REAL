@@ -19,6 +19,8 @@ import { TiroirAssets, TYPE_ASSET, type AssetGlisse } from './TiroirAssets';
 import { AlerteSecurite, Aide, CadreEnLecture, Projets, Pupitre } from './Superpositions';
 import { useRaccourcis } from './raccourcis';
 import { useRelaisSortie } from '../sortie';
+import { demarrerSpectacle } from '../etat/spectacle';
+import { RailSorties } from './RailSorties';
 import './coquille.css';
 
 /** Moment visé par un dépôt : la sélection, sinon le moment en cours, sinon le premier. */
@@ -104,6 +106,7 @@ export function App() {
   useRaccourcis();
   useEffect(() => demarrerBoucle(), []);
   useRelaisSortie();   // traduit la lecture en scènes pour la sortie Écran scène (une seule fois pour toute l'app)
+  useEffect(() => demarrerSpectacle(), []);   // client régie du serveur de spectacle (relié si l'onglet a ses réglages)
   const demarre = useRef(false);
   useEffect(() => {
     if (demarre.current) return;   // StrictMode monte deux fois en développement
@@ -118,6 +121,7 @@ export function App() {
     <div className="coquille">
       <CadreEnLecture />
       <EnTete />
+      <RailSorties />
       <div className="corps">
         {vue !== 'tracks' && (
           <div className="haut">
