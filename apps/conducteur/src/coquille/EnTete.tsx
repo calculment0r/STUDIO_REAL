@@ -14,6 +14,7 @@ import { IcoDebut, IcoLecture, IcoLoupe, IcoPause, IcoPleinEcran, IcoProjet, Ico
 import { Presence } from '../collab';
 import { basculerPleinEcran } from './raccourcis';
 import { BoutonSortieScene } from '../sortie';
+import { BoutonEmulateur } from './Emulateur';
 import { etatRepresentation } from './etat-scene';
 import { useGoRecent } from './useGoRecent';
 
@@ -118,6 +119,7 @@ export function EnTete() {
       <button className={'btn-carre si-moyen' + (ui.pupitre ? ' on' : '')} onClick={() => ui.basculer('pupitre')} title="Pupitre de représentation · touche P"><IcoPupitre /></button>
       <button className="btn-carre disp-txt si-moyen" onClick={() => ui.basculer('aide')} title="Raccourcis · touche ?">?</button>
       <BoutonSortieScene />
+      <BoutonEmulateur />
       <button className="btn-carre" onClick={basculerPleinEcran} title={ui.pleinEcran ? 'Quitter le plein écran · F' : 'Plein écran · F'}>
         <IcoPleinEcran actif={ui.pleinEcran} />
       </button>

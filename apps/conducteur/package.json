@@ -12,6 +12,7 @@
     "pages": "tsc -b && vite build --base ./ --outDir ../../conducteur --emptyOutDir"
   },
   "dependencies": {
+    "@studio-real/emulateur": "*",
     "@studio-real/modele": "*",
     "@studio-real/theme": "*",
     "@types/qrcode": "^1.5.6",
