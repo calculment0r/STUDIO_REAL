@@ -1,3 +1,5 @@
+> **Remplacé par packages/protocole/PROTOCOLE.md** ([protocole unique v2](../../packages/protocole/PROTOCOLE.md)) ; ce document reste valable pour le code actuel jusqu’à la bascule (lot L2).
+
 # Protocole de la salle de projet (WebSocket)
 
 Un **Durable Object `SalleProjet` par projet**. Il tient la copie de travail partagée du projet et relaie la présence,
