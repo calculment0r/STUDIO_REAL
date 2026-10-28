@@ -15,3 +15,10 @@ medias-locales/
 exploitation/spectacle.secrets.json
 exploitation/etat/
 exploitation/journaux/
+# exploitation : PID et journaux de console du lancement, archives d'après-spectacle, identifiants de tunnel (par prudence :
+# ils vivent dans %USERPROFILE%\.cloudflared, jamais dans le dépôt)
+exploitation/run/
+exploitation/archives/
+exploitation/cloudflared/*.json
+exploitation/cloudflared/*.pem
+exploitation/cloudflared/config.yml

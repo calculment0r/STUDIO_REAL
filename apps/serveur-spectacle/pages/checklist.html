@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>STUDIO REAL · check-list du spectacle</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/theme/theme.css">
+  <script src="/theme/venus.js" defer></script>
+  <style>
+    body { padding: var(--s6) var(--s4); }
+    main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s4); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; }
+    h1, h2, h3 { font-family: var(--f-disp); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: var(--s5) 0 var(--s2); }
+    h1 { font-size: 20px; margin: 0; }
+    h2 { font-size: 16px; color: var(--ort); padding-top: var(--s4); box-shadow: inset 0 1px 0 var(--filet-14); }
+    h3 { font-size: 13px; color: var(--cy); }
+    p { margin: var(--s2) 0; color: var(--ink2); }
+    ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+    li { display: flex; gap: var(--s3); align-items: flex-start; padding: var(--s2) var(--s3); border-radius: var(--nl-8); background: var(--tile); }
+    li.fait { color: var(--ink3); text-decoration: line-through; }
+    li input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--gt); }
+    li.puce::before { content: ''; width: 5px; height: 5px; margin: 8px 7px 0 5px; border-radius: 50%; background: var(--ink3); flex: none; }
+    code { font-family: var(--f-mono); font-size: .9em; color: var(--cy); background: var(--well2); padding: 1px 5px; border-radius: var(--nl-4); }
+    .outils { display: flex; gap: var(--s4); align-items: center; font-size: 12px; color: var(--ink3); }
+    .outils button { padding: var(--s2) var(--s4); border-radius: var(--nl-7); background: var(--tile); box-shadow: inset 0 0 0 1px var(--filet-20); color: var(--ink); }
+    .outils button:hover { background: var(--tile2); }
+    @media print {
+      .outils, header a { display: none !important; }
+      li { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="sr-marque"><span class="sr-marque-carre"></span>
+        <span class="sr-marque-titres"><b class="sr-marque-nom">Studio Real</b><span class="sr-marque-sous">check-list du spectacle</span></span></div>
+      <a href="/sante.html">Page de santé</a>
+    </header>
+    <div class="outils">
+      <button id="imprimer" type="button">Imprimer</button>
+      <button id="raz" type="button">Tout décocher</button>
+      <span>Les cases cochées restent dans ce navigateur (aucune donnée envoyée).</span>
+    </div>
+    <div id="contenu"><p>Chargement…</p></div>
+  </main>
+  <script>
+  'use strict';
+  // Lit /checklist.md (exploitation/CHECKLIST.md) et l'affiche : titres, cases à cocher mémorisées, puces, paragraphes.
+  // Tout est construit avec textContent (jamais innerHTML).
+  var CLE = 'checklist-spectacle:';
+  var cases = [];
+
+  function lire(cle) { try { return localStorage.getItem(CLE + cle) === '1'; } catch (e) { return false; } }
+  function ecrire(cle, v) { try { if (v) localStorage.setItem(CLE + cle, '1'); else localStorage.removeItem(CLE + cle); } catch (e) { /* rien */ } }
+
+  function enligne(parent, texte) {
+    texte.split(/(\*\*[^*]+\*\*|`[^`]+`)/).forEach(function (m) {
+      if (!m) return;
+      if (m.slice(0, 2) === '**') { var b = document.createElement('b'); b.textContent = m.slice(2, -2); parent.appendChild(b); }
+      else if (m[0] === '`') { var c = document.createElement('code'); c.textContent = m.slice(1, -1); parent.appendChild(c); }
+      else parent.appendChild(document.createTextNode(m));
+    });
+  }
+
+  function afficher(md) {
+    var racine = document.getElementById('contenu');
+    racine.textContent = '';
+    var ul = null, section = '';
+    function liste() { if (!ul) { ul = document.createElement('ul'); racine.appendChild(ul); } return ul; }
+    md.split(/\r?\n/).forEach(function (l, i) {
+      var m;
+      if ((m = /^(#{1,3})\s+(.*)$/.exec(l))) {
+        ul = null;
+        var h = document.createElement('h' + m[1].length);
+        enligne(h, m[2]);
+        racine.appendChild(h);
+        if (m[1].length <= 2) section = m[2];
+      } else if ((m = /^\s*[-*]\s+\[( |x|X)\]\s+(.*)$/.exec(l))) {
+        var cle = section + '|' + m[2];
+        var li = document.createElement('li');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = lire(cle);
+        li.className = cb.checked ? 'fait' : '';
+        cb.addEventListener('change', function () { ecrire(cle, cb.checked); li.className = cb.checked ? 'fait' : ''; });
+        var span = document.createElement('label');
+        enligne(span, m[2]);
+        li.appendChild(cb); li.appendChild(span);
+        liste().appendChild(li);
+        cases.push({ cb: cb, li: li, cle: cle });
+      } else if ((m = /^\s*[-*]\s+(.*)$/.exec(l))) {
+        var p = document.createElement('li');
+        p.className = 'puce';
+        var s = document.createElement('span');
+        enligne(s, m[1]);
+        p.appendChild(s);
+        liste().appendChild(p);
+      } else if (/^\s*---+\s*$/.test(l) || !l.trim()) {
+        if (!l.trim() || /^\s*---/.test(l)) ul = null;
+      } else {
+        ul = null;
+        var para = document.createElement('p');
+        enligne(para, l.trim());
+        racine.appendChild(para);
+      }
+    });
+  }
+
+  fetch('/checklist.md', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
+    .then(afficher)
+    .catch(function () { document.getElementById('contenu').textContent = 'Check-list introuvable (exploitation/CHECKLIST.md).'; });
+
+  document.getElementById('raz').addEventListener('click', function () {
+    cases.forEach(function (c) { c.cb.checked = false; c.li.className = ''; ecrire(c.cle, false); });
+  });
+  document.getElementById('imprimer').addEventListener('click', function () { window.print(); });
+  // Papier : clair, quel que soit le thème de l'écran.
+  var avant = 'dark';
+  window.addEventListener('beforeprint', function () { avant = document.documentElement.dataset.theme || 'dark'; document.documentElement.dataset.theme = 'light'; });
+  window.addEventListener('afterprint', function () { document.documentElement.dataset.theme = avant; });
+  </script>
+</body>
+</html>

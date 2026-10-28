@@ -18,6 +18,8 @@
     "lint": "npm run lint -w conducteur",
     "pages": "npm run pages -w conducteur",
     "dev:spectacle": "npm start -w @studio-real/serveur-spectacle",
+    "spectacle": "powershell -NoProfile -File exploitation/lancer-spectacle.ps1",
+    "spectacle:arret": "powershell -NoProfile -File exploitation/arreter-spectacle.ps1",
     "dev:figurants": "node prototypes/figurants/serveur/index.mjs",
     "dev:serveur": "npm run dev -w serveur"
   }

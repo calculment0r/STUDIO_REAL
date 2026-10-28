@@ -15,6 +15,10 @@ export const PORT_DEFAUT = 8790;
 export const ROLES_JETON = ['regie', 'acteur', 'agent'] as const;
 export type RoleJeton = (typeof ROLES_JETON)[number];
 
+/** Tunnel qui donne au serveur son adresse publique (le script de lancement le démarre ; le serveur sonde l'adresse). */
+export const TYPES_TUNNEL = ['aucun', 'cloudflare-nomme', 'tailscale-funnel'] as const;
+export type TypeTunnel = (typeof TYPES_TUNNEL)[number];
+
 export interface ConfigSpectacle {
   /** nom court du spectacle */
   spectacle: string;
@@ -31,6 +35,8 @@ export interface ConfigSpectacle {
   clients: { telephone: string; conducteur: string };
   /** dossier d'exploitation : secrets, état, journaux */
   exploitation: string;
+  /** tunnel de l'adresse publique : `nom` = nom du tunnel nommé Cloudflare (cloudflared tunnel run <nom>) */
+  tunnel: { type: TypeTunnel; nom?: string };
 }
 
 export interface Secrets { jetons: Record<RoleJeton, string> }
@@ -44,6 +50,7 @@ const DEFAUT: ConfigSpectacle = {
   medias: { dossier: 'medias-locales' },
   clients: { telephone: 'apps/telephone/dist', conducteur: 'apps/conducteur/dist' },
   exploitation: 'exploitation',
+  tunnel: { type: 'aucun' },
 };
 
 const estObjet = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
@@ -55,6 +62,9 @@ export function normaliserConfig(x: unknown): ConfigSpectacle {
   const a = estObjet(x.adresses) ? x.adresses : {};
   const m = estObjet(x.medias) ? x.medias : {};
   const c = estObjet(x.clients) ? x.clients : {};
+  const t = estObjet(x.tunnel) ? x.tunnel : {};
+  const typeTunnel = t.type === undefined ? DEFAUT.tunnel.type : t.type;
+  if (!(TYPES_TUNNEL as readonly unknown[]).includes(typeTunnel)) throw new Error(`Configuration : tunnel.type invalide (${String(t.type)}) ; attendu : ${TYPES_TUNNEL.join(', ')}.`);
   const port = x.port === undefined ? DEFAUT.port : Number(x.port);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error(`Configuration : port invalide (${String(x.port)}).`);
   const config: ConfigSpectacle = {
@@ -66,7 +76,9 @@ export function normaliserConfig(x: unknown): ConfigSpectacle {
     medias: { dossier: texte(m.dossier, DEFAUT.medias.dossier) },
     clients: { telephone: texte(c.telephone, DEFAUT.clients.telephone), conducteur: texte(c.conducteur, DEFAUT.clients.conducteur) },
     exploitation: texte(x.exploitation, DEFAUT.exploitation),
+    tunnel: { type: typeTunnel as TypeTunnel },
   };
+  if (typeof t.nom === 'string' && t.nom.trim()) config.tunnel.nom = t.nom.trim();
   if (typeof x.representation === 'string' && x.representation.trim()) config.representation = x.representation.trim();
   if (typeof a.secours === 'string' && a.secours.trim()) config.adresses.secours = a.secours.trim();
   return config;

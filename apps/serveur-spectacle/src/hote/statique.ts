@@ -14,7 +14,7 @@ export const MIME: Record<string, string> = {
   '.webp': 'image/webp', '.avif': 'image/avif', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2',
   '.ttf': 'font/ttf', '.otf': 'font/otf', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4',
   '.mp4': 'video/mp4', '.webm': 'video/webm', '.vtt': 'text/vtt; charset=utf-8', '.wasm': 'application/wasm',
-  '.webmanifest': 'application/manifest+json',
+  '.webmanifest': 'application/manifest+json', '.md': 'text/markdown; charset=utf-8',
 };
 
 /** Nom versionné : `<nom>.<8 hexadécimaux>.<ext>` → mis en cache un an, immuable. */
@@ -78,6 +78,17 @@ export function servirStatique(req: IncomingMessage, res: ServerResponse, chemin
   if (!t) { repondre(res, 404, 'introuvable'); return true; }
   envoyerFichier(req, res, t.fichier, t.st);
   return true;
+}
+
+/** Sert UN fichier choisi par le code (page de santé, check-list) ; 404 s'il manque. Jamais un chemin venu du client. */
+export function servirFichier(req: IncomingMessage, res: ServerResponse, fichier: string): void {
+  try {
+    const st = statSync(fichier);
+    if (!st.isFile()) throw new Error('pas un fichier');
+    envoyerFichier(req, res, fichier, st);
+  } catch {
+    repondre(res, 404, 'introuvable');
+  }
 }
 
 function envoyerFichier(req: IncomingMessage, res: ServerResponse, fichier: string, st: Stats) {
