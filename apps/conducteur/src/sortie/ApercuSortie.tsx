@@ -11,7 +11,7 @@ import { VERSION_SORTIE, type TypeScene } from './protocole';
 import './sortie.css';
 
 const NOMS: Record<TypeScene, string> = {
-  noir: 'noir', 'accueil-qr': 'QR d’accueil', streamer: 'direct', vote: 'vote', chrono: 'chrono', titre: 'titre', image: 'image', video: 'vidéo', page: 'page',
+  noir: 'noir', 'accueil-qr': 'QR d’accueil', streamer: 'direct', vote: 'vote', chrono: 'chrono', titre: 'titre', image: 'image', video: 'vidéo', page: 'page', mur: 'mur', visio: 'visio',
 };
 const nom = (t: TypeScene | null | undefined): string => (t ? NOMS[t] : '—');
 

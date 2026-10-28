@@ -7,8 +7,10 @@ import type { CalqueReactions } from './calque/calque';
 import type { GestionFlux, EtatFlux } from './flux';
 import { mmssRebours, restantCompteur } from './horloge';
 import type { BibliothequeMedias } from './medias';
+import { SceneMur, type DonneesMur } from './mur';
 import { adresseLisible, cleScene, type EtatScene, type Scene } from './protocole';
 import { cadrageAuto, type PoolVideos } from './videos';
+import { SceneVisio } from './visio';
 
 export const LARGEUR = 1920;
 export const HAUTEUR = 1080;
@@ -30,6 +32,8 @@ export interface Services {
   secoursDefaut?: string;
   /** un média demandé est introuvable (oui) ou de nouveau trouvé / plus à l'écran (non) : remonte aux régies */
   absent?: (asset: string, oui: boolean) => void;
+  /** messages et voix du mur arrivés par effets depuis la dernière vue (scène « mur ») */
+  mur?: DonneesMur;
 }
 export const ContexteServices = createContext<Services | null>(null);
 
@@ -101,7 +105,11 @@ export function hotePage(url: string): string {
  * La page gardée est posée AVANT les couches (.so-page-gardee, pas .so-couche) : la dernière .so-couche reste la
  * scène du dessus (essais de bout en bout).
  */
-export function Fondus({ scene, n, fondu, miniature = false }: { scene: Scene | null; n: number; fondu: number; miniature?: boolean }) {
+export function Fondus({ scene, n, fondu, miniature = false, surAffiche }: {
+  scene: Scene | null; n: number; fondu: number; miniature?: boolean;
+  /** la couche `n` est À L'ÉCRAN (rendue visible : le fondu commence) — accusé d'affichage au serveur de spectacle */
+  surAffiche?: (n: number) => void;
+}) {
   const [couches, setCouches] = useState<Couche[]>([]);
   /** adresse de la dernière scène « page » montrée (page de sortie seulement) : son iframe reste montée */
   const [pageGardee, setPageGardee] = useState<string | null>(null);
@@ -130,6 +138,11 @@ export function Fondus({ scene, n, fondu, miniature = false }: { scene: Scene | 
   }, [cle]);
   // l'ancienne couche part quand la nouvelle est entièrement visible
   const derniere = couches[couches.length - 1];
+  const rappelAffiche = useRef(surAffiche);
+  rappelAffiche.current = surAffiche;
+  useEffect(() => {
+    if (derniere?.visible) rappelAffiche.current?.(derniere.n);
+  }, [derniere?.visible, derniere?.n]);
   useEffect(() => {
     if (!derniere?.visible || couches.length < 2) return;
     const t = setTimeout(() => setCouches((l) => l.slice(-1)), derniere.fondu + 50);
@@ -181,7 +194,15 @@ export function RenduScene({ scene, n, miniature }: { scene: Scene; n: number; m
     case 'titre': return <SceneTitre scene={scene} />;
     case 'image': return <SceneImage scene={scene} miniature={miniature} />;
     case 'video': return <SceneVideo scene={scene} n={n} miniature={miniature} />;
+    case 'mur': return <SceneMurServie scene={scene} />;
+    case 'visio': return <SceneVisio scene={scene} miniature={miniature} />;
   }
+}
+
+/** Le mur avec ses données vivantes (page de sortie) ; la vignette de la régie le dessine avec les seuls réglages. */
+function SceneMurServie({ scene }: { scene: Extract<Scene, { type: 'mur' }> }) {
+  const s = useContext(ContexteServices);
+  return <SceneMur scene={scene} donnees={s?.mur ?? null} traceQr={traceQr} />;
 }
 
 // ── QR d'accueil ────────────────────────────────────────────────────────────────────────────────────────────────

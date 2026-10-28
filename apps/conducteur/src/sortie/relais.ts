@@ -9,6 +9,7 @@
 //   configurerSortie({ titre, adresse, code, consigne, secours })          → QR d'accueil, vidéo de secours
 //   precharger(['coupure_flux.mp4'])   → la sortie met la vidéo en mémoire avant la bascule
 //   surFinVideo(fn)                    → une vidéo « une seule fois » est finie sur la sortie
+//   choisirSourceSortie({ url, jeton }) → la sortie écoute le serveur de spectacle (acteur « scene ») ; null : canal local
 //   rechargerSortie()                  → la sortie se recharge (message `recharger`, ou sa fenêtre si elle est périmée)
 // État observable : le magasin zustand `useSortie` (fenêtre fermée / ouverte / connectée, scène en cours…) et les
 // RETOURS de la sortie : scène réellement vue (sceneVue, sceneVueComplete), écart publiée ≠ vue (ecart), version et
@@ -17,9 +18,9 @@ import { create } from 'zustand';
 import type { StatutTransport, Transport } from './canal';
 import {
   BATTEMENT_MS, borneFondu, cleScene, configParDefaut, FONDU_DEFAUT_MS, lireMessageSortie, msgConfig, msgEtat, msgEvenement,
-  msgHeure, msgPrecharger, msgRecharger, msgScene, PERTE_MS, adresseEntree, VERSION_SORTIE,
+  msgHeure, msgPrecharger, msgRecharger, msgScene, msgSource, PERTE_MS, adresseEntree, VERSION_SORTIE,
   type Cadrage, type ConfigSortie, type EtatScene, type EtatSortie, type EvenementScene, type Gabarit, type OptionVote, type RaisonRefus,
-  type Scene, type TypeScene,
+  type Scene, type SourceSpectacle, type TypeScene,
 } from './protocole';
 
 export type EtatFenetre = 'fermee' | 'ouverte' | 'connectee';
@@ -229,6 +230,13 @@ export function rechargerSortie(): void {
   const v = useSortie.getState().versionSortie;
   if (v !== null && v !== VERSION_SORTIE) rechargerFenetreRef?.();
   useSortie.setState({ refus: null });
+}
+
+/** Dit à la sortie d'écouter le serveur de spectacle (elle y devient l’acteur « scene » : ses vues font la scène, le canal
+ *  local reste le secours), ou de revenir au canal local et à la salle (null). Même machine : le jeton ne quitte pas le
+ *  navigateur (BroadcastChannel). */
+export function choisirSourceSortie(spectacle: SourceSpectacle | null): void {
+  diffuser(msgSource(spectacle));
 }
 
 /** Branche un transport (local, salle) ; renvoie la fonction qui le retire. */

@@ -6,6 +6,9 @@ ainsi que les messages de la sortie écran scène (`apps/conducteur/src/sortie/p
 
 - Types : `src/spectacle.ts`. Validation (à la main, sans dépendance) : `src/lire.ts`, fonctions
   `lireMessageClient(x)` et `lireMessageServeur(x)` qui renvoient `{ message }` ou `{ message: null, raison }`.
+- Client commun (reconnexion, `hello` refait à chaque ouverture, file rejouée, ping → horloge du serveur) :
+  `src/client.ts`, `transportWebSocket(url, jeton, {hello})` et `transportMemoire({hello})` (tests, émulateur). Utilisé par
+  le téléphone (`@studio-real/ui-telephone`) et par la sortie écran scène (`apps/conducteur/src/sortie/client-spectacle.ts`).
 - Origine des décisions : `docs/audit-2026-10/01-architecture.md` §4.3 et §4.4, `02-sorties-et-emulateur.md` §4.3.
 - Le calcul de ce que voit chaque acteur est dans le modèle (`packages/modele/src/acteurs.ts`, `vueActeur()`).
 
@@ -119,6 +122,30 @@ l'envoi, où `"$question"` a été remplacé par le paramètre `question` de l'�
 qu'un envoi ne le remplace pas : la vue se recalcule à tout instant depuis le parcours du lecteur, ce qui rend la reprise
 possible sans journal côté téléphone. Pour l'écran scène, `params` a la forme d'une `Scene` de la sortie
 (`apps/conducteur/src/sortie/protocole.ts`), plus les écrans `mur`, `visio`, `flux-video`.
+
+### L'acteur `scene` (sortie écran scène)
+
+La sortie du Conducteur (`sortie.html#spectacle=<wss://…/ws>&jeton=…`) se présente en
+`hello{role:'acteur', acteur:'scene', app{version, build}, capacites}` (capacités = écrans qu'elle sait montrer) et accuse
+chaque vue quand elle est **à l'écran** (`in{k:'accuse', data{vseq, affiche}}`, avec `refus:'capacite'` pour un écran
+inconnu, `'invalide'` pour des réglages inutilisables). Battement `etat` 1 fois par seconde avec `media[]` (préchargés,
+en lecture, introuvables). Écrans et réglages qu'elle comprend (conversion : `sceneDeVue`, `sortie/traduction.ts`) :
+
+| `ecran` | `params` |
+|---|---|
+| `noir` (ou `null`) | — |
+| `accueil-qr`, `qr` | `titre?`, `consigne?`, `code?`, `adresse?` (défaut : configuration de la sortie) |
+| `video` | `asset` (nom d'un média LOCAL, sans chemin), `boucle?` (défaut vrai), `son?`, `cadrage?`, `legende?` |
+| `flux-video` | `asset?` (défaut `flux_insta_jim.mp4`), lue une fois, avec le son |
+| `titre` | `titre` ou `texte`, `surtitre?`, `sousTitre?` |
+| `mur` | `titre?`, `messages?[]{id?, pseudo, texte, couleur? (jeton « --cy »), grand?}`, `vote?` (objet `{etat:'ouvert'\|'revele', numero?, question, reponses[], comptes?[], pourcents?[], resultat?}` ou texte `'ouvert'\|'revele'\|'ferme'` avec ces champs à côté ; `scores` = résultats imposés), `audio?` (`'x.mp3'` ou `{asset, depuis? (heure serveur de sa position 0, défaut vue.at), boucle?}`, `null` = aucun), `qr?` (vrai : QR d'accueil en coin) |
+| `vote` | `question`, `reponses[]`, `etat?`, `comptes?[]`, `gagnant?` |
+| `visio` | `postes[]` (ids, ou `{id, nom}`), `son?{<poste>: bool}` (défaut coupé), `noms?{<poste>: texte}`, `disposition?` (`cote` \| `plein`), `plein?` |
+| `streamer`, `image`, `chrono`, `page` | comme les scènes de la sortie (`page` reste l'exception : iframe) |
+
+Tout écran porte en plus `precharger?[]` (médias à mettre en mémoire). Effets (`fx.kind`) : `message` (ajout au mur),
+`a-vote` `{pseudo?, index?}` (pop « @x a voté », +1 sur la réponse), `pop`, `reaction`, `coeurs`, `fusee`, `alerte`,
+`gabarit` ; les autres sont ignorés. La sortie ne lit jamais de fichier de banque : tout est dans la vue.
 
 ## Exemple : la question 1 d'Écho
 
