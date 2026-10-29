@@ -161,6 +161,20 @@ describe('lireMessageServeur', () => {
     expect(refusS({ t: 'bienvenue', v: 1, role: 'acteur', session: SESSION, ts: 0, vue: null, cseq: 0 })).toMatch(/^version/);
   });
 
+  it('bienvenue porte le pseudo retenu par le serveur (2 à 20 caractères)', () => {
+    const base = { t: 'bienvenue', v: 2, role: 'acteur', acteur: 'public', session: SESSION, ts: 1, vue: null, cseq: 0 };
+    expect(okS({ ...base, pseudo: 'spectateur_412' })).toMatchObject({ pseudo: 'spectateur_412' });
+    expect(okS(base)).not.toHaveProperty('pseudo');
+    expect(refusS({ ...base, pseudo: 'x' })).toMatch(/pseudo/);
+    expect(refusS({ ...base, pseudo: 'x'.repeat(21) })).toMatch(/pseudo/);
+  });
+
+  it('salle : vote au résultat forcé par la banque (force)', () => {
+    expect(okS({ t: 'salle', ts: 1, acteurs: {}, vote: { q: '1', recus: 3, parts: [1, 2], force: true } })).toMatchObject({ vote: { force: true } });
+    expect((okS({ t: 'salle', ts: 1, acteurs: {}, vote: { q: '1', recus: 3, parts: [1, 2] } }) as { vote?: object }).vote).not.toHaveProperty('force');
+    expect(refusS({ t: 'salle', ts: 1, acteurs: {}, vote: { q: '1', recus: 3, parts: [1, 2], force: 'oui' } })).toMatch(/vote.force/);
+  });
+
   it('lecture : forme contrôlée, journal long accepté', () => {
     const etat = { t: 12, moment: 'b5_q1', etape: 'b5_q1_s', tEtape: 2, parcours: [['b1_entree', 'b1_entree_s', 0]], journal: Array(500).fill({ t: 1 }) };
     expect(okS({ t: 'lecture', etat, par: 'serveur', ts: 1 })).toMatchObject({ t: 'lecture', par: 'serveur' });

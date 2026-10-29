@@ -3,7 +3,7 @@
 import { TY_MACHINE, type Acteur, type Condition, type Envoi, type Etape, type Moment, type Projet, type Sortie as SortieProjet } from '@studio-real/modele';
 import type { MessageClient, MessageServeur, MsgHello, Role } from '@studio-real/protocole';
 import { Representation } from './representation';
-import type { Sortie } from './types';
+import type { BanquesRepresentation, Sortie } from './types';
 
 export const T0 = Date.UTC(2026, 10, 14, 19, 30, 0);
 
@@ -66,9 +66,9 @@ export function projetBanc(extra: Partial<Projet> = {}): Projet {
 }
 
 /** Une représentation sur le banc, son horloge, et des raccourcis pour parler au noyau. */
-export function banc(projet: Projet = projetBanc(), graine = 42) {
+export function banc(projet: Projet = projetBanc(), graine = 42, banques?: BanquesRepresentation) {
   const h = { now: T0 };
-  const rep = new Representation({ projet, horloge: () => h.now, alea: aleaFixe(3) });
+  const rep = new Representation({ projet, horloge: () => h.now, alea: aleaFixe(3), ...(banques ? { banques } : {}) });
   const cseq: Record<string, number> = {};
   const b = {
     rep, h,

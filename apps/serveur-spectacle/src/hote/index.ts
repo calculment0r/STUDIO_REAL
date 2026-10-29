@@ -2,11 +2,39 @@
 // (node --import tsx src/hote/index.ts). Variables : SPECTACLE_CONFIG (fichier de configuration), PORT, SANS_REPRISE=1.
 // Codes de sortie : 0 arrêt propre, 1 exception (instantané et journal écrits), 2 port déjà pris.
 // Arrêt propre : Ctrl+C, SIGTERM, SIGHUP, SIGBREAK, ou `POST /arret` avec le jeton de la régie, depuis cette machine.
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { banqueFigurants, type BanquesRepresentation, type QuestionVote, type Representation } from '../noyau';
+import { lireInterdits } from '../noyau/moderation';
 import { RACINE, chemin, lireConfig, lireOuCreerSecrets, versionGit } from './config';
 import { ErreurPortPris, demarrerServeur, type ServeurSpectacle } from './serveur';
 
 const env = process.env;
+const DOSSIER_BANQUES = join(RACINE, 'prototypes', 'figurants', 'banques');
+
+/**
+ * Banques du mur, lues sur disque et passées au noyau (qui ne lit aucun fichier) : la liste des mots interdits
+ * (prototypes/figurants/banques/interdits.txt, une entrée par ligne, « # » = commentaire) et les questions des votes
+ * (prototypes/figurants/banques/<banque>/votes.json, <banque> = `agent.config.banques` de l'acteur figurants du projet).
+ * Un fichier absent ou illisible est signalé et ignoré : le serveur tourne sans.
+ */
+function chargerBanques(rep: Representation): void {
+  const b: BanquesRepresentation = {};
+  const fichierInterdits = join(DOSSIER_BANQUES, 'interdits.txt');
+  try {
+    if (existsSync(fichierInterdits)) b.interdits = lireInterdits(readFileSync(fichierInterdits, 'utf8'));
+  } catch (e) { console.warn(`Liste des mots interdits illisible (${fichierInterdits}) : ${(e as Error).message}`); }
+  const banque = banqueFigurants(rep.projet);
+  const fichierVotes = banque ? join(DOSSIER_BANQUES, banque, 'votes.json') : null;
+  try {
+    if (fichierVotes && existsSync(fichierVotes)) {
+      const brut = JSON.parse(readFileSync(fichierVotes, 'utf8')) as { questions?: unknown };
+      b.votes = (Array.isArray(brut.questions) ? brut.questions : []) as QuestionVote[];
+    }
+  } catch (e) { console.warn(`Banque des votes illisible (${fichierVotes}) : ${(e as Error).message}`); }
+  rep.definirBanques(b);
+  console.log(`Mur : ${b.interdits?.length ?? 0} mot(s) interdit(s), ${b.votes?.length ?? 0} question(s) de vote${banque ? ` (banque « ${banque} »)` : ''}.`);
+}
 let serveur: ServeurSpectacle | null = null;
 let arret = false;
 /** Arrêt propre : sockets fermées, instantané et journal écrits, puis sortie 0. Idempotent. */
@@ -49,6 +77,8 @@ async function principal() {
     }
     throw e;
   }
+  // Les vues complétées (question et réponses des votes) partent au prochain recalcul, au plus 1 s après.
+  chargerBanques(serveur.representation);
   console.log(`PRET : http://localhost:${serveur.port}  (santé : /sante · configuration publique : /config.json · WebSocket : /ws)`);
   for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP', 'SIGBREAK'] as const) process.on(s, () => arreter(s));
 }

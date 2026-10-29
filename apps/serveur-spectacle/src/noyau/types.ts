@@ -3,6 +3,7 @@
 // entrées du lecteur (le lecteur du modèle est déterministe : même projet + mêmes entrées + même graine = même état).
 import type { Projet, Signaux } from '@studio-real/modele';
 import type { AppClient, EcranAffiche, MessageServeur, MsgFx, Role, VueDiffusee } from '@studio-real/protocole';
+import type { Verdict } from './moderation';
 
 /** À qui envoyer un message : une session, un acteur (toutes ses sessions, ou une personne de la foule), un rôle, tous. */
 export type Destination =
@@ -24,6 +25,27 @@ export interface OptionsRepresentation {
   horloge: () => number;
   /** tirage uniforme dans [0, 1) */
   alea: () => number;
+  /** banques lues par l'hôte (mots interdits, questions des votes) ; absentes : liste vide, aucune question */
+  banques?: BanquesRepresentation;
+}
+
+/** Une question de vote d'une banque (prototypes/figurants/banques/<banque>/votes.json). */
+export interface QuestionVote {
+  numero: number;
+  question: string;
+  reponses: string[];
+  /** résultat FORCÉ : comptes montrés à la révélation à la place des voix réelles (vote truqué d'Écho) */
+  scores?: number[];
+  /** phrase de résultat de la banque (montrée à la révélation) */
+  resultat?: string;
+}
+
+/** Données que l'hôte lit sur disque et passe au noyau (le noyau ne lit aucun fichier). */
+export interface BanquesRepresentation {
+  /** entrées de la liste des mots interdits (une par ligne de interdits.txt, voir moderation.ts) */
+  interdits?: string[];
+  /** questions des votes : le serveur complète les vues `mur` et `vote` avec leur texte et leurs réponses */
+  votes?: QuestionVote[];
 }
 
 /** Entrée du lecteur, journalisée pour pouvoir le reconstruire à l'identique (restaurer). `x` : répétitions. */
@@ -70,6 +92,12 @@ export interface PersonneSalle {
   rttMs?: number;
   /** heure serveur du dernier signe de vie */
   vu: number;
+  /** pseudo montré au mur (filtré, unique parmi les personnes de l'acteur, gardé à la reconnexion) */
+  pseudo?: string;
+  /** couleur du pseudo au mur : jeton CSS du thème (« --cy ») */
+  couleur?: string;
+  /** heures serveur des derniers messages (limite de débit : 8 par 10 s) */
+  messages?: number[];
 }
 
 /** Vue diffusée d'un flux : un acteur (vue commune) ou une personne (`<acteur>/<personne>`, envois ciblés). */
@@ -111,7 +139,15 @@ export interface Forcage {
   envois: number;
 }
 
-export interface TexteRecu { ts: number; acteur: string; personne: string; q?: string; texte: string }
+export interface TexteRecu {
+  ts: number; acteur: string; personne: string; q?: string;
+  /** texte reçu, tel quel */
+  texte: string;
+  pseudo?: string;
+  /** décision de la modération ; `affiche` = texte montré au mur quand des mots ont été masqués */
+  verdict?: Verdict;
+  affiche?: string;
+}
 
 /** État COMPLET de la représentation : l'instantané est une copie de cet objet. */
 export interface EtatRepresentation {
@@ -136,6 +172,8 @@ export interface EtatRepresentation {
   voteOuvert: boolean;
   /** 200 derniers textes reçus */
   textes: TexteRecu[];
+  /** effets fabriqués pour le mur (numérotation des `message` et `a-vote`) */
+  nMur: number;
   /** acteur → emoji → nombre */
   reactions: Record<string, Record<string, number>>;
   /** clé de flux → vue diffusée (son `vseq` est le numéro courant du flux) */

@@ -58,7 +58,7 @@ Un jeton par rôle (et par acteur nommé). Le jeton n'est jamais conservé dans 
 | `in` | acteur | `cseq`, `k`, `q?` (question), `data`, `heure?` (tableau suivant) | `ack` |
 | `etat` | acteur | battement : `heure`, `ecran` (`{vseq, ecran, cle?, depuis}` ou `null`), `visible`, `enLigne?`, `rttMs?`, `decalageMs?`, `media?[]{asset, pret 0→1, lecture}`, `batterie?` (0→100), `erreurs?[]` | — |
 | `agent.ack` | agent | `n`, `statut` (`recu` \| `fait` \| `echec` \| `refus`), `detail?` | — (`fait` → signal `accuse:<étape>` du lecteur) |
-| `agent.in` | agent | `cseq`, `k` (nom : `say`, `stat`, `transcript`, `fin-appel`…), `data` | `ack` |
+| `agent.in` | agent | `cseq`, `k` (nom : `say` `{persona, texte, couleur?}` = réplique d'un figurant montrée au mur, `stat`, `transcript`, `fin-appel`…), `data` | `ack` (`refus filtre` : réplique refusée par la modération) |
 | `ping` | tous | `tc` | `pong` |
 | `resync` | tous | — | `vue` courante (acteur) ou `bienvenue` |
 | `rtc` | acteur | `vers` (acteur ou session), `signal` (objet opaque, ≤ 64 Ko) | `rtc` relayé |
@@ -101,7 +101,7 @@ Une seule famille pour tout ce qu'un acteur renvoie (ex `entree` et `ack{n, affi
 | `k` | `data` | Exemple |
 |---|---|---|
 | `vote` | `index` (0 → 25), `numero?` ; `q` = question | `{"t":"in","cseq":42,"k":"vote","q":"q1","data":{"index":2}}` |
-| `texte` | `texte` (≤ 2000, non vide) ; `q?` | commentaire, « pourquoi ? » |
+| `texte` | `texte` (≤ 2000, non vide) ; `q?` | commentaire, « pourquoi ? » — 8 par 10 s et par personne (`ack refus trop-vite`), modéré (`ack refus filtre`), puis montré au mur (fx `message`, voir plus bas) |
 | `reaction` | `emoji` (≤ 16), `n?` (1 → 100) | 😂 |
 | `pret` | `pret` (défaut vrai) | téléphone prêt |
 | `presence` | `visible` | l'onglet passe au premier plan / en arrière-plan |
@@ -113,11 +113,11 @@ Une seule famille pour tout ce qu'un acteur renvoie (ex `entree` et `ack{n, affi
 
 | `t` | Destinataires | Champs |
 |---|---|---|
-| `bienvenue` | l'émetteur du `hello` | `v`, `role`, `acteur?`, `session`, `ts`, `vue` (vue courante ou `null`), `cseq` (dernier reçu de la session), `lecture?` (régie) |
+| `bienvenue` | l'émetteur du `hello` | `v`, `role`, `acteur?`, `session`, `ts`, `vue` (vue courante ou `null`), `cseq` (dernier reçu de la session), `lecture?` (régie), `pseudo?` (acteur : pseudo retenu par le serveur, filtré et unique, gardé à la reconnexion) |
 | `vue` | un acteur (ou une personne de la foule) | `acteur`, `vseq`, `at`, `ecran` (ou `null` : aucun écran encore), `params`, `cle?` |
 | `fx` | un acteur | `acteur`, `id`, `at`, `kind` (`vibrer`, `son`, `flash`, `pop`…), `p`, `ttl` (ms, ≤ 10 min) |
 | `lecture` | régie | `etat` (`EtatLecture` du modèle), `par`, `ts` — émis par le serveur en scène |
-| `salle` | régie | `ts`, `acteurs{<id>: {presents, prets?, enLigne?, demande?{vseq, ecran, at, cle?}, parEcran?{<écran>: n}, rttMs?}}`, `vote?{q, recus, parts[]}` — ≤ 4 par seconde |
+| `salle` | régie | `ts`, `acteurs{<id>: {presents, prets?, enLigne?, demande?{vseq, ecran, at, cle?}, parEcran?{<écran>: n}, rttMs?}}`, `vote?{q, recus, parts[], force?}` (`force` : résultat imposé par la banque des votes) — ≤ 4 par seconde |
 | `etat` | régie | battement d'un acteur NOMMÉ (cardinalité 1) relayé : `acteur`, `personne?`, `ts` (serveur), `heure` (client), `ecran` (`{vseq, ecran, cle?, depuis}` ou `null`), `visible`, `enLigne?`, `rttMs?`, `media?[]`, `batterie?`, `erreurs?[]`, `app?` |
 | `agent.cmd` | un agent | `n`, `type` (`figurants.cmd`, `appel`, `machine`…), `moment?`, `etape`, `donnees`, `at?` |
 | `ack` | l'émetteur d'un `cseq` | `cseq`, `statut` (`ok` \| `doublon` \| `refus` \| `ferme`), `raison?`, `res?` |
@@ -157,6 +157,23 @@ en lecture, introuvables). Écrans et réglages qu'elle comprend (conversion : `
 Tout écran porte en plus `precharger?[]` (médias à mettre en mémoire). Effets (`fx.kind`) : `message` (ajout au mur),
 `a-vote` `{pseudo?, index?}` (pop « @x a voté », +1 sur la réponse), `pop`, `reaction`, `coeurs`, `fusee`, `alerte`,
 `gabarit` ; les autres sont ignorés. La sortie ne lit jamais de fichier de banque : tout est dans la vue.
+
+### Ce que le serveur fabrique pour le mur
+
+Destinataires : chaque acteur dont les écrans contiennent `mur` (dans Écho : `scene`) ; ces effets sont rejoués à sa
+reconnexion tant que leur `ttl` court (200 au plus) et ne partent jamais pendant la panique.
+
+| Origine | Effet | `p` | Aussi à la régie | `ttl` |
+|---|---|---|---|---|
+| `in{k:'texte'}` accepté et modéré | `message` | `{id:'<acteur>/<personne>/<n>', pseudo, texte (mots interdits → `***`), couleur (jeton), grand:true}` | oui (`fx.acteur` = l'auteur) | 30 s |
+| `agent.in{k:'say', data:{persona, texte, couleur?}}` d'un agent figurants | `message` | `{id:'fig/<n>', pseudo: persona, texte, couleur (jeton valide, sinon `--ink2`), grand:false}` | oui | 30 s |
+| vote accepté | `a-vote` | `{pseudo, index}` | non (elle a `salle.vote`) | 10 s |
+
+Le serveur complète aussi les vues de vote avec la banque des votes (`prototypes/figurants/banques/<banque>/votes.json`) :
+`mur` avec `vote:'ouvert'|'revele'|'ferme'` et `numero` → `vote:{etat, numero, question, reponses[]}`, plus à la
+révélation `comptes[]` (voix réelles, ou `scores` de la banque : résultat forcé, et `salle.vote.force`), `pourcents[]`,
+`gagnant` (index de la réponse majoritaire, absent en cas d'égalité) et `resultat` (phrase de la banque) ; `vote` →
+`question`, `reponses[]`. Ce que la vue porte déjà n'est pas remplacé.
 
 ## Exemple : la question 1 d'Écho
 

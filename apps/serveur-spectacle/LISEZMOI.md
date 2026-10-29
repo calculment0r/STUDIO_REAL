@@ -41,9 +41,20 @@ Fait tourner le lecteur en représentation, tient l'état officiel, calcule la v
 - Au démarrage, le dernier instantané est repris : le lecteur est reconstruit en rejouant ses entrées (déterministe),
   les clients se reconnectent et reçoivent leur vue courante dans `bienvenue`.
 
+## Ce que le serveur envoie au mur
+
+Le mur est l'écran `mur` de tout acteur qui le déclare (l'écran scène d'Écho). Règles reprises du prototype du 27/10 :
+- **Pseudo** : celui du `hello` s'il passe le filtre (2 à 20 lettres, chiffres, `_ . -`, aucun mot interdit), sinon `spectateur_NNN` ; unique dans l'acteur (`_2`, `_3`…), gardé à la reconnexion, renvoyé dans `bienvenue.pseudo` ; couleur = un jeton du thème tiré du pseudo.
+- **Messages du public** (`in{k:'texte'}`) : 8 par 10 s et par personne (sinon `ack refus trop-vite`), modérés (`noyau/moderation.ts` : mots interdits masqués `***`, refus `filtre` si vide, > 200 caractères ou surtout interdit), puis fx `message` `{id, pseudo, texte, couleur, grand:true}` au mur et à la régie, valable 30 s.
+- **Répliques des figurants** (`agent.in{k:'say', data:{persona, texte, couleur?}}`) : même modération, fx `message` `grand:false`.
+- **Voix** : chaque vote accepté donne fx `a-vote` `{pseudo, index}` au mur (10 s).
+- **Question du vote** : les vues `mur` (`vote:'ouvert'|'revele'|'ferme'` + `numero`) et `vote` sont complétées avec la question et les réponses de la banque ; à la révélation, `comptes` (voix réelles, ou `scores` de la banque : résultat forcé, signalé à la régie par `salle.vote.force`), `pourcents`, `gagnant`, `resultat` (phrase de la banque). Ce qu'un projet écrit déjà n'est pas remplacé.
+- **Banques** : l'hôte lit `prototypes/figurants/banques/interdits.txt` et `prototypes/figurants/banques/<banque>/votes.json` (`<banque>` = `agent.config.banques` de l'acteur figurants) ; un fichier absent est ignoré.
+- **Reprise et panique** : les effets du mur encore valables sont rejoués à la reconnexion (200 au plus) ; en panique, aucun ne part.
+
 ## Pas encore fait
 
 Latences d'affichage agrégées (rapport 2 §4.3) · jetons par acteur nommé · capteurs bruit et assis (valeurs neutres) ·
-rejeu de la fin du journal postérieure à l'instantané · `agent.in say` vers le mur (lot agents) · orchestrateur,
+rejeu de la fin du journal postérieure à l'instantané · orchestrateur,
 Whisper, ElevenLabs, R2, TURN, sortie · adaptateur Durable Object · alertes poussées à la régie et pastilles dans le Conducteur.
 Fait par le lot exploitation : script de lancement et d'arrêt, tunnel (fichiers et procédure seulement : rien n'est créé chez Cloudflare), page de santé, check-list.

@@ -6,17 +6,24 @@ import { fileURLToPath } from 'node:url';
 import { chargerFichier, simuler, vueActeur, type Projet } from '@studio-real/modele';
 import { lireMessageServeur } from '@studio-real/protocole';
 import { Representation } from './representation';
-import { preparerProjet } from './projet';
+import { banqueFigurants, preparerProjet } from './projet';
 import { T0, aleaFixe, de, messages } from './banc-test';
+import { lireInterdits } from './moderation';
 import { empreinteDe } from './outils';
-import type { Sortie } from './types';
+import type { BanquesRepresentation, QuestionVote, Sortie } from './types';
 
 const chemin = fileURLToPath(new URL('../../../../projets/echo/echo.conducteur.json', import.meta.url));
 const echo = (): Projet => chargerFichier(readFileSync(chemin, 'utf8')).project;
+const fichierBanque = (p: string) => readFileSync(fileURLToPath(new URL(`../../../../prototypes/figurants/banques/${p}`, import.meta.url)), 'utf8');
+/** Les banques telles que l'hôte les lit (hote/index.ts) : interdits.txt et <banque>/votes.json. */
+const banquesEcho = (): BanquesRepresentation => ({
+  interdits: lireInterdits(fichierBanque('interdits.txt')),
+  votes: (JSON.parse(fichierBanque(`${banqueFigurants(preparerProjet(echo()).projet)}/votes.json`)) as { questions: QuestionVote[] }).questions,
+});
 
-function salleEcho() {
+function salleEcho(banques?: BanquesRepresentation) {
   const h = { now: T0 };
-  const rep = new Representation({ projet: echo(), horloge: () => h.now, alea: aleaFixe(5) });
+  const rep = new Representation({ projet: echo(), horloge: () => h.now, alea: aleaFixe(5), ...(banques ? { banques } : {}) });
   let cseq = 0;
   const out: Sortie[] = [];
   const garder = (l: Sortie[]) => { out.push(...l); return l; };
@@ -115,5 +122,49 @@ describe('Écho converti', () => {
     const b = suite(rep2);
     expect(empreinteDe(b)).toBe(empreinteDe(a));
     expect(rep2.etatLecture()!.moment).toBe('b5_q2_res');
+  });
+});
+
+describe('Écho converti, avec les banques du prototype (votes.json, interdits.txt)', () => {
+  const banques = banquesEcho();
+  const q = (n: number) => banques.votes!.find(x => x.numero === n)!;
+
+  it('la banque de l’acteur figurants est « echo » ; ses 5 questions sont lues', () => {
+    expect(banqueFigurants(preparerProjet(echo()).projet)).toBe('echo');
+    expect(banques.votes!.map(x => x.numero)).toEqual([1, 2, 3, 4, 15]);
+    expect(banques.interdits!.length).toBeGreaterThan(100);
+  });
+
+  it('b5_q1 : le mur et les téléphones portent la question et les réponses ; les voix montent sur le mur', () => {
+    const e = salleEcho(banques);
+    e.jusqua('b5_q1');
+    expect(e.rep.vue('scene')).toMatchObject({ ecran: 'mur', params: { vote: { etat: 'ouvert', numero: 1, question: q(1).question, reponses: q(1).reponses } } });
+    expect(e.rep.vue('public')).toMatchObject({ ecran: 'vote', params: { numero: 1, question: q(1).question, reponses: q(1).reponses } });
+    const out = e.rep.recevoir('pub_s1', { t: 'in', cseq: 1, k: 'vote', data: { index: 2 } });
+    expect(messages(out, 'fx')).toContainEqual(expect.objectContaining({ acteur: 'scene', kind: 'a-vote', p: expect.objectContaining({ index: 2 }) }));
+    const salle = messages([...out, ...e.secondes(1)], 'salle').pop()!;
+    expect(salle.vote).toMatchObject({ q: '1', force: true });
+  });
+
+  it('b5_q1_res : résultat forcé de la banque (scores et synthèse) sur le mur, quoi qu’ait voté la salle', () => {
+    const e = salleEcho(banques);
+    e.jusqua('b5_q1');
+    e.rep.recevoir('pub_s1', { t: 'in', cseq: 1, k: 'vote', data: { index: 3 } });
+    e.jusqua('b5_q1_res');
+    const vote = e.rep.vue('scene')!.params.vote;
+    expect(vote).toMatchObject({ etat: 'revele', numero: 1, question: q(1).question, comptes: q(1).scores, pourcents: q(1).scores, gagnant: 0, resultat: q(1).resultat });
+  });
+
+  it('soirée complète : chaque vue de vote est complète, tous les messages sont valides', () => {
+    const e = salleEcho(banques);
+    e.rep.recevoir('pub_s1', { t: 'in', cseq: 1, k: 'texte', data: { texte: 'Bonsoir tout le monde' } });
+    for (let i = 0; i < 40 && !e.rep.etatLecture()!.termine; i++) { e.secondes(11); e.top(); }
+    expect(e.rep.etatLecture()!.termine).toBe(true);
+    const vues = messages(e.out, 'vue');
+    const murs = vues.filter(v => v.ecran === 'mur' && v.params.vote !== undefined && v.params.vote !== 'ferme');
+    expect(murs.length).toBeGreaterThanOrEqual(10);
+    for (const v of murs) expect(v.params.vote, JSON.stringify(v.params)).toMatchObject({ question: expect.any(String), reponses: expect.any(Array) });
+    for (const v of vues.filter(x => x.ecran === 'vote')) expect(v.params).toMatchObject({ question: expect.any(String), reponses: expect.any(Array) });
+    for (const s of e.out) expect(lireMessageServeur(JSON.stringify(s.m)).raison, s.m.t).toBeUndefined();
   });
 });

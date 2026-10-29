@@ -183,6 +183,8 @@ export interface MsgBienvenue {
   cseq: number;
   /** pour la régie : état de lecture courant */
   lecture?: { etat: EtatLecture; par: string; ts: number } | null;
+  /** pour un acteur : pseudo retenu par le serveur (filtré, unique ; gardé à la reconnexion) */
+  pseudo?: string;
 }
 
 export interface MsgVue extends VueDiffusee { t: 'vue' }
@@ -220,7 +222,8 @@ export interface MsgSalle {
   t: 'salle';
   ts: number;
   acteurs: Record<string, ResumeActeurSalle>;
-  vote?: { q: string; recus: number; parts: number[] };
+  /** `force` : résultat imposé par la banque des votes (les voix réelles sont comptées mais pas montrées) */
+  vote?: { q: string; recus: number; parts: number[]; force?: boolean };
 }
 
 /** Battement d'un acteur NOMMÉ (cardinalité 1 : écran scène, téléphone de comédien…) relayé à la régie : ce qu'il
