@@ -220,6 +220,10 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
     { prefixe: '/conducteur/', dossier: chemin(o.racine, config.clients.conducteur), spa: true },
     { prefixe: '/medias/', dossier: chemin(o.racine, config.medias.dossier) },
     { prefixe: '/theme/', dossier: join(DEPOT, 'packages', 'theme') },
+    // Le téléphone est construit avec la base `/t/` (apps/telephone/vite.config.ts) : ses fichiers sont référencés en
+    // /t/assets/…, et les liens des acteurs (QR) pointent sur /t/. On le monte donc sous /t/ ET à la racine (une adresse
+    // tapée sans /t/ rend quand même la page, dont les fichiers passent par /t/).
+    { prefixe: '/t/', dossier: chemin(o.racine, config.clients.telephone), spa: true },
     { prefixe: '/', dossier: chemin(o.racine, config.clients.telephone), spa: true },
   ];
   const json = (res: ServerResponse, code: number, x: unknown) => {

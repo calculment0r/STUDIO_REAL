@@ -134,6 +134,12 @@ function empreinteBuild(): string {
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Adresses RELATIVES dans le build (`./assets/…`) : le même dist se sert à la racine (vite dev, vite preview), sous
+  // `/conducteur/` par le serveur de spectacle (apps/serveur-spectacle) et sous `./` sur GitHub Pages (`npm run pages`).
+  // Avec la base `/` par défaut, la sortie servie sous /conducteur/sortie.html cherchait /assets/… → 404, page noire
+  // (constaté à l’essai de la branche d’intégration le 29/10). Les pages n’ont que des routes en fragment (#…), donc
+  // la base relative ne pose pas de problème de sous-chemin.
+  base: "./",
   plugins: [react(), licencesPolices(), mediasLocales(), telephoneEmule()],
   define: { __BUILD__: JSON.stringify(empreinteBuild()) },
   server: TELEPHONE_DEV ? { proxy: { '/t/': { target: TELEPHONE_DEV, changeOrigin: true } } } : {},
