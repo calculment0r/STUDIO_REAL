@@ -159,7 +159,7 @@ function FluxAppel({ son }: { son: unknown }) {
       {recus.map(([acteur, flux]) => <VideoFlux key={acteur} flux={flux} muet={sons[acteur] === false} etiquette={acteur} />)}
       {recus.length === 0 && <span className="tl-et" style={{ alignSelf: 'center', textAlign: 'center' }}>{statutVisio(etat)}</span>}
       {local && (
-        <div style={{ position: 'absolute', right: 8, bottom: 8, width: '30%', aspectRatio: '9 / 16', borderRadius: 'var(--nl-12)', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', right: 8, bottom: 8, width: '30%', aspectRatio: '9 / 16', borderRadius: 'var(--rayon)', overflow: 'hidden' }}>
           <VideoFlux flux={local} muet miroir />
         </div>
       )}
