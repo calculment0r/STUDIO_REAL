@@ -56,6 +56,13 @@ export function acteursCibles(projet: Projet): Set<string> {
   return out;
 }
 
+/** Nom de la banque de l'acteur figurants (`agent.config.banques`, 'echo' dans acteursEcho()) ; null s'il n'y en a pas. */
+export function banqueFigurants(projet: Projet): string | null {
+  const a = (projet.acteurs ?? []).find(x => x.type === 'agent' && x.agent?.genre === 'figurants');
+  const b = a?.agent?.config?.banques;
+  return typeof b === 'string' && /^[a-z0-9_-]{1,64}$/i.test(b) ? b : null;
+}
+
 /** Agent qui exécute une commande du lecteur : 'figurants.cmd' → l'agent des figurants, 'machine' → le pont OSC.
  *  null : commande pour la régie seule (message, chrono, reprise). */
 export function agentPour(projet: Projet, type: string): string | null {

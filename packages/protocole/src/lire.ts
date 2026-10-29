@@ -354,7 +354,10 @@ function lireSalle(m: Brut): MsgSalle {
   return avec<MsgSalle>({ t: 'salle', ts: nombre(m.ts, 'ts'), acteurs }, {
     vote: opt(m.vote, v => {
       const o = objet(v, 'vote');
-      return { q: court(o.q, 'vote.q'), recus: entier(o.recus, 'vote.recus'), parts: tableau(o.parts, 'vote.parts', 26).map((p, i) => nombre(p, `vote.parts[${i}]`)) };
+      return avec<NonNullable<MsgSalle['vote']>>(
+        { q: court(o.q, 'vote.q'), recus: entier(o.recus, 'vote.recus'), parts: tableau(o.parts, 'vote.parts', 26).map((p, i) => nombre(p, `vote.parts[${i}]`)) },
+        { force: opt(o.force, x => booleen(x, 'vote.force')) },
+      );
     }),
   });
 }
@@ -373,6 +376,11 @@ export function lireMessageServeur(x: unknown): Lu<MessageServeur> {
         }, {
           acteur: opt(m.acteur, v => acteurId(v)),
           lecture: m.lecture === null ? null : opt(m.lecture, v => lireEtatLecture(v, 'lecture')),
+          pseudo: opt(m.pseudo, v => {
+            const p = texte(v, 'pseudo', 20);
+            if (p.trim().length < 2) throw new Refus('champ-invalide', 'pseudo : 2 à 20 caractères');
+            return p;
+          }),
         });
       }
       case 'vue': return { t: 'vue', ...lireVue(m, 'vue') };

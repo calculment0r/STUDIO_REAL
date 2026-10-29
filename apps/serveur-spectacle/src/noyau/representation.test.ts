@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { lireMessageServeur } from '@studio-real/protocole';
 import { Representation, correspond } from './representation';
 import { T0, aleaFixe, banc, de, messages, projetBanc } from './banc-test';
-import type { Sortie } from './types';
+import type { BanquesRepresentation, Sortie } from './types';
 
 /** Banc lancé, salle connectée (régie, scène, ministre, 4 téléphones). */
 function pret(n = 4) {
@@ -352,7 +352,9 @@ describe('entrées des acteurs → signaux du lecteur', () => {
     b.envoyer('pub_s1', { t: 'in', k: 'texte', data: { texte: 'Pourquoi pas ?' } });
     b.envoyer('pub_s2', { t: 'in', k: 'reaction', data: { emoji: '😂', n: 2 } });
     const etat = b.rep.instantane();
-    expect(etat.textes).toEqual([{ ts: b.h.now, acteur: 'public', personne: 'tel_001', texte: 'Pourquoi pas ?' }]);
+    expect(etat.textes).toEqual([{
+      ts: b.h.now, acteur: 'public', personne: 'tel_001', texte: 'Pourquoi pas ?', pseudo: expect.stringMatching(/^spectateur_\d{3}$/), verdict: 'ok',
+    }]);
     expect(etat.reactions).toEqual({ public: { '😂': 2 } });
   });
 });
@@ -494,5 +496,211 @@ describe('barre de scène : retenir et prolonger', () => {
     const out = b.envoyer('pub_s1', { t: 'conduite', op: 'retenir', actif: true });
     expect(out[0]!.m).toMatchObject({ t: 'ack', statut: 'refus' });
     expect(b.rep.etatLecture()!.retenu).toBe(false);
+  });
+});
+
+describe('le mur nourri par le serveur : pseudos, messages, figurants, voix, question du vote', () => {
+  const INTERDITS = ['connard', 'pute', 're:\\b(https?:\\/\\/|www\\.)\\S+'];
+  const QUESTIONS = [
+    { numero: 1, question: 'Faut-il continuer ?', reponses: ['Oui', 'Non'] },
+    { numero: 2, question: 'Et maintenant ?', reponses: ['Rester', 'Partir', 'Rire'], scores: [64, 13, 23], resultat: 'Le public a choisi de rester.' },
+  ];
+  /** Banc dont l'écran scène montre le mur : vote ouvert (numéro seul, comme la conversion d'Écho), puis révélé. */
+  function projetMur(numero = 1) {
+    const p = projetBanc();
+    p.ev[0]!.st[1]!.envois = [
+      { vers: 'public', ecran: 'vote', params: { numero } },
+      { vers: 'scene', ecran: 'mur', params: { vote: 'ouvert', numero } },
+    ];
+    p.ev[0]!.st[2]!.envois = [
+      { vers: 'public', ecran: 'regardez', params: { texte: 'Résultat à l’écran' } },
+      { vers: 'scene', ecran: 'mur', params: { vote: 'revele' } },
+    ];
+    return p;
+  }
+  function murPret(numero = 1, banques: BanquesRepresentation = { interdits: INTERDITS, votes: QUESTIONS }) {
+    const b = banc(projetMur(numero), 42, banques);
+    b.lancer();
+    b.salle(4);
+    return b;
+  }
+  const bienvenue = (l: Sortie[]) => messages(l, 'bienvenue')[0]!;
+  const texte = (b: ReturnType<typeof murPret>, session: string, t: string) => b.envoyer(session, { t: 'in', k: 'texte', data: { texte: t } });
+
+  it('pseudo : filtré comme au prototype, unique dans l’acteur, gardé à la reconnexion ; bienvenue le porte', () => {
+    const b = murPret();
+    expect(bienvenue(b.hello('p1_____', 'acteur', 'public', 'tel_101', { pseudo: 'Léa du 3e' })).pseudo).toBe('Léa_du_3e');
+    expect(bienvenue(b.hello('p2_____', 'acteur', 'public', 'tel_102', { pseudo: 'léa_DU_3e' })).pseudo).toBe('léa_DU_3e_2');
+    expect(bienvenue(b.hello('p3_____', 'acteur', 'public', 'tel_103', { pseudo: 'gros connard' })).pseudo).toMatch(/^spectateur_\d{3}$/);
+    expect(bienvenue(b.hello('p4_____', 'acteur', 'public', 'tel_104', { pseudo: '<script>' })).pseudo).toMatch(/^spectateur_\d{3}$/);
+    const sans = bienvenue(b.hello('p5_____', 'acteur', 'public', 'tel_105')).pseudo;
+    expect(sans).toMatch(/^spectateur_\d{3}$/);
+    // reconnexion (nouvelle session, même personne, autre pseudo proposé) : le pseudo ne change pas
+    expect(bienvenue(b.hello('p1b____', 'acteur', 'public', 'tel_101', { pseudo: 'Autre' })).pseudo).toBe('Léa_du_3e');
+    expect(bienvenue(b.hello('p5b____', 'acteur', 'public', 'tel_105')).pseudo).toBe(sans);
+    // un acteur nommé prend son id ; un agent et la régie n'ont pas de pseudo
+    expect(bienvenue(b.hello('mini_2_', 'acteur', 'ministre', 'mini_2_')).pseudo).toBe('ministre_2');
+    expect(bienvenue(b.hello('fig_1__', 'agent', 'figurants'))).not.toHaveProperty('pseudo');
+    expect(bienvenue(b.hello('regie_2', 'regie'))).not.toHaveProperty('pseudo');
+    const salle = b.rep.instantane().salle.public!;
+    expect(salle.tel_101).toMatchObject({ pseudo: 'Léa_du_3e', couleur: expect.stringMatching(/^--(cy|or|grn2|amb|coral-3|ink2|coral-2)$/) });
+    for (const s of b.hello('p6_____', 'acteur', 'public', 'tel_106', { pseudo: 'Zoé' })) expect(lireMessageServeur(JSON.stringify(s.m)).raison).toBeUndefined();
+  });
+
+  it('message du public : fx `message` chez l’écran scène et la régie, pas chez le public ; accusé en premier', () => {
+    const b = murPret();
+    b.hello('p1_____', 'acteur', 'public', 'tel_101', { pseudo: 'Zoé' });
+    const out = texte(b, 'p1_____', '  Trop   bien  ');
+    expect(out[0]!.m).toMatchObject({ t: 'ack', statut: 'ok' });
+    const fx = de(out, 'fx');
+    expect(fx.map(f => f.a)).toEqual([{ acteur: 'scene' }, { role: 'regie' }]);
+    const couleur = b.rep.instantane().salle.public!.tel_101!.couleur;
+    expect(fx[0]!.m).toMatchObject({ acteur: 'scene', kind: 'message', ttl: 30_000, p: { pseudo: 'Zoé', texte: 'Trop bien', couleur, grand: true } });
+    expect(fx[0]!.m.p.id).toMatch(/^public\/tel_101\/\d+$/);
+    expect(fx[0]!.m.id).toBe(fx[0]!.m.p.id);
+    expect(fx[1]!.m).toMatchObject({ acteur: 'public', kind: 'message', p: { texte: 'Trop bien' } });
+    for (const f of fx) expect(lireMessageServeur(JSON.stringify(f.m)).raison).toBeUndefined();
+    expect(b.rep.instantane().textes.at(-1)).toMatchObject({ pseudo: 'Zoé', texte: '  Trop   bien  ', verdict: 'ok' });
+    // la sortie qui se reconnecte retrouve les messages encore valables, plus ceux qui ont expiré
+    b.rep.fermer('scene_1');
+    b.h.now += 5000;
+    expect(messages(b.hello('scene_1', 'acteur', 'scene'), 'fx')).toContainEqual(expect.objectContaining({ kind: 'message', p: expect.objectContaining({ texte: 'Trop bien' }) }));
+    b.rep.fermer('scene_1');
+    b.h.now += 30_000;
+    b.secondes(1);
+    expect(messages(b.hello('scene_1', 'acteur', 'scene'), 'fx').filter(f => f.kind === 'message')).toHaveLength(0);
+  });
+
+  it('8 messages par 10 s et par personne : le 9e est refusé (trop-vite), puis ça repart', () => {
+    const b = murPret();
+    for (let i = 0; i < 8; i++) expect(texte(b, 'pub_s1', `message ${i}`)[0]!.m).toMatchObject({ statut: 'ok' });
+    const neuvieme = texte(b, 'pub_s1', 'encore');
+    expect(neuvieme[0]!.m).toMatchObject({ t: 'ack', statut: 'refus', raison: 'trop-vite' });
+    expect(de(neuvieme, 'fx')).toHaveLength(0);
+    expect(texte(b, 'pub_s2', 'moi aussi')[0]!.m).toMatchObject({ statut: 'ok' });   // une autre personne n'est pas freinée
+    b.h.now += 10_000;
+    expect(texte(b, 'pub_s1', 'me revoilà')[0]!.m).toMatchObject({ statut: 'ok' });
+  });
+
+  it('modération : mot interdit masqué, message surtout interdit refusé (filtre), lien masqué', () => {
+    const b = murPret();
+    const masque = texte(b, 'pub_s1', 'tu es un c0nnaaard toi');
+    expect(masque[0]!.m).toMatchObject({ statut: 'ok' });
+    expect(messages(masque, 'fx')[0]!.p).toMatchObject({ texte: 'tu es un *** toi' });
+    expect(b.rep.instantane().textes.at(-1)).toMatchObject({ texte: 'tu es un c0nnaaard toi', verdict: 'masque', affiche: 'tu es un *** toi' });
+    const refuse = texte(b, 'pub_s2', 'CONNARD !!!');
+    expect(refuse[0]!.m).toMatchObject({ statut: 'refus', raison: 'filtre' });
+    expect(de(refuse, 'fx')).toHaveLength(0);
+    expect(b.rep.instantane().textes.at(-1)).toMatchObject({ verdict: 'refuse' });
+    expect(messages(texte(b, 'pub_s3', 'allez voir sur www.exemple.com ce soir'), 'fx')[0]!.p.texte).toBe('allez voir sur *** ce soir');
+  });
+
+  it('réplique d’un figurant (agent.in say) : même modération, fx `message` grand:false, couleur valide sinon --ink2', () => {
+    const b = murPret();
+    b.hello('fig_1__', 'agent', 'figurants');
+    const out = b.envoyer('fig_1__', { t: 'agent.in', k: 'say', data: { persona: '@MarieL', texte: 'Il a raison', couleur: '--coral-2' } });
+    expect(out[0]!.m).toMatchObject({ t: 'ack', statut: 'ok' });
+    const fx = de(out, 'fx');
+    expect(fx.map(f => f.a)).toEqual([{ acteur: 'scene' }, { role: 'regie' }]);
+    expect(fx[0]!.m).toMatchObject({ kind: 'message', p: { pseudo: 'MarieL', texte: 'Il a raison', couleur: '--coral-2', grand: false } });
+    expect(fx[0]!.m.p.id).toMatch(/^fig\/\d+$/);
+    const sansCouleur = messages(b.envoyer('fig_1__', { t: 'agent.in', k: 'say', data: { persona: 'Jo', texte: 'ok', couleur: 'red' } }), 'fx');
+    expect(sansCouleur[0]!.p.couleur).toBe('--ink2');
+    expect(b.envoyer('fig_1__', { t: 'agent.in', k: 'say', data: { persona: 'Jo', texte: 'pute' } })[0]!.m).toMatchObject({ statut: 'refus', raison: 'filtre' });
+    // les autres `k` restent journalisés seulement ; le pont OSC ne parle pas au mur
+    expect(de(b.envoyer('fig_1__', { t: 'agent.in', k: 'proposition', data: { texte: 'x' } }), 'fx')).toHaveLength(0);
+    b.hello('pont_1_', 'agent', 'pont');
+    expect(de(b.envoyer('pont_1_', { t: 'agent.in', k: 'say', data: { persona: 'Jo', texte: 'bonjour' } }), 'fx')).toHaveLength(0);
+  });
+
+  it('vote accepté : fx `a-vote` {pseudo, index} chez l’écran scène seulement, 10 s', () => {
+    const b = murPret();
+    b.secondes(10);
+    const out = b.voter('pub_s1', 1);
+    expect(out[0]!.m).toMatchObject({ t: 'ack', statut: 'ok' });
+    const fx = de(out, 'fx');
+    expect(fx).toHaveLength(1);
+    expect(fx[0]!.a).toEqual({ acteur: 'scene' });
+    const pseudo = b.rep.instantane().salle.public!.tel_001!.pseudo;
+    expect(fx[0]!.m).toMatchObject({ kind: 'a-vote', ttl: 10_000, p: { pseudo, index: 1 } });
+    expect(de(b.voter('pub_s1', 0), 'fx')).toHaveLength(0);   // doublon : pas de seconde voix
+  });
+
+  it('vue `mur` ouverte : question et réponses de la banque ; vue `vote` du public aussi', () => {
+    const b = murPret();
+    b.secondes(10);
+    expect(b.rep.vue('scene')).toMatchObject({ ecran: 'mur', params: { vote: { etat: 'ouvert', numero: 1, question: 'Faut-il continuer ?', reponses: ['Oui', 'Non'] } } });
+    expect(b.rep.vue('scene')!.params.vote).not.toHaveProperty('comptes');
+    expect(b.rep.vue('public')).toMatchObject({ ecran: 'vote', params: { numero: 1, question: 'Faut-il continuer ?', reponses: ['Oui', 'Non'] } });
+    expect(messages(b.secondes(1), 'vue')).toHaveLength(0);   // rien ne change tant que personne ne vote
+  });
+
+  it('révélé : comptes réels, pourcentages arrondis, gagnant', () => {
+    const b = murPret();
+    b.secondes(10);
+    b.voter('pub_s1', 1);
+    b.secondes(12);   // durée prévue passée : on attend le quorum
+    const out = b.voter('pub_s2', 1);   // 50 % : passage au résultat
+    expect(b.rep.etatLecture()!.etape).toBe('resultat');
+    const mur = messages(out, 'vue').find(v => v.acteur === 'scene')!;
+    expect(mur.params.vote).toEqual({ etat: 'revele', numero: 1, question: 'Faut-il continuer ?', reponses: ['Oui', 'Non'], comptes: [0, 2], pourcents: [0, 100], gagnant: 1 });
+    expect(lireMessageServeur(JSON.stringify(mur)).raison).toBeUndefined();
+  });
+
+  it('révélé avec `scores` dans la banque : résultat forcé, et la régie le sait (salle.vote.force)', () => {
+    const b = murPret(2);
+    b.secondes(10);
+    b.voter('pub_s1', 0);
+    b.secondes(12);
+    const salle = [...messages(b.voter('pub_s2', 0), 'salle'), ...messages(b.secondes(1), 'salle')].pop()!;
+    expect(salle.vote).toMatchObject({ q: '2', recus: 2, parts: [2], force: true });
+    expect(b.rep.vue('scene')!.params.vote).toEqual({
+      etat: 'revele', numero: 2, question: 'Et maintenant ?', reponses: ['Rester', 'Partir', 'Rire'],
+      comptes: [64, 13, 23], pourcents: [64, 13, 23], gagnant: 0, resultat: 'Le public a choisi de rester.',
+    });
+  });
+
+  it('projet écrit à la main (question déjà dans la vue) ou sans banque : rien n’est remplacé', () => {
+    const p = projetMur(1);
+    p.ev[0]!.st[1]!.envois![1] = { vers: 'scene', ecran: 'mur', params: { vote: 'ouvert', numero: 1, question: 'À la main', reponses: ['x', 'y'] } };
+    const b = banc(p, 42, { votes: QUESTIONS });
+    b.lancer();
+    b.salle(2);
+    b.secondes(10);
+    expect(b.rep.vue('scene')!.params).toEqual({ vote: 'ouvert', numero: 1, question: 'À la main', reponses: ['x', 'y'] });
+    const sans = murPret(1, {});
+    sans.secondes(10);
+    expect(sans.rep.vue('scene')!.params).toEqual({ vote: 'ouvert', numero: 1 });
+  });
+
+  it('banques données après coup (hôte) : la vue complétée part au tick suivant', () => {
+    const b = murPret(1, {});
+    b.secondes(10);
+    b.rep.definirBanques({ votes: QUESTIONS });
+    const vues = messages(b.secondes(1), 'vue');
+    expect(vues.find(v => v.acteur === 'scene')).toMatchObject({ params: { vote: { question: 'Faut-il continuer ?' } } });
+  });
+
+  it('panique : aucun fx `message` ni `a-vote` ne part', () => {
+    const b = murPret();
+    b.secondes(10);
+    b.hello('fig_1__', 'agent', 'figurants');
+    b.envoyer('regie_1', { t: 'conduite', op: 'panique', actif: true });
+    b.rep.journal();
+    expect(texte(b, 'pub_s1', 'coucou')[0]!.m).toMatchObject({ statut: 'ok' });
+    expect(de(texte(b, 'pub_s2', 'coucou'), 'fx')).toHaveLength(0);
+    expect(de(b.envoyer('fig_1__', { t: 'agent.in', k: 'say', data: { persona: 'Jo', texte: 'salut' } }), 'fx')).toHaveLength(0);
+    expect(de(b.voter('pub_s3', 0), 'fx')).toHaveLength(0);
+    expect(b.rep.journal().filter(e => e.type === 'fx' && e.supprime === 'panique')).toHaveLength(4);
+    expect(b.rep.instantane().fxActifs.filter(f => f.m.kind === 'message' || f.m.kind === 'a-vote')).toHaveLength(0);
+  });
+
+  it('effets actifs bornés à 200 (les plus récents)', () => {
+    const b = murPret();
+    for (let i = 0; i < 30; i++) b.hello(`pp_${String(i).padStart(4, '0')}`, 'acteur', 'public', `tel_9${String(i).padStart(2, '0')}`);
+    for (let k = 0; k < 8; k++) for (let i = 0; i < 30; i++) texte(b, `pp_${String(i).padStart(4, '0')}`, `n ${k}`);
+    const actifs = b.rep.instantane().fxActifs;
+    expect(actifs).toHaveLength(200);
+    expect(actifs.at(-1)!.m.p).toMatchObject({ texte: 'n 7' });
   });
 });

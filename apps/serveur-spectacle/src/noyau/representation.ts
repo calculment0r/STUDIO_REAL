@@ -25,6 +25,10 @@
 // - rail des sorties de la régie (rapport 2 §4.2 a) : le battement (et l'accusé d'affichage) d'un acteur NOMMÉ
 //   (cardinalité 1) est relayé à la régie (`etat`) ; la foule est résumée dans `salle` (vue demandée, écrans affichés
 //   par ses personnes présentes, aller-retour médian), toujours ≤ 4 par seconde.
+// - le mur (acteurs dont les écrans contiennent `mur`, l'écran scène d'Écho) est nourri par le serveur : pseudo filtré et
+//   unique de chaque personne (`bienvenue.pseudo`), messages du public modérés (fx `message`, 8 par 10 s et par personne,
+//   aussi envoyés à la régie), répliques des figurants (`agent.in{k:'say'}`), « @x a voté » (fx `a-vote`), texte de la
+//   question et des réponses complété depuis la banque des votes dans les vues `mur` et `vote`. Rien en panique.
 import {
   cibleDansFoule, creerLecteur, envoisPasses, personneConcernee, vueActeur,
   type Acteur, type ContexteFoule, type EnvoiPasse, type EtatLecture, type Lecteur, type Projet, type Signaux,
@@ -35,10 +39,11 @@ import {
   type MsgEtat, type MsgEtatActeur, type MsgFx, type MsgHello, type MsgIn, type MsgSalle, type StatutAck, type VueDiffusee,
 } from '@studio-real/protocole';
 import { acteursCibles, acteursFoule, agentPour, preparerProjet, type ProjetPrepare } from './projet';
+import { COULEUR_DEFAUT, RE_JETON_COULEUR, RE_PSEUDO, couleurPseudo, filtrerPseudo, hache, verifierTexte } from './moderation';
 import { cloner, empreinteDe, idRepresentation, jsonStable, lettre } from './outils';
 import type {
-  CommandeAgent, Destination, EntreeLecteur, EtatRepresentation, EvenementJournal, InfoSession, OptionsRepresentation,
-  PersonneSalle, SessionEtat, Sortie, TypeEvenement,
+  BanquesRepresentation, CommandeAgent, Destination, EntreeLecteur, EtatRepresentation, EvenementJournal, InfoSession,
+  OptionsRepresentation, PersonneSalle, QuestionVote, SessionEtat, Sortie, TexteRecu, TypeEvenement,
 } from './types';
 
 export const FORMAT_INSTANTANE = 'studio-real/representation@1' as const;
@@ -52,6 +57,14 @@ export const TTL_FX = 5000;
 export const INTERVALLE_SALLE_MS = 250;
 /** Bruit et assis : pas de capteur en salle → valeurs neutres (salle calme, assise). À remplacer par un vrai capteur. */
 export const SIGNAUX_SANS_CAPTEUR = { bruit: 32, assis: 100 } as const;
+/** Effets actifs gardés pour être rejoués à la reconnexion (les plus récents). */
+export const MAX_FX_ACTIFS = 200;
+/** Durée de vie d'un message au mur (ms) et d'un « @x a voté » (ms). */
+export const TTL_MESSAGE = 30_000;
+export const TTL_A_VOTE = 10_000;
+/** Limite de débit des messages du public : 8 par 10 s et par personne (comme le prototype du 27/10). */
+export const DEBIT_MESSAGES = 8;
+export const FENETRE_DEBIT_MS = 10_000;
 
 /** Réponse d'un traitement idempotent (devient l'`ack`). */
 interface Resultat { statut: StatutAck; raison?: string; res?: unknown }
@@ -88,7 +101,7 @@ const arrondi = (x: number) => Math.round(x * 10) / 10;
 function etatVide(empreinteProjet: string): EtatRepresentation {
   return {
     format: FORMAT_INSTANTANE, projet: empreinteProjet, run: null, entrees: [], lecture: null, pause: false, panique: false,
-    sessions: {}, salle: {}, votes: {}, question: null, voteOuvert: false, textes: [], reactions: {}, flux: {}, fxEmis: [],
+    sessions: {}, salle: {}, votes: {}, question: null, voteOuvert: false, textes: [], nMur: 0, reactions: {}, flux: {}, fxEmis: [],
     fxActifs: [], tirages: {}, commandes: [], nLecteur: 0, forcages: [], signaux: null,
     salleEnvoyee: { ts: 0, empreinte: '' }, position: '', dernierTop: null, agents: {},
   };
@@ -107,6 +120,10 @@ export class Representation {
   private readonly acteurs = new Map<string, Acteur>();
   private readonly foule: string[];
   private readonly cibles: Set<string>;
+  /** acteurs qui montrent le mur (leurs écrans contiennent `mur`) : destinataires des `message` et `a-vote` */
+  private readonly acteursMur: string[];
+  /** mots interdits et questions des votes (données de l'hôte, hors instantané) */
+  private banques: { interdits: string[]; votes: QuestionVote[] } = { interdits: [], votes: [] };
   private e: EtatRepresentation;
   private lecteur: Lecteur | null = null;
   private etatL: EtatLecture | null = null;
@@ -126,7 +143,19 @@ export class Representation {
     for (const a of this.projet.acteurs ?? []) this.acteurs.set(a.id, a);
     this.foule = acteursFoule(this.projet).map(a => a.id);
     this.cibles = acteursCibles(this.projet);
+    this.acteursMur = [...this.acteurs.values()].filter(a => a.type !== 'agent' && a.ecrans.includes('mur')).map(a => a.id);
+    if (o.banques) this.definirBanques(o.banques);
     this.e = etatVide(this.empreinteProjet);
+  }
+
+  /**
+   * Banques lues par l'hôte : mots interdits (modération) et questions des votes (texte et réponses ajoutés aux vues
+   * `mur` et `vote`). Peut être appelé après coup : les vues complétées partent au prochain recalcul (tick).
+   */
+  definirBanques(b: BanquesRepresentation): void {
+    const votes = (Array.isArray(b.votes) ? b.votes : []).filter(q =>
+      q && Number.isFinite(q.numero) && typeof q.question === 'string' && Array.isArray(q.reponses));
+    this.banques = { interdits: Array.isArray(b.interdits) ? b.interdits.filter(x => typeof x === 'string') : [], votes: cloner(votes) };
   }
 
   // ── Lecture de l'état ──────────────────────────────────────────────────────────────────────────────────────────
@@ -266,11 +295,13 @@ export class Representation {
           }
           s.cseqs = [...s.cseqs, m.cseq].sort((a, b) => a - b).slice(-FENETRE_CSEQ);
           s.cseq = Math.max(s.cseq, m.cseq);
+          const avant = this.sorties.length;
           const r = m.t === 'conduite' ? this.conduite(session, s, m) : m.t === 'in' ? this.entree(session, s, m) : this.agentIn(session, s, m);
           const ack: MsgAck = { t: 'ack', cseq: m.cseq, statut: r.statut };
           if (r.raison !== undefined) ack.raison = r.raison;
           if (r.res !== undefined) ack.res = r.res;
-          this.envoyer({ session }, ack);
+          // l'accusé passe avant ce que l'entrée a produit (effets du mur, commandes)
+          this.sorties.splice(avant, 0, { a: { session }, m: ack });
           if (r.statut === 'refus') this.journaliser('refus', { session, t: m.t, raison: r.raison });
         }
       }
@@ -303,6 +334,8 @@ export class Representation {
     if (s.acteur !== undefined) m.acteur = s.acteur;
     if ((s.role === 'acteur' || s.role === 'agent') && s.acteur) m.vue = cloner(this.assurerFlux(s.acteur, s.personne ?? session).vue);
     if (s.role === 'regie') m.lecture = this.etatL ? { etat: cloner(this.etatL), par: 'serveur', ts: this.horloge() } : null;
+    const pseudo = s.role === 'acteur' && s.acteur ? this.e.salle[s.acteur]?.[s.personne ?? session]?.pseudo : undefined;
+    if (pseudo !== undefined) m.pseudo = pseudo;
     return m;
   }
 
@@ -400,6 +433,11 @@ export class Representation {
       p.vu = this.horloge();
       p.enLigne = true;
       p.visible = true;
+      // Pseudo attribué une fois : à la reconnexion, la même personne garde le sien.
+      if (p.pseudo === undefined) {
+        p.pseudo = this.attribuerPseudo(m.acteur, cleP, m.pseudo);
+        p.couleur = couleurPseudo(p.pseudo);
+      }
     }
     this.journaliser('connexion', {
       session, role: m.role, acteur: m.acteur ?? null, personne: m.role === 'acteur' ? cleP : null, reprise: !!ancienne,
@@ -415,6 +453,21 @@ export class Representation {
       for (const c of this.e.commandes) if (c.agent === m.acteur && (c.statut === 'envoye' || c.statut === 'recu')) this.envoyer({ session }, this.messageCommande(c));
     }
     if (m.role === 'regie') this.envoyer({ session }, this.messageSalle());
+  }
+
+  /**
+   * Pseudo d'une personne : celui du hello s'il passe le filtre (règle du prototype), sinon `spectateur_NNN` (NNN tiré
+   * de la clé de la personne : stable, sans consommer l'aléa) ; un acteur nommé (cardinalité 1) prend à défaut son id.
+   * Unique parmi les personnes de l'acteur, sans tenir compte de la casse : suffixe `_2`, `_3`…
+   */
+  private attribuerPseudo(acteur: string, cle: string, propose: unknown): string {
+    const a = this.acteurs.get(acteur);
+    const defaut = a?.cardinalite === 1 && RE_PSEUDO.test(acteur.slice(0, 20)) ? acteur.slice(0, 20) : `spectateur_${100 + (hache(`${acteur}/${cle}`) % 900)}`;
+    const base = filtrerPseudo(propose, this.banques.interdits) ?? defaut;
+    const pris = new Set(Object.entries(this.e.salle[acteur] ?? {}).filter(([k, p]) => k !== cle && p.pseudo).map(([, p]) => p.pseudo!.toLowerCase()));
+    let p = base;
+    for (let k = 2; pris.has(p.toLowerCase()); k++) p = `${base.slice(0, 20 - `_${k}`.length)}_${k}`;
+    return p;
   }
 
   private detacher(session: string, s: SessionEtat, journal = true) {
@@ -535,13 +588,26 @@ export class Representation {
         votes[votant] = m.data.index;
         journal({ q, index: m.data.index });
         signal(`${acteur}.vote`, { q, index: m.data.index, valeur: lettre(m.data.index) });
+        // « @x a voté » sur le mur (pas à la régie : elle a `salle.vote`)
+        this.fxMur('a-vote', `a-vote/${++this.e.nMur}`, { pseudo: this.pseudoDe(acteur, cleP, p), index: m.data.index }, TTL_A_VOTE, acteur, false);
         return ok({ q, recus: Object.keys(votes).length });
       }
       case 'texte': {
-        const t = { ts: this.horloge(), acteur, personne: cleP, texte: m.data.texte, ...(m.q !== undefined ? { q: m.q } : {}) };
+        const now = this.horloge();
+        const recents = (p.messages ?? []).filter(x => now - x < FENETRE_DEBIT_MS);
+        if (recents.length >= DEBIT_MESSAGES) { p.messages = recents; return refus('trop-vite'); }
+        p.messages = [...recents, now];
+        const v = verifierTexte(m.data.texte, this.banques.interdits);
+        const pseudo = this.pseudoDe(acteur, cleP, p);
+        const t: TexteRecu = { ts: now, acteur, personne: cleP, pseudo, texte: m.data.texte, verdict: v.verdict, ...(m.q !== undefined ? { q: m.q } : {}) };
+        if (v.verdict === 'masque') t.affiche = v.texte;
         this.e.textes = [...this.e.textes, t].slice(-MAX_TEXTES);
-        journal({ q: m.q ?? null, texte: m.data.texte });
-        signal(`${acteur}.texte`, { texte: m.data.texte, ...(m.q !== undefined ? { q: m.q } : {}) });
+        journal({ q: m.q ?? null, texte: m.data.texte, pseudo, verdict: v.verdict, ...(v.raison ? { raisonFiltre: v.raison } : {}) });
+        if (v.verdict === 'refuse') return refus('filtre');
+        signal(`${acteur}.texte`, { texte: v.texte, ...(m.q !== undefined ? { q: m.q } : {}) });
+        const n = ++this.e.nMur;
+        const id = `${acteur}/${cleP.slice(0, 40)}/${n}`;
+        this.fxMur('message', id, { id, pseudo, texte: v.texte, couleur: p.couleur ?? COULEUR_DEFAUT, grand: true }, TTL_MESSAGE, acteur, true);
         return ok();
       }
       case 'reaction': {
@@ -584,9 +650,52 @@ export class Representation {
 
   private agentIn(session: string, s: SessionEtat, m: MsgAgentIn): Resultat {
     if (s.role !== 'agent' || !s.acteur) return refus('role : réservé aux agents');
-    if (m.k === 'stat') this.e.agents[s.acteur] = { ts: this.horloge(), stat: cloner(m.data) };
-    else this.journaliser('agent.in', { session, agent: s.acteur, k: m.k, data: m.data });
+    if (m.k === 'stat') { this.e.agents[s.acteur] = { ts: this.horloge(), stat: cloner(m.data) }; return ok(); }
+    this.journaliser('agent.in', { session, agent: s.acteur, k: m.k, data: m.data });
+    if (m.k === 'say' && this.acteurs.get(s.acteur)?.agent?.genre === 'figurants') return this.repliqueFigurant(s.acteur, m.data);
     return ok();
+  }
+
+  /** Réplique d'un figurant (`agent.in{k:'say', data:{persona, texte, couleur?}}`) : même modération, puis le mur. */
+  private repliqueFigurant(agent: string, d: Record<string, unknown>): Resultat {
+    const persona = typeof d.persona === 'string' ? d.persona.trim().replace(/^@+/, '').slice(0, 40) : '';
+    if (!persona || typeof d.texte !== 'string') return refus('say : persona et texte attendus');
+    const v = verifierTexte(d.texte, this.banques.interdits);
+    if (v.verdict === 'refuse') return refus('filtre');
+    const couleur = typeof d.couleur === 'string' && RE_JETON_COULEUR.test(d.couleur) ? d.couleur : COULEUR_DEFAUT;
+    const id = `fig/${++this.e.nMur}`;
+    this.fxMur('message', id, { id, pseudo: persona, texte: v.texte, couleur, grand: false }, TTL_MESSAGE, agent, true);
+    return ok();
+  }
+
+  /** Pseudo d'une personne (attribué ici si l'état vient d'un instantané plus ancien que les pseudos). */
+  private pseudoDe(acteur: string, cle: string, p: PersonneSalle): string {
+    if (p.pseudo === undefined) {
+      p.pseudo = this.attribuerPseudo(acteur, cle, undefined);
+      p.couleur = couleurPseudo(p.pseudo);
+    }
+    return p.pseudo;
+  }
+
+  /**
+   * Effet fabriqué par le serveur pour le mur (`message`, `a-vote`) : à chaque acteur qui montre le mur (gardé pour être
+   * rejoué à sa reconnexion), et à la régie si demandé (`acteur` = l'auteur). Supprimé en panique.
+   */
+  private fxMur(kind: 'message' | 'a-vote', id: string, p: Record<string, unknown>, ttl: number, auteur: string, regie: boolean) {
+    if (this.e.panique) { this.journaliser('fx', { id, kind, supprime: 'panique' }); return; }
+    const at = this.horloge();
+    for (const acteur of this.acteursMur) {
+      const m: MsgFx = { t: 'fx', acteur, id, at, kind, p: cloner(p), ttl };
+      this.envoyer({ acteur }, m);
+      this.garderFx({ acteur }, m);
+    }
+    if (regie) this.envoyer({ role: 'regie' }, { t: 'fx', acteur: auteur, id, at, kind, p: cloner(p), ttl });
+  }
+
+  /** Effet actif gardé pour la reconnexion : les MAX_FX_ACTIFS plus récents. */
+  private garderFx(a: Destination, m: MsgFx) {
+    this.e.fxActifs.push({ a, m: cloner(m) });
+    if (this.e.fxActifs.length > MAX_FX_ACTIFS) this.e.fxActifs = this.e.fxActifs.slice(-MAX_FX_ACTIFS);
   }
 
   private accuseAgent(session: string, s: SessionEtat, m: MsgAgentAck) {
@@ -649,10 +758,68 @@ export class Representation {
       if (f.acteur !== a.id || f.envois !== envois) continue;
       const filtre = cibleDansFoule(f.cible)?.filtre ?? null;
       if (filtre && !personneConcernee(filtre, ctx, '')) continue;
-      return { ecran: f.ecran, params: cloner(f.params), cle: `forcer@${f.at}` };
+      return this.completerVote({ ecran: f.ecran, params: cloner(f.params), cle: `forcer@${f.at}` });
     }
     const v = vueActeur(this.projet, this.etatL, a.id, ctx);
-    return v ? { ecran: v.ecran, params: v.params, cle: v.cle } : { ecran: null, params: {} };
+    return v ? this.completerVote({ ecran: v.ecran, params: v.params, cle: v.cle }) : { ecran: null, params: {} };
+  }
+
+  /** Question de la banque des votes pour un numéro ('1', 1). */
+  private questionBanque(numero: unknown): QuestionVote | undefined {
+    const n = typeof numero === 'number' ? numero : typeof numero === 'string' && numero.trim() ? Number(numero) : NaN;
+    return Number.isFinite(n) ? this.banques.votes.find(q => q.numero === n) : undefined;
+  }
+
+  /**
+   * Complète les vues de vote avec la banque des votes (la sortie et les téléphones ne lisent aucune banque) :
+   * - `mur` avec `vote` texte ('ouvert' | 'revele' | 'ferme') et `numero` (forme de la conversion d'Écho) → `vote` objet
+   *   {etat, numero, question, reponses} ; à la révélation, `comptes` (voix réelles, ou `scores` de la banque : résultat
+   *   forcé), `pourcents` arrondis, `gagnant` (index de la réponse majoritaire, absent en cas d'égalité) et `resultat`
+   *   (phrase de la banque). Sans numéro, c'est la dernière question ouverte ;
+   * - `vote` (téléphones, ou écran scène) → `question` et `reponses`.
+   * Ce que la vue porte déjà (projet écrit à la main) n'est jamais remplacé.
+   */
+  private completerVote(v: VueCalculee): VueCalculee {
+    const p = v.params;
+    if (v.ecran === 'vote') {
+      const q = this.questionBanque(p.numero ?? p.q);
+      if (!q || (p.question !== undefined && (p.reponses !== undefined || p.options !== undefined))) return v;
+      const params = { ...p };
+      if (params.question === undefined) params.question = q.question;
+      if (params.reponses === undefined && params.options === undefined) params.reponses = [...q.reponses];
+      return { ...v, params };
+    }
+    if (v.ecran !== 'mur' || p.vote === undefined || p.vote === null) return v;
+    const objet = typeof p.vote === 'object' && !Array.isArray(p.vote) ? (p.vote as Record<string, unknown>) : null;
+    const etat = objet ? objet.etat ?? objet.phase ?? 'ouvert' : p.vote === true ? 'ouvert' : p.vote;
+    if (etat !== 'ouvert' && etat !== 'revele' && etat !== 'ferme') return v;
+    const champ = (k: string) => (objet && objet[k] !== undefined ? objet[k] : p[k]);
+    if (champ('question') !== undefined && champ('reponses') !== undefined) return v;
+    const numero = champ('numero') ?? (etat !== 'ouvert' && this.e.question !== null ? Number(this.e.question) : undefined);
+    const q = this.questionBanque(numero);
+    if (!q) return v;
+    const vote: Record<string, unknown> = {
+      ...(objet ?? {}), etat, numero: q.numero,
+      question: champ('question') ?? q.question, reponses: champ('reponses') ?? [...q.reponses],
+    };
+    if (etat === 'revele') {
+      const n = (vote.reponses as unknown[]).length;
+      let comptes: number[];
+      if (q.scores) {
+        comptes = Array.from({ length: n }, (_, i) => Math.max(0, Number(q.scores![i]) || 0));
+        if (q.resultat !== undefined && vote.resultat === undefined) vote.resultat = q.resultat;
+      } else {
+        comptes = Array.from({ length: n }, () => 0);
+        for (const i of Object.values(this.e.votes[String(q.numero)] ?? {})) if (i >= 0 && i < n) comptes[i]!++;
+      }
+      const total = comptes.reduce((s, x) => s + x, 0);
+      if (vote.comptes === undefined) vote.comptes = comptes;
+      if (vote.pourcents === undefined) vote.pourcents = comptes.map(x => (total ? Math.round((x * 100) / total) : 0));
+      const max = Math.max(0, ...comptes);
+      if (max > 0 && comptes.filter(x => x === max).length === 1) vote.gagnant = comptes.indexOf(max);
+    }
+    const { numero: _n, question: _q, reponses: _r, ...reste } = p;
+    return { ...v, params: { ...reste, vote } };
   }
 
   /** Flux d'un acteur (ou d'une personne) : créé sans être diffusé s'il n'existe pas (bienvenue, resync). */
@@ -777,7 +944,7 @@ export class Representation {
           .map(per => ({ acteur: a.id, personne: per }));
       for (const d of dests) {
         this.envoyer(d, cloner(m));
-        this.e.fxActifs.push({ a: d, m: cloner(m) });
+        this.garderFx(d, m);
       }
       this.journaliser('fx', { id: x.cle, acteur: a.id, kind: x.envoi.fx, destinataires: dests.length });
     }
@@ -854,6 +1021,8 @@ export class Representation {
         parts[i] = (parts[i] ?? 0) + 1;
       }
       m.vote = { q, recus: indices.length, parts };
+      // résultat forcé par la banque : la régie sait que les voix réelles ne seront pas montrées
+      if (this.questionBanque(q)?.scores) m.vote.force = true;
     }
     return m;
   }
