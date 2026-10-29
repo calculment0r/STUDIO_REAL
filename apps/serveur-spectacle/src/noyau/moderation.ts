@@ -58,7 +58,7 @@ export const couleurPseudo = (pseudo: string): string => COULEURS_HUMAINS[hache(
 export function nettoyer(texte: string): string {
   return String(texte ?? '')
     .normalize('NFKC')
-    .replace(/[​-‏‪-‮⁠-⁤﻿­]/g, '')
+    .replace(/[​-‏‪-‮⁠-⁤﻿­]/g, '')   // caractères invisibles (largeur nulle, sens d'écriture, BOM, trait d'union conditionnel), écrits en codes Unicode pour rester lisibles
     .replace(/[\p{Cc}\p{Cs}\p{Co}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
