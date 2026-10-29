@@ -10,6 +10,8 @@ import { PublicFactice } from './public-factice';
 import { hachage, lireTheme, parseCss, versHex } from './theme';
 
 const HAUTEUR = 1080;
+/** Délai avant d'arrêter la boucle d'un calque devenu invisible : le fondu de sortie.css (`.so-calque`) dure 500 ms. */
+const DELAI_SUSPENSION_MS = 600;
 
 interface Reglages { pops: boolean; danmaku: boolean; feux: boolean; coeurs: boolean; jauge: boolean; plafond: number }
 export const GABARITS_EFFETS: Record<Gabarit, Reglages> = {
@@ -36,6 +38,10 @@ export class CalqueReactions {
   private demo: PublicFactice | null = null;
   private readonly hote: HTMLElement;
   private readonly cibleSecousse: HTMLElement | null;
+  /** Ticker arrêté parce que le calque est invisible (voir regulerTicker). */
+  private suspendu = false;
+  private observateur: MutationObserver | null = null;
+  private minuteurSuspension: ReturnType<typeof setTimeout> | undefined;
 
   private constructor(hote: HTMLElement, cibleSecousse: HTMLElement | null) { this.hote = hote; this.cibleSecousse = cibleSecousse; }
 
@@ -78,6 +84,42 @@ export class CalqueReactions {
     this.disposer();
     this.appliquer();
     this.app.ticker.add((tk) => this.image(Math.min(tk.deltaMS / 1000, 1 / 20)));
+    // La page de sortie cache le calque en posant l'opacité de son conteneur (pas d'appel à afficher()) : on l'observe,
+    // sans rien lire à chaque image, pour arrêter la boucle PixiJS tant qu'il est invisible.
+    if (typeof MutationObserver !== 'undefined') {
+      this.observateur = new MutationObserver(() => this.regulerTicker());
+      this.observateur.observe(this.hote, { attributes: true, attributeFilter: ['style'] });
+      this.observateur.observe(this.app.canvas, { attributes: true, attributeFilter: ['style'] });
+    }
+    this.regulerTicker();
+  }
+
+  /** Le calque est-il montré ? Opacité posée par la page de sortie sur son conteneur, ou par afficher() sur le canevas. */
+  private estVisible(): boolean {
+    const opacite = (e: HTMLElement) => (e.style.opacity === '' ? 1 : Number(e.style.opacity));
+    return !(opacite(this.hote) <= 0 || opacite(this.app.canvas) <= 0);
+  }
+
+  /**
+   * Boucle PixiJS (mise à jour des effets ET dessin, 2 appels par image : 120 appels/s mesurés, audit de fluidité 07, cause 7)
+   * arrêtée tant que le calque est invisible, relancée dès qu'il est montré. Pendant l'arrêt, les événements du public sont
+   * ignorés (personne ne les verrait, et ils se déverseraient en rafale au retour) ; les effets en vol reprennent où ils étaient.
+   */
+  private regulerTicker(): void {
+    if (this.estVisible()) {
+      clearTimeout(this.minuteurSuspension);
+      this.minuteurSuspension = undefined;
+      if (this.suspendu) { this.suspendu = false; this.app.ticker.start(); }
+      return;
+    }
+    if (this.suspendu || this.minuteurSuspension !== undefined) return;
+    // le calque s'efface en fondu (500 ms, sortie.css) : on n'arrête la boucle qu'une fois l'effacement fini
+    this.minuteurSuspension = setTimeout(() => {
+      this.minuteurSuspension = undefined;
+      if (this.estVisible() || this.suspendu) return;
+      this.suspendu = true;
+      this.app.ticker.stop();
+    }, DELAI_SUSPENSION_MS);
   }
 
   private lw = 0; private lh = 0;
@@ -104,8 +146,8 @@ export class CalqueReactions {
   /** Zone protégée (visage du streamer), en fractions de l'écran ; null = aucune. */
   zoneProtegee(z: Rect | null): void { this.zoneFrac = z; this.disposer(); }
 
-  /** Montre ou cache le calque (les effets continuent hors écran : rien à rattraper au retour). */
-  afficher(v: boolean): void { this.app.canvas.style.opacity = v ? '1' : '0'; }
+  /** Montre ou cache le calque (caché, la boucle PixiJS est arrêtée : voir regulerTicker). */
+  afficher(v: boolean): void { this.app.canvas.style.opacity = v ? '1' : '0'; this.regulerTicker(); }
 
   /** Faux public (répétition sans téléphones). */
   basculerDemo(v = !this.demo): boolean {
@@ -131,6 +173,7 @@ export class CalqueReactions {
 
   /** Événement du public venu de la régie. */
   recevoir(ev: EvenementScene): void {
+    if (this.suspendu && ev.type !== 'gabarit') return;   // calque invisible : boucle arrêtée, rien à montrer
     switch (ev.type) {
       case 'pop':
         if (ev.style === 'vedette') this.vedette.montrer({ auteur: ev.auteur, texte: ev.texte });
@@ -200,6 +243,8 @@ export class CalqueReactions {
   rafale(): void { const e = EMOJIS[(Math.random() * EMOJIS.length) | 0]; for (let i = 0; i < 40; i++) this.feux.taper(e); }
 
   detruire(): void {
+    this.observateur?.disconnect();
+    clearTimeout(this.minuteurSuspension);
     this.pops.vider(); this.danmaku.vider();
     try { this.app.destroy(true, { children: true }); } catch { /* déjà détruit */ }
   }

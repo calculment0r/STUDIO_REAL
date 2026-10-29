@@ -4,7 +4,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Projet } from '@studio-real/modele';
 import echo from '../../../../projets/echo/echo.conducteur.json';
-import { DELAI_ANTI_DOUBLE_GO_MS, avancerDe, migrerMode, normaliserMode, useMagasin } from './magasin';
+import { DELAI_ANTI_DOUBLE_GO_MS, avancerDe, etatVif, lectureVive, migrerMode, normaliserMode, structureChangee, useMagasin } from './magasin';
+import { useHorloge } from './horloge';
 import { actionTouche, etatRepresentation } from '../coquille/etat-scene';
 
 const s = () => useMagasin.getState();
@@ -371,5 +372,127 @@ describe('barre de scène · RETENIR, +30 s, PANIQUE', () => {
     s().panique(true);
     expect(s().enPanique).toBe(true);
     s().panique(false);
+  });
+});
+
+describe('horloge séparée de la lecture (lot performance-react)', () => {
+  const horloge = () => useHorloge.getState();
+  /** Compte les remplacements de `lecture` pendant `fn`. */
+  const publications = (fn: () => void): number => {
+    let n = 0;
+    const fin = useMagasin.subscribe((a, b) => { if (a.lecture !== b.lecture) n++; });
+    try { fn(); } finally { fin(); }
+    return n;
+  };
+
+  it('à chaque image l’horloge avance, mais `lecture` n’est remplacée qu’au battement lent (0,2 s), pas 60 fois par seconde', () => {
+    s().go();
+    apresAntiRebond();
+    const t0 = horloge().t;
+    let n = 0;
+    const vus = new Set<number>();
+    const fin = useMagasin.subscribe((a, b) => { if (a.lecture !== b.lecture) n++; });
+    for (let i = 0; i < 120; i++) { avancerDe(1 / 60); vus.add(horloge().t); }
+    fin();
+    expect(vus.size).toBe(120);                                        // une valeur d'horloge neuve à chaque image
+    expect(horloge().t).toBeCloseTo(t0 + 2, 6);
+    expect(n).toBeLessThanOrEqual(11);                                 // 2 s / 0,2 s, plus la marge d'une image
+    expect(n).toBeGreaterThanOrEqual(8);
+    // le battement garde `lecture` à moins de 0,2 s de l'horloge
+    expect(horloge().t - s().lecture!.t).toBeLessThan(0.2 + 1e-9);
+  });
+
+  it('un changement de structure remplace `lecture` tout de suite (GO, mémoire posée, retenue, attente du top)', () => {
+    s().go();
+    apresAntiRebond();
+    avancerDe(0.5);
+    const avant = s().lecture;
+    s().retenir(true);
+    expect(s().lecture).not.toBe(avant);
+    expect(s().lecture?.retenu).toBe(true);
+    const avant2 = s().lecture;
+    s().poserMemoire('niveau', 3);
+    expect(s().lecture).not.toBe(avant2);
+    expect(s().lecture?.memoires.niveau).toBe(3);
+    s().retenir(false);
+    apresAntiRebond();
+    avancerDe(30);                                                    // l'étape de 10 s finit : le passage « go » attend
+    expect(s().lecture?.attenteGo).toBe(true);
+    expect(publications(() => avancerDe(0.01))).toBe(0);              // dans l'attente : aucun changement de structure, pas de nouvelle `lecture`
+  });
+
+  it('les tableaux et dictionnaires de `lecture` gardent leur référence d’une image à l’autre', () => {
+    s().go();
+    apresAntiRebond();
+    s().poserMemoire('niveau', 3);
+    const l = s().lecture!;
+    for (let i = 0; i < 60; i++) avancerDe(1 / 60);
+    const m = s().lecture!;
+    expect(m).not.toBe(l);                                              // battement : objet neuf…
+    expect(m.memoires).toBe(l.memoires);                                // …mais mêmes références
+    expect(m.parcours).toBe(l.parcours);
+    expect(m.journal).toBe(l.journal);
+    expect(m.commandes).toBe(l.commandes);
+    expect(m.alertes).toBe(l.alertes);
+    expect(m.reprises).toBe(l.reprises);
+  });
+
+  it('à l’arrêt, `lecture` est remise à l’heure de l’horloge (note, saut et export lisent lecture.t)', () => {
+    s().go();
+    apresAntiRebond();
+    for (let i = 0; i < 7; i++) avancerDe(1 / 60);                     // entre deux battements : `lecture` est en retard
+    s().pause();
+    expect(s().lecture!.t).toBe(horloge().t);
+    expect(s().lecture!.tEtape).toBe(horloge().tEtape);
+    expect(s().enLecture).toBe(false);
+  });
+
+  it('`structureChangee` ignore le temps (t, tEtape, retard, attentes, temps de séquence) et voit le reste', () => {
+    s().go();
+    const a = s().lecture!;
+    expect(structureChangee(a, { ...a, t: a.t + 5, tEtape: a.tEtape + 5, retard: 3, attentes: { x: 2 } })).toBe(false);
+    expect(structureChangee(a, { ...a, etape: 'autre' })).toBe(true);
+    expect(structureChangee(a, { ...a, attenteGo: !a.attenteGo })).toBe(true);
+    expect(structureChangee(a, { ...a, memoires: { ...a.memoires } })).toBe(true);        // autre référence = autre contenu pour le magasin
+    expect(structureChangee(a, { ...a, sequence: { id: 's', nom: 'S', etape: 'e', tEtape: 1, chemin: ['S'] } })).toBe(true);
+    const avecSeq = { ...a, sequence: { id: 's', nom: 'S', etape: 'e', tEtape: 1, chemin: ['S'] } };
+    expect(structureChangee(avecSeq, { ...avecSeq, sequence: { ...avecSeq.sequence, tEtape: 9 } })).toBe(false);
+  });
+
+  it('`etatVif` rend `lecture` à l’heure de l’horloge sans changer ce qui est déjà à l’heure (la tête de lecture)', () => {
+    s().go();
+    apresAntiRebond();
+    avancerDe(0.5);
+    expect(s().lecture!.t).toBe(horloge().t);                            // 0,5 s d'un coup : `lecture` vient d'être publiée, à l'heure
+    expect(etatVif(s())).toBe(s());                                      // déjà à l'heure : aucune copie
+    for (let i = 0; i < 3; i++) avancerDe(1 / 60);                       // 0,05 s plus tard : pas de battement, `lecture` est en retard
+    expect(s().lecture!.t).toBeLessThan(horloge().t);
+    const vif = etatVif(s());
+    expect(vif).not.toBe(s());
+    expect(vif.lecture!.t).toBe(horloge().t);
+    expect(vif.lecture!.tEtape).toBe(horloge().tEtape);
+    expect(vif.mode).toBe(s().mode);                                     // le reste de l'état se lit à travers
+    expect(etatVif(s())).toBe(vif);                                      // une seule copie par état et par image
+    expect(lectureVive(null)).toBeNull();
+  });
+
+  it('une `lecture` posée de l’extérieur (poste qui suit la régie) amène l’horloge avec elle', () => {
+    const l = s().lecture!;
+    useMagasin.setState({ lecture: { ...l, t: 123, tEtape: 7, retard: 2 } });
+    expect(horloge()).toMatchObject({ t: 123, tEtape: 7, retard: 2 });
+  });
+
+  it('lecture miroir : des tableaux de même contenu reçus du serveur gardent la référence précédente', () => {
+    s().changerMode('spectacle');
+    s().go();
+    const avant = s().lecture!;
+    const copie = JSON.parse(JSON.stringify(avant)) as typeof avant;     // ce que le réseau livre : des objets neufs, même contenu
+    s().resynchroniser(copie);
+    const apres = s().lecture!;
+    expect(apres.parcours).toBe(avant.parcours);
+    expect(apres.memoires).toBe(avant.memoires);
+    expect(apres.journal).toBe(avant.journal);
+    s().resynchroniser({ ...copie, memoires: { ...copie.memoires, nouveau: 1 } });
+    expect(s().lecture!.memoires).not.toBe(avant.memoires);
   });
 });

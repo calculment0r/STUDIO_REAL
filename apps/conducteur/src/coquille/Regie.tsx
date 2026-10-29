@@ -2,7 +2,8 @@
 // signal, reprendre à un point de reprise) et le journal compact de ce que les blocs émettent (commandes machine,
 // messages, chronos, figurants), des entrées reçues et des alertes. Dans le panneau (section RÉGIE) et dans le pupitre
 // de représentation (touche P). Des valeurs, des noms, des actions : pas de phrases d'aide.
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { memo, useMemo, useState, type KeyboardEvent } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useMagasin } from '../etat/magasin';
 import {
   enNombre, lireValeur, memoiresRegie, signauxAttendus, type LigneRegie, type MemoireRegie, type SignalAttendu, type ValeurMemoire,
@@ -104,12 +105,14 @@ export function JournalRegie({ max = 40 }: { max?: number }) {
 }
 
 /** Le pupitre de la régie. `large` : version du pupitre de représentation (toutes les mémoires visibles). */
-export function PupitreRegie({ large = false }: { large?: boolean }) {
+export const PupitreRegie = memo(function PupitreRegie({ large = false }: { large?: boolean }) {
   const projet = useMagasin(s => s.projet);
   const moment = useMagasin(s => s.lecture?.moment ?? null);
   const etape = useMagasin(s => s.lecture?.etape ?? null);
-  const memoires = useMagasin(s => s.lecture?.memoires);
-  const reprises = useMagasin(s => s.lecture?.reprises);
+  // comparés par CONTENU (useShallow) : une lecture reçue du serveur, ou un lecteur recréé, ne ré-exécute pas le pupitre
+  // quand les mémoires et les points de reprise sont les mêmes
+  const memoires = useMagasin(useShallow(s => s.lecture?.memoires));
+  const reprises = useMagasin(useShallow(s => s.lecture?.reprises));
   const reprendre = useMagasin(s => s.reprendreAuPoint);
   const [toutes, setToutes] = useState(large);
 
@@ -150,4 +153,4 @@ export function PupitreRegie({ large = false }: { large?: boolean }) {
       <JournalRegie max={large ? 60 : 30} />
     </div>
   );
-}
+});

@@ -12,6 +12,10 @@
 // Serveur de spectacle (src/etat/spectacle.ts) : `surConduiteLocale` annonce chaque geste de conduite (GO et le nombre
 // de tops qu'il a joués, saut, mémoire, signal, reprise, retenir, +30 s, panique) pour qu'il parte en `conduite` ; `resynchroniser(etat)` cale
 // le lecteur local, devenu MIROIR, sur l'état officiel reçu du serveur (`lecture`).
+// Horloge séparée (etat/horloge.ts, lot performance-react) : `lecture` ne change que si la STRUCTURE change (moment, étape,
+// attente du GO, mémoires, parcours, alertes, journal…) ; le temps (t, tEtape, retard, attentes) va à chaque image dans
+// `useHorloge`. `lecture.t` n'est rafraîchi que par un battement de 0,2 s de spectacle (relais de la sortie, salle collaborative) :
+// pour AFFICHER le temps, lire l'horloge.
 // Barre de scène (coquille/BarreScene.tsx) : `retenir`, `prolonger`, `panique` (état local `enPanique`) ; la pause / reprise
 // reste `basculerLecture`.
 import { create } from 'zustand';
@@ -20,6 +24,7 @@ import {
   type CategorieAssets, type EtatLecture, type Execution, type Lecteur, type Projet, type SalleSimulee, type Signaux,
 } from '@studio-real/modele';
 import { creerLecteur, signauxSalle } from './moteur';
+import { horlogeDe, poserHorloge, useHorloge } from './horloge';
 import { ASSETS_DEMO } from './assets';
 import { publierScene, relacherScene } from '../sortie/relais';
 import { ligneAlerte, ligneCommande, ligneEvenement, type LigneRegie, type ValeurMemoire } from './regie';
@@ -68,7 +73,10 @@ export interface Magasin {
   selection: Selection;
   /** 'repetition' ou 'spectacle' (voir ModeConducteur ; les anciennes valeurs sont traduites par changerMode). */
   mode: ModeConducteur;
-  /** État du moteur de lecture ; null tant que rien n'est lancé. */
+  /** État du moteur de lecture ; null tant que rien n'est lancé. Remplacé seulement quand la STRUCTURE change, plus un
+   *  battement de `PAS_BATTEMENT` s de spectacle qui rafraîchit `t`, `tEtape` et `retard` pour les lecteurs hors React ; le
+   *  temps exact est dans `useHorloge` (etat/horloge.ts). Les tableaux et dictionnaires gardent leur référence tant que
+   *  leur contenu ne change pas. */
   lecture: EtatLecture | null;
   enLecture: boolean;
   /** Zoom de la planche (1 = 100 %) et de la conduite (pixels par seconde). */
@@ -252,6 +260,47 @@ function placerAuPassage(l: Lecteur, moment: string): EtatLecture {
   return e;
 }
 
+/** Battement lent de `lecture` (secondes de spectacle) : même sans changement de structure, `lecture` est remplacée quand son
+ *  temps a avancé d'autant, pour les lecteurs hors React (relais de la sortie, salle collaborative : déjà limités à 4 Hz). */
+export const PAS_BATTEMENT = 0.2;
+
+/** Champs de `EtatLecture` comparés valeur à valeur. */
+const CHAMPS_DE_STRUCTURE_SIMPLES = ['moment', 'etape', 'phase', 'attenteGo', 'bloque', 'termine', 'issue', 'retenu', 'prolonge'] as const;
+/** Tableaux et dictionnaires comparés par RÉFÉRENCE : Lecteur.etat() rend la même référence tant que le contenu est le même. */
+const CHAMPS_DE_STRUCTURE_REFERENCES = ['memoires', 'parcours', 'alertes', 'tours', 'journal', 'commandes', 'reprises', 'receptions', 'votes'] as const;
+
+/** La structure de la lecture a-t-elle changé ? Tout sauf le temps : `t`, `tEtape`, `retard`, `attentes` et le temps de la séquence. */
+export function structureChangee(a: EtatLecture, b: EtatLecture): boolean {
+  for (const k of CHAMPS_DE_STRUCTURE_SIMPLES) if (a[k] !== b[k]) return true;
+  for (const k of CHAMPS_DE_STRUCTURE_REFERENCES) if (a[k] !== b[k]) return true;
+  const sa = a.sequence, sb = b.sequence;
+  if (sa !== sb) {
+    if (!sa || !sb || sa.id !== sb.id || sa.etape !== sb.etape || sa.nom !== sb.nom || sa.chemin.join('/') !== sb.chemin.join('/')) return true;
+  }
+  return false;
+}
+
+const memeContenu = (a: unknown, b: unknown): boolean => {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  return ka.every(k => memeContenu((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+};
+
+/** Reprend les références de `avant` pour les tableaux et dictionnaires de `apres` qui ont le même contenu (lecture reçue du
+ *  serveur : des objets neufs à chaque message, qu'il ne faut pas faire passer pour un changement de structure). */
+function stabiliser(avant: EtatLecture | null, apres: EtatLecture): EtatLecture {
+  if (!avant) return apres;
+  const sortie = apres as unknown as Record<string, unknown>;
+  for (const k of CHAMPS_DE_STRUCTURE_REFERENCES) {
+    const v = (avant as unknown as Record<string, unknown>)[k];
+    if (v !== undefined && memeContenu(v, sortie[k])) sortie[k] = v;
+  }
+  return apres;
+}
+
 export const useMagasin = create<Magasin>((set, get) => {
   const signaler = (m: string) => {
     clearTimeout(minuteurMessage);
@@ -325,18 +374,32 @@ export const useMagasin = create<Magasin>((set, get) => {
     lignes.sort((p, q) => p.t - q.t || p.n - q.n);
     return [...get().journalRegie, ...lignes].slice(-300);
   };
+  /** Publie l'état du lecteur : le temps va TOUJOURS à l'horloge ; `lecture` n'est remplacée que si la structure a changé
+   *  ou si le battement lent (PAS_BATTEMENT s de spectacle) est échu. */
   const publier = (e: EtatLecture) => {
-    const lecture = { ...e, t: e.t + decalT, retard: e.retard + decalRetard };
+    const t = e.t + decalT, retard = e.retard + decalRetard;
+    poserHorloge({ t, tEtape: e.tEtape, retard, attentes: horlogeDe(e).attentes });
     // lecture miroir : le journal de régie suit l'état officiel du serveur (resynchroniser), pas le lecteur local
     const journalRegie = get().miroir ? null : releverRegie(e);
-    set(journalRegie ? { lecture, journalRegie } : { lecture });
+    const avant = get().lecture;
+    if (!avant || structureChangee(avant, e) || Math.abs(t - avant.t) >= PAS_BATTEMENT) {
+      const lecture = { ...e, t, retard };
+      set(journalRegie ? { lecture, journalRegie } : { lecture });
+    } else if (journalRegie) set({ journalRegie });
+  };
+  /** Remet `lecture` à l'heure de l'horloge (à l'arrêt de la lecture : plus rien ne la rafraîchira). */
+  const rafraichirLecture = () => {
+    const l = get().lecture, h = useHorloge.getState();
+    if (l && (l.t !== h.t || l.tEtape !== h.tEtape || l.retard !== h.retard || l.attentes !== h.attentes)) {
+      set({ lecture: { ...l, t: h.t, tEtape: h.tEtape, retard: h.retard, attentes: h.attentes } });
+    }
   };
   /** Nouvelle représentation : le journal de régie repart de zéro. */
   const viderRegie = () => { vus = { c: 0, j: 0, a: 0 }; vusServeur = { c: 0, j: 0, a: 0 }; set({ journalRegie: [] }); };
 
   const journal = (type: string, extra: Record<string, unknown> = {}) => {
     if (!execution) return;
-    execution.evenements.push({ t: Math.round(get().lecture?.t ?? 0), type, ...extra });
+    execution.evenements.push({ t: Math.round(useHorloge.getState().t), type, ...extra });
   };
   const ouvrirExecution = () => {
     if (execution) return;
@@ -345,11 +408,11 @@ export const useMagasin = create<Magasin>((set, get) => {
   /** Ferme l'exécution en cours ; elle compte comme un soir joué si elle a duré plus d'une minute. */
   const fermerExecution = () => {
     if (!execution) return;
-    const l = get().lecture;
-    journal('fin', { retard: Math.round(l?.retard ?? 0) });
+    const h = useHorloge.getState();
+    journal('fin', { retard: Math.round(h.retard) });
     const x = execution;
     execution = null;
-    if ((l?.t ?? 0) < 60) return;
+    if (h.t < 60) return;
     set(s => ({ executions: [...s.executions, x] }));
     signaler('Soir ' + get().executions.length + ' enregistré');
   };
@@ -487,7 +550,8 @@ export const useMagasin = create<Magasin>((set, get) => {
       ouvrirExecution();
       set({ enLecture: true });
     },
-    pause: () => set({ enLecture: false }),
+    // À l'arrêt, plus rien ne rafraîchit `lecture` : on la remet à l'heure avant (nouvelle note, saut, export lisent lecture.t).
+    pause: () => { rafraichirLecture(); set({ enLecture: false }); },
 
     go,
     top: go,
@@ -569,7 +633,7 @@ export const useMagasin = create<Magasin>((set, get) => {
       // la salle ne change pas la structure : le lecteur continue (les signaux sont relus à chaque image)
       set({ projet: { ...s.projet, sens: { ...s.projet.sens, [k]: Math.max(0, Math.min(100, Math.round(v))) } } });
     },
-    signaux: () => { const s = get(); return signauxCourants(s.projet.sens, s.lecture?.tEtape ?? 0); },
+    signaux: () => { const s = get(); return signauxCourants(s.projet.sens, s.lecture ? useHorloge.getState().tEtape : 0); },
 
     assets: reprise?.assets?.length ? reprise.assets : ASSETS_DEMO,
     executions: reprise?.runs ?? [],
@@ -709,13 +773,44 @@ export const useMagasin = create<Magasin>((set, get) => {
       // premier calage : l'historique du serveur ne remplit pas le journal, seules les nouveautés y entrent
       if (!get().miroir) vusServeur = { c: etat.commandes?.length ?? 0, j: etat.journal?.length ?? 0, a: etat.alertes?.length ?? 0 };
       const journalRegie = releverRegie(etat, true);
-      const maj: Partial<Magasin> = { lecture: { ...etat }, miroir: true };
+      const maj: Partial<Magasin> = { lecture: stabiliser(get().lecture, { ...etat }), miroir: true };
       if (journalRegie) maj.journalRegie = journalRegie;
       if (etat.termine) maj.enLecture = false;
       set(maj);
     },
   };
 });
+
+// ── la lecture « à l'heure » pour ceux qui lisent le magasin hors React (tête de lecture) ──────────────────────────────
+let vivePour: { lecture: EtatLecture; t: number; tEtape: number; retard: number; attentes: Record<string, number>; vive: EtatLecture } | null = null;
+let etatVifPour: { etat: Magasin; lecture: EtatLecture; vif: Magasin } | null = null;
+
+/** `lecture` avec le temps de l'horloge : la même référence quand `lecture` est déjà à l'heure (à l'arrêt, juste après un
+ *  saut…), sinon une copie mémorisée (une seule par image). */
+export function lectureVive(l: EtatLecture | null): EtatLecture | null {
+  if (!l) return null;
+  const h = useHorloge.getState();
+  if (l.t === h.t && l.tEtape === h.tEtape && l.retard === h.retard && l.attentes === h.attentes) return l;
+  const v = vivePour;
+  if (v && v.lecture === l && v.t === h.t && v.tEtape === h.tEtape && v.retard === h.retard && v.attentes === h.attentes) return v.vive;
+  const vive = { ...l, t: h.t, tEtape: h.tEtape, retard: h.retard, attentes: h.attentes };
+  vivePour = { lecture: l, t: h.t, tEtape: h.tEtape, retard: h.retard, attentes: h.attentes, vive };
+  return vive;
+}
+
+/** L'état du magasin dont `lecture` est « à l'heure » (voir lectureVive), pour un sélecteur écrit comme
+ *  `(s: Magasin) => s.lecture?.t` mais appelé à chaque image hors React. Ne copie rien quand `lecture` est déjà à l'heure. */
+export function etatVif(s: Magasin): Magasin {
+  const vive = lectureVive(s.lecture);
+  if (vive === s.lecture) return s;
+  if (etatVifPour && etatVifPour.etat === s && etatVifPour.lecture === vive) return etatVifPour.vif;
+  const vif = Object.create(s, { lecture: { value: vive, enumerable: true } }) as Magasin;
+  etatVifPour = { etat: s, lecture: vive!, vif };
+  return vif;
+}
+
+// Une `lecture` posée de l'extérieur (poste qui suit la régie, essais) amène l'horloge avec elle.
+useMagasin.subscribe((s, p) => { if (s.lecture && s.lecture !== p.lecture) poserHorloge(horlogeDe(s.lecture)); });
 
 /** Vitesse appliquée : ×1 en SPECTACLE quoi qu'il arrive. */
 const vitesseEffective = (s: Pick<Magasin, 'mode' | 'vitesse'>) => (s.mode === 'spectacle' ? 1 : s.vitesse);

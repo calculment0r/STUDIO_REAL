@@ -116,6 +116,34 @@ function valeurDonnees(d: unknown): number | string | boolean | undefined {
 const virgule = (n: number) => String(n).replace('.', ',');
 const capitale = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** Copie d'un tableau qui ne fait que grandir (parcours, alertes, journal, commandes) ou qui est remplacé d'un bloc (reprises) :
+ *  tant que le tableau source est le même et de même longueur, la MÊME copie est rendue (la référence ne change pas) ; à
+ *  l'ajout, une copie neuve ne copie que les éléments nouveaux ; un tableau source remplacé est recopié en entier. Les
+ *  éléments déjà copiés ne sont jamais modifiés (le moteur ne fait que pousser dans ces tableaux). */
+function copieurDeTableau<S, C = S>(copier: (x: S) => C): (a: S[]) => C[] {
+  let source: S[] | null = null, n = 0, copie: C[] = [];
+  return (a) => {
+    if (a === source && a.length === n) return copie;
+    copie = a === source && a.length > n ? [...copie, ...a.slice(n).map(copier)] : a.map(copier);
+    source = a; n = a.length;
+    return copie;
+  };
+}
+
+/** Copie d'un dictionnaire de valeurs simples (mémoires, tours, réceptions, attentes, votes) : la même copie tant que
+ *  le contenu est égal (clés et valeurs), une copie neuve dès qu'une valeur change. */
+function copieurDeDictionnaire<V>(): (r: Record<string, V>) => Record<string, V> {
+  let derniere: Record<string, V> | null = null;
+  return (r) => {
+    if (derniere) {
+      const a = Object.keys(r), b = Object.keys(derniere);
+      if (a.length === b.length && a.every(k => k in derniere! && derniere![k] === r[k])) return derniere;
+    }
+    derniere = { ...r };
+    return derniere;
+  };
+}
+
 export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLecteur): Lecteur => {
   const graine = options.graine ?? (options.mode === 'repetition' ? GRAINE_REPETITION : Math.floor(Math.random() * 2 ** 32));
   let prng = creerPrng(graine);
@@ -160,27 +188,38 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.commandes.push(cmd);
   }
 
+  // Copies mémoïsées pour etat() : une référence qui ne change que si le contenu change (voir copieurDeTableau).
+  const copieMemoires = copieurDeDictionnaire<number | string | boolean>();
+  const copieParcours = copieurDeTableau<[string, string, number]>(p => [...p] as [string, string, number]);
+  const copieAttentes = copieurDeDictionnaire<number>();
+  const copieAlertes = copieurDeTableau<AlerteLecture>(a => ({ ...a }));
+  const copieTours = copieurDeDictionnaire<number>();
+  const copieJournal = copieurDeTableau<EvenementLecture>(j => ({ ...j }));
+  const copieCommandes = copieurDeTableau<CommandeLecture>(x => ({ ...x, donnees: { ...x.donnees } }));
+  const copieReprises = copieurDeTableau<Reprise, PointReprise>(r => {
+    const p: PointReprise = {
+      nom: r.nom, t: r.t, moment: r.moment, etape: r.cadres[0]?.appelant ?? r.etape, restaure: r.restaure,
+      memoires: { ...r.memoires },
+    };
+    if (r.issue !== undefined) p.issue = r.issue;
+    return p;
+  });
+  const copieReceptions = copieurDeDictionnaire<number>();
+  const copieVotes = copieurDeDictionnaire<number>();
+
   function etat(): EtatLecture {
     const c0 = s.cadres[0];
     const c = cadre();
     const e: EtatLecture = {
       t: s.t, moment: moment()?.id ?? null, etape: etapeMoment(), tEtape: c0 ? s.t - c0.debut : s.tEtape,
       attenteGo: s.attenteGo, retard: s.retard, bloque: s.bloque, termine: s.termine, issue: s.issue,
-      memoires: { ...s.memoires }, parcours: s.parcours.map(p => [...p] as [string, string, number]),
-      phase: s.phase, attentes: { ...s.attentes }, alertes: s.alertes.map(a => ({ ...a })), tours: { ...s.tours },
-      journal: s.journal.map(j => ({ ...j })), commandes: s.commandes.map(x => ({ ...x, donnees: { ...x.donnees } })),
-      reprises: s.reprises.map(r => {
-        const p: PointReprise = {
-          nom: r.nom, t: r.t, moment: r.moment, etape: r.cadres[0]?.appelant ?? r.etape, restaure: r.restaure,
-          memoires: { ...r.memoires },
-        };
-        if (r.issue !== undefined) p.issue = r.issue;
-        return p;
-      }),
-      receptions: { ...s.receptions },
+      memoires: copieMemoires(s.memoires), parcours: copieParcours(s.parcours),
+      phase: s.phase, attentes: copieAttentes(s.attentes), alertes: copieAlertes(s.alertes), tours: copieTours(s.tours),
+      journal: copieJournal(s.journal), commandes: copieCommandes(s.commandes), reprises: copieReprises(s.reprises),
+      receptions: copieReceptions(s.receptions),
       retenu: s.retenu, prolonge: s.prolonge,
     };
-    if (s.votes) e.votes = { ...s.votes };
+    if (s.votes) e.votes = copieVotes(s.votes);
     if (c && s.etape) e.sequence = { id: c.seq.id, nom: c.seq.nom, etape: s.etape, tEtape: s.tEtape, chemin: s.cadres.map(x => x.seq.nom) };
     return e;
   }
