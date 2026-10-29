@@ -124,3 +124,31 @@ Ce que le lot vise (objectifs du rapport 07 §7 ; **ce sont des objectifs, pas d
 1. Le battement de 0,2 s de `lecture` est-il acceptable, ou faut-il que le lot suivant fasse lire `useHorloge` au relais de la sortie et à `serveur.ts` pour le supprimer ?
 2. Si la mesure navigateur donne plus de 5 mises en page par seconde : convertir les jauges `.barre > span` (`coquille.css`, `barre-scene.css`, `planche.css`) de `width` en `transform: scaleX` ? Hors du périmètre de ce lot (CSS des jauges).
 3. L'aperçu de la sortie dans le panneau est rafraîchi à 4 Hz par le relais (`sortie/**`) : à garder tel quel ?
+
+## Mesure du relecteur dans le navigateur (29 octobre, 16 h, intégration `67564b1`)
+
+Commande : `npm run fluidite -- --etiquette apres-performance-react --phase repos,lecture,go,go-lent,rendus` (Edge en
+`--headless=old`, validé sur ce poste : aucune fenêtre listée par Windows, aucun processus restant), puis
+`--comparer` avec la référence du matin `20261029-1329-reference-secteur.json`. Fichiers : `outils/fluidite/resultats/20261029-1508-apres-performance-react.json`
+et `20261029-1504-essai-headless-old.json`. Machine partagée avec d'autres programmes (12 à 28 %).
+
+| Phase | Mesure | Avant | Après | Variation |
+|---|---|---|---|---|
+| lecture (attente d'un GO, 60 s) | fil principal occupé (ms/s) | 410 | 311 | −24 % |
+| | script (ms/s) | 74 | 19 | −74 % |
+| | rendus React validés par seconde | 129 | 15 | −88 % |
+| | sortie : script (ms/s) | 16 | 6 | −61 % |
+| go (GO toutes les 5 s) | script (ms/s) | 91 | 37 | −59 % |
+| | rendus React validés par seconde | 129 | 41 | −68 % |
+| go-lent (processeur ralenti ×4) | images par seconde | 22 | 24 | +10 % |
+| | script (ms/s) | 165 | 114 | −31 % |
+| | rendus React validés par seconde | 45 | 20 | −56 % |
+| rendus (construction de développement) | script (ms/s) | 468 | 166 | −65 % |
+| | temps de rendu React (ms/s) | 215 | 106 | −50 % |
+
+Lecture : les objectifs « script par image » et « validations » sont presque atteints (15 validations par seconde au
+lieu de moins de 10 : les jauges en largeur rafraîchies 4 fois par seconde et l'aperçu de la sortie restent) ; le fil
+principal reste à 311 ms/s parce que l'assemblage des calques par le navigateur (194 ms/s dans l'audit) n'a été réduit
+que pour la tête de lecture. Sur une machine ralentie ×4, la saccade reste : la suite est dans les jauges (`scaleX`
+au lieu de `width`), la conduite et la planche limitées à ce qui est vu, et la consigne d'exploitation (secteur, plan
+Performances, construction de production).
