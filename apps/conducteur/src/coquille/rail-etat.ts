@@ -55,11 +55,40 @@ export function useVignettes(ms = SURVEILLANCE_MS): VignetteActeur[] {
 
 /** Pastille (texte, couleur) de chaque acteur du projet, pour la bande de la planche et la fenêtre Acteurs : même
  *  diagnostic que le rail des sorties, donc elle se colore dès que `poserEtatActeur` / `poserResumeSalle` sont appelés. */
-export function usePastillesActeurs(): Record<string, { texte: string; couleur: string }> {
-  const vignettes = useVignettes(1000);
-  const sortie: Record<string, { texte: string; couleur: string }> = {};
-  for (const v of vignettes) sortie[v.id] = pastilleDiagnostic(v.diag, v.agregats);
-  return sortie;
+type Pastilles = Record<string, { texte: string; couleur: string }>;
+
+/** Les pastilles d'état de chaque acteur, recalculées ; le MÊME objet (et les mêmes pastilles) tant que rien n'a changé. */
+function calculerPastilles(maintenant: number, avant: Pastilles): Pastilles {
+  const m = useMagasin.getState();
+  const vignettes = vignettesSorties({
+    projet: m.projet, acteurs: magasinActeurs.getState(), local: sortieLocale(useSortie.getState(), maintenant),
+    spectacle: m.mode === 'spectacle', maintenant,
+  });
+  const sortie: Pastilles = {};
+  for (const v of vignettes) {
+    const p = pastilleDiagnostic(v.diag, v.agregats);
+    const ancienne = avant[v.id];
+    sortie[v.id] = ancienne && ancienne.texte === p.texte && ancienne.couleur === p.couleur ? ancienne : p;
+  }
+  const cles = Object.keys(sortie);
+  return cles.length === Object.keys(avant).length && cles.every(k => sortie[k] === avant[k]) ? avant : sortie;
+}
+
+export function usePastillesActeurs(): Pastilles {
+  // L'état ne change (donc le composant n'est ré-exécuté) que si une pastille change : le tic d'une seconde ne rend rien
+  // quand tout est pareil. Les changements de projet, de mode, de liaison ou de fenêtre recalculent aussitôt.
+  const [pastilles, setPastilles] = useState<Pastilles>(() => calculerPastilles(Date.now(), {}));
+  useEffect(() => {
+    const maj = () => setPastilles(avant => calculerPastilles(Date.now(), avant));
+    const id = setInterval(maj, 1000);
+    const retirer = [
+      useMagasin.subscribe((s, p) => { if (s.projet !== p.projet || s.mode !== p.mode) maj(); }),
+      useSortie.subscribe((s, p) => { if (s.fenetre !== p.fenetre) maj(); }),
+      useSpectacle.subscribe((s, p) => { if (s.ligne !== p.ligne) maj(); }),
+    ];
+    return () => { clearInterval(id); for (const f of retirer) f(); };
+  }, []);
+  return pastilles;
 }
 
 /** Lien de l'acteur (public : avec le jeton `public` ; acteur nommé : avec SON jeton) ; null tant que le jeton n'est pas connu. */

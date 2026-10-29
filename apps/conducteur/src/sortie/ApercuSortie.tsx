@@ -5,6 +5,7 @@
 //   écart (ambre)        demandé : <type publié> · affiché : <type vu>   — la sortie ne suit pas depuis plus de 2 s
 //   sortie périmée       la sortie annonce une autre version du protocole : bouton « Recharger la sortie »
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { rechargerSortie, relacherScene, useSortie } from './relais';
 import { ContexteTemps, Fondus, Scene1080 } from './scenes';
 import { VERSION_SORTIE, type TypeScene } from './protocole';
@@ -16,7 +17,11 @@ const NOMS: Record<TypeScene, string> = {
 const nom = (t: TypeScene | null | undefined): string => (t ? NOMS[t] : '—');
 
 export function ApercuSortie({ className }: { className?: string }) {
-  const { scene, sceneVue, sceneVueComplete, ecart, versionSortie, buildSortie, refus, n, fondu, etat, heureEtat, mode, fenetre, sortie } = useSortie();
+  // un sélecteur : l'aperçu n'est ré-exécuté que si l'un de ces champs change (et non à chaque écriture du magasin de la sortie)
+  const { scene, sceneVue, sceneVueComplete, ecart, versionSortie, buildSortie, refus, n, fondu, etat, heureEtat, mode, fenetre, sortie } = useSortie(useShallow(s => ({
+    scene: s.scene, sceneVue: s.sceneVue, sceneVueComplete: s.sceneVueComplete, ecart: s.ecart, versionSortie: s.versionSortie, buildSortie: s.buildSortie,
+    refus: s.refus, n: s.n, fondu: s.fondu, etat: s.etat, heureEtat: s.heureEtat, mode: s.mode, fenetre: s.fenetre, sortie: s.sortie,
+  })));
   const temps = useMemo(() => ({ etat, heureEtat, maintenantRegie: () => Date.now() }), [etat, heureEtat]);
   const connectee = fenetre === 'connectee';
   const perimee = fenetre !== 'fermee' && versionSortie !== null && versionSortie !== VERSION_SORTIE;

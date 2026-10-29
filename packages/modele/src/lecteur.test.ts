@@ -345,3 +345,93 @@ describe('retenir et prolonger (barre de scène)', () => {
     expect(f.journal).toEqual([]);
   });
 });
+
+describe('etat() : mêmes références tant que rien n’a changé (lot performance-react)', () => {
+  const mk = () => projet([
+    moment('m1', [etape('a', 10), etape('b', 10)], [sortie('a', 'b')], { mode: 'go', g: [] }),
+    moment('m2', [etape('c', 10)], []),
+  ]);
+
+  it('les tableaux et dictionnaires gardent leur référence d’un appel à l’autre, seuls t, tEtape et retard bougent', () => {
+    const L = creerLecteur(mk(), { mode: 'repetition' });
+    const e1 = L.avancer(0.5, sig());
+    const e2 = L.avancer(0.5, sig());
+    expect(e2.t).toBeGreaterThan(e1.t);
+    expect(e2.tEtape).toBeGreaterThan(e1.tEtape);
+    expect(e2.memoires).toBe(e1.memoires);
+    expect(e2.parcours).toBe(e1.parcours);
+    expect(e2.attentes).toBe(e1.attentes);
+    expect(e2.alertes).toBe(e1.alertes);
+    expect(e2.tours).toBe(e1.tours);
+    expect(e2.journal).toBe(e1.journal);
+    expect(e2.commandes).toBe(e1.commandes);
+    expect(e2.reprises).toBe(e1.reprises);
+    expect(e2.receptions).toBe(e1.receptions);
+    expect(L.etat().parcours).toBe(e2.parcours);
+  });
+
+  it('à l’ajout d’une entrée, un NOUVEAU tableau est rendu ; l’ancien n’est pas modifié', () => {
+    const L = creerLecteur(mk(), { mode: 'repetition' });
+    const avant = L.etat();
+    expect(avant.parcours).toEqual([['m1', 'a', 0]]);
+    let e = avant;
+    for (let i = 0; i < 12; i++) e = L.avancer(1, sig());          // l'étape 'a' finit, 'b' commence
+    expect(e.etape).toBe('b');
+    expect(e.parcours).not.toBe(avant.parcours);
+    expect(e.parcours).toEqual([['m1', 'a', 0], ['m1', 'b', 10]]);
+    expect(avant.parcours).toEqual([['m1', 'a', 0]]);                // la copie rendue plus tôt reste intacte
+    // le journal : une mémoire posée l'agrandit, sans toucher à la copie précédente
+    const j0 = L.etat().journal!;
+    L.poser('x', 1);
+    const j1 = L.etat().journal!;
+    expect(j1).not.toBe(j0);
+    expect(j1.length).toBe(j0.length + 1);
+    expect(j0.length).toBe(j1.length - 1);
+  });
+
+  it('un dictionnaire change de référence quand une valeur change, et seulement alors', () => {
+    const L = creerLecteur(mk(), { mode: 'repetition' });
+    const m0 = L.poser('niveau', 3).memoires;
+    expect(L.poser('niveau', 3).memoires).toBe(m0);                 // même valeur reposée : même référence
+    const m1 = L.poser('niveau', 4).memoires;
+    expect(m1).not.toBe(m0);
+    expect(m1).toEqual({ niveau: 4 });
+    expect(m0).toEqual({ niveau: 3 });
+    const r0 = L.signal('top').receptions;
+    expect(L.etat().receptions).toBe(r0);
+    expect(L.signal('top').receptions).not.toBe(r0);
+  });
+
+  it('pendant l’attente du GO, attentes change (cumul) mais parcours et memoires gardent leur référence', () => {
+    const L = creerLecteur(mk(), { mode: 'repetition' });
+    let e = L.etat();
+    for (let i = 0; i < 25; i++) e = L.avancer(1, sig());           // l'étape finit, le passage « go » du moment attend
+    expect(e.attenteGo).toBe(true);
+    const p = e.parcours, m = e.memoires;
+    const a = e.attentes;
+    e = L.avancer(1, sig());
+    expect(e.attentes).not.toBe(a);
+    expect(e.parcours).toBe(p);
+    expect(e.memoires).toBe(m);
+  });
+
+  it('reinitialiser repart de tableaux neufs', () => {
+    const L = creerLecteur(mk(), { mode: 'repetition' });
+    const avant = L.avancer(1, sig());
+    const apres = L.reinitialiser();
+    expect(apres.parcours).not.toBe(avant.parcours);
+    expect(apres.parcours).toEqual([['m1', 'a', 0]]);
+    expect(apres.journal).toEqual([]);
+  });
+
+  it('les points de reprise gardent leur forme (sans les champs internes du moteur)', () => {
+    const p = projet([moment('m', [etape('a', 10, 'p:reprise', { params: { nom: 'départ' } }), etape('b', 10)], [sortie('a', 'b')])]);
+    const L = creerLecteur(p, { mode: 'repetition' });
+    const e = L.etat();
+    expect(e.reprises?.length).toBe(1);
+    const r = e.reprises![0]!;
+    expect(r.nom).toBe('départ');
+    expect(Object.keys(r).sort()).toEqual(['etape', 'memoires', 'moment', 'nom', 'restaure', 't']);
+    expect(L.etat().reprises).toBe(e.reprises);
+  });
+});

@@ -13,7 +13,8 @@ import {
 import { TYPES_PISTE } from '../etat/assets';
 import { mmss, romain } from '../theme/format';
 import { useInterface, type Accordeons } from './interface';
-import { infoBloc, libelleCondition, regleSortie, situation } from './derive';
+import { infoBloc, libelleCondition, regleSortie } from './derive';
+import { useSituationVive, useStructure } from './structure-lecture';
 import { Rotatif, RotatifSeul } from './Rotatif';
 import { CHEVRON } from './icones';
 import { nouveauMoment } from './raccourcis';
@@ -401,15 +402,14 @@ function PanneauPiste({ sel }: { sel: Selection }) {
 }
 
 // ─── où en est-on ─────────────────────────────────────────────────────────────────────────────────────
+// Se ré-exécute à la structure (étape, attente du GO…) et au quart de seconde pour le temps restant et les jauges (jamais 60 fois par seconde).
 function OuEnEstOn() {
-  const projet = useMagasin(s => s.projet);
-  const lecture = useMagasin(s => s.lecture);
-  const sig = useMagasin(s => s.signaux)();
+  const st = useStructure();
   const go = useMagasin(s => s.go);
-  const sit = situation(projet, lecture, sig);
-  const compte = sit.passageGo !== null && !lecture?.attenteGo && sit.avantPret > 0 && sit.avantPret <= 10 && !!lecture;
+  const sit = useSituationVive();
+  const compte = sit.passageGo !== null && !st?.attenteGo && sit.avantPret > 0 && sit.avantPret <= 10 && !!st;
   // le GO (magasin.go) est toujours possible tant que le spectacle n'est pas terminé : un appui = un cue
-  const goPossible = !!lecture && !lecture.termine;
+  const goPossible = !!st && !st.termine;
   return (
     <div className="pn-bloc large">
       <div className="pn-tete"><span className="pn-tag">OÙ EN EST-ON</span><span className="pn-droite">{sit.tag}</span></div>

@@ -8,6 +8,7 @@
 //   - EN COURS / PROCHAIN (mode SPECTACLE) : le cue en cours, le prochain et les envois qui partiront au GO.
 // Toute modification passe par modifierProjet (annulable, synchronisée avec la salle collaborative).
 import { useMemo, useState, type DragEvent, type ReactNode } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { signauxDuProjet, type Acteur, type Envoi, type Etape, type Projet } from '@studio-real/modele';
 import { useMagasin } from '../etat/magasin';
 import { testerVue } from '../etat/acteurs';
@@ -369,10 +370,10 @@ export function cibleSignal(moment: string, sortie: number) {
 // ─── EN COURS / PROCHAIN (SPECTACLE) ──────────────────────────────────────────────────────────────────────────────────
 export function EnCoursProchain() {
   const projet = useMagasin(s => s.projet);
-  const lecture = useMagasin(s => s.lecture);
-  const cle = lecture ? `${lecture.moment}|${lecture.etape}|${lecture.termine}` : '';
-  // ne se recalcule qu'au changement de cue (pas à chaque image de la lecture)
-  const r = useMemo(() => prochainCue(projet, lecture), [projet, cle]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // seulement le cue (moment, étape, fin) : le temps ne change rien à ce bloc, il ne se ré-exécute donc qu'au changement de cue
+  const cue = useMagasin(useShallow(s => (s.lecture ? { moment: s.lecture.moment, etape: s.lecture.etape, termine: s.lecture.termine } : null)));
+  const r = useMemo(() => prochainCue(projet, cue), [projet, cue]);
+  const lecture = cue;
   return (
     <div className="pn-bloc ec-bloc" aria-label="Cue en cours et prochain">
       <div className="ec-cue">

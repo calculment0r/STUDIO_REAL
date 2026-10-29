@@ -3,6 +3,7 @@
 // re-rendent pas ce composant (seul le niveau de zoom sémantique, l'état de lecture ou le projet le font).
 import { memo, useMemo, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
 import { dureeEtape, type Acteur, type Etape } from '@studio-real/modele';
+import { useHorloge, useTempsArrondi } from '../etat/horloge';
 import {
   entreesDe, fm, hauteurBloc, liensDuMoment, regleSortie, libelleCondition, rondEntree, rondSortie, statutSortie,
   LARGEUR_BLOC, type CadreMoment, type Niveau, type StatutEtape,
@@ -21,7 +22,8 @@ export interface ApiPlanche {
   saisirEnvoi: (e: RPointerEvent, moment: string, etape: string) => void;
 }
 
-export interface EtatActif { etape: string; tEtape: number; bloque: boolean }
+/** L'étape en cours d'un moment. Pas de temps ici : le reste, la jauge et l'aperçu lisent l'horloge eux-mêmes (voir plus bas). */
+export interface EtatActif { etape: string; bloque: boolean }
 export interface RotatifProvisoire { etape: string; i: number; v: number }
 
 export interface ProprietesMoment {
@@ -163,6 +165,26 @@ export const MomentPlanche = memo(function MomentPlanche(p: ProprietesMoment) {
   );
 });
 
+// ── le temps de l'étape en cours : trois petits composants, les seuls du bloc qui suivent l'horloge ─────────────────────
+/** Durée restante MM:SS de l'étape en cours (une validation par seconde). */
+function ResteEtape({ d }: { d: number }) {
+  const reste = useHorloge(h => Math.floor(Math.max(0, d - h.tEtape) + 1e-6));
+  return <>{fm(reste)}</>;
+}
+
+/** Jauge de l'étape en cours (au quart de seconde). */
+function JaugeEtape({ d, couleur }: { d: number; couleur: string }) {
+  const t = useTempsArrondi('tEtape', 0.25);
+  const prog = Math.max(0, Math.min(1, t / d));
+  return <span style={{ width: (prog * 100).toFixed(1) + '%', background: couleur }} />;
+}
+
+/** Aperçu vivant du bloc en cours : lui donne le temps de l'étape au quart de seconde (il se dessine seul entre deux). */
+function ApercuEnCours(p: { ty: string; k: number[]; theme: ThemePlanche; echelle: number }) {
+  const t = useTempsArrondi('tEtape', 0.25);
+  return <ApercuEtape ty={p.ty} k={p.k} t={t} actif theme={p.theme} echelle={p.echelle} />;
+}
+
 interface ProprietesBloc {
   st: Etape; si: number; pos: { x: number; y: number }; momentId: string; niveau: Niveau; NH: number; theme: ThemePlanche;
   statut: StatutEtape; actif: EtatActif | null; sel: boolean; terne: boolean; entree: boolean;
@@ -180,7 +202,7 @@ function BlocEtape(b: ProprietesBloc) {
   const act = b.statut === 'actif';
   const ignore = b.statut === 'ignore';
   const d = dureeEtape(st);
-  const prog = act && b.actif ? Math.max(0, Math.min(1, b.actif.tEtape / d)) : b.statut === 'joue' ? 1 : 0;
+  const enCours = act && !!b.actif;
   const bloque = !!(act && b.actif?.bloque);
   const k = b.rotatif ? st.k.map((v, i) => (i === b.rotatif!.i ? b.rotatif!.v : v)) : st.k;
 
@@ -211,7 +233,7 @@ function BlocEtape(b: ProprietesBloc) {
         : b.cibleLien ? `inset 0 0 0 ${px(1)} ${teinte('var(--cy)', 50)}` : `inset 0 0 0 ${px(1)} ${LIGNE(0.18)}`;
   const long = st.name.length > 14;
   const pointCouleur = COULEUR_STATUT[b.statut] ?? acc;
-  const resteOuDuree = act && b.actif ? fm(Math.max(0, d - b.actif.tEtape)) : fm(d);
+
   const nbS = b.sorties.length;
 
   return (
@@ -229,12 +251,18 @@ function BlocEtape(b: ProprietesBloc) {
             </span>
             <span className="planche-bloc__sous">{String(b.si + 1).padStart(2, '0')} · {info.label} · {TXT_STATUT[b.statut]}</span>
           </span>
-          <span className="planche-chiffre" style={{ fontSize: 11, color: act ? 'var(--ort)' : 'var(--ink2)', flex: 'none', width: 40, textAlign: 'right' }}>{resteOuDuree}</span>
-          <span className="planche-bloc__prog"><span style={{ width: (prog * 100).toFixed(1) + '%', background: act ? 'var(--ort)' : 'var(--gt)' }} /></span>
+          <span className="planche-chiffre" style={{ fontSize: 11, color: act ? 'var(--ort)' : 'var(--ink2)', flex: 'none', width: 40, textAlign: 'right' }}>{enCours ? <ResteEtape d={d} /> : fm(d)}</span>
+          <span className="planche-bloc__prog">
+            {enCours
+              ? <JaugeEtape d={d} couleur="var(--ort)" />
+              : <span style={{ width: (b.statut === 'joue' ? 100 : 0).toFixed(1) + '%', background: act ? 'var(--ort)' : 'var(--gt)' }} />}
+          </span>
           {bloque && <span className="planche-bloque planche-pulse">BLOQUÉ</span>}
         </div>
         <div className="planche-bloc__apercu">
-          <ApercuEtape ty={st.ty} k={k} t={act && b.actif ? b.actif.tEtape : 0} actif={act} theme={b.theme} echelle={niveau === 'pres' ? 2 : 1} />
+          {enCours
+            ? <ApercuEnCours ty={st.ty} k={k} theme={b.theme} echelle={niveau === 'pres' ? 2 : 1} />
+            : <ApercuEtape ty={st.ty} k={k} t={0} actif={act} theme={b.theme} echelle={niveau === 'pres' ? 2 : 1} />}
         </div>
         {niveau === 'pres' && (
           <>

@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState, type PointerEvent as EvenementPointeur } from 'react';
 import { NOMS_MELANGES } from '@studio-real/emulateur';
 import { useMagasin } from '../etat/magasin';
+import { useTempsArrondi } from '../etat/horloge';
 import {
   VITESSES_EMULATEUR, VITRINE_MAX, arreterEmulateur, changerVitesseEmulateur, demarrerEmulateur, emulateurCourant, epingler,
   mettreEnVitrine, rafraichirEmulateur, reglerAutoEmulateur, remettreAZero, retirerDeVitrine, sourceSignaux, telephoneEmule,
@@ -107,7 +108,7 @@ function Etat() {
   const sig = useEmulateur(s => s.signaux);
   const fil = useEmulateur(s => s.fil);
   const projet = useMagasin(s => s.projet);
-  const tEtape = useMagasin(s => s.lecture?.tEtape ?? 0);
+  const tEtape = useTempsArrondi('tEtape', 1);   // la fenêtre n'affiche que la source des signaux : la seconde suffit
   const source = sourceSignaux(projet.sens, tEtape).source;
   return (
     <div className="emu-etat">

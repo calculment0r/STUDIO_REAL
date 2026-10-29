@@ -117,11 +117,14 @@
   position: absolute; top: 62px; height: 40px; border-radius: var(--rayon); background: var(--cd-tuile); display: flex; align-items: center;
   overflow: hidden; cursor: pointer; box-shadow: inset 0 0 0 1px var(--cd-acc, var(--cd-filet2));
 }
+/* Le fond d'avancement garde sa largeur et se met à l'échelle : TeteDeLecture écrit --avance (0 à 1) à 10 Hz, ce qui
+   ne déclenche plus de mise en page (lot performance-react, audit de fluidité 07). */
 .cd-moment::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--avance, 0) * 100%);
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  transform: scaleX(var(--avance, 0)); transform-origin: 0 50%;
   background: color-mix(in srgb, var(--cd-vert) 16%, transparent); pointer-events: none;
 }
-.cd-moment[data-vif]::before { background: color-mix(in srgb, var(--cd-or) 16%, transparent); }
+.cd-moment[data-vif]::before { background: color-mix(in srgb, var(--cd-or) 16%, transparent); will-change: transform; }
 .cd-moment[data-vif] { box-shadow: inset 0 0 0 1.5px var(--cd-or); }
 .cd-moment[data-sel] { box-shadow: inset 0 0 0 1.5px var(--cd-cy); }
 .cd-moment .nom { position: relative; font-size: 11px; font-weight: 600; color: var(--cd-encre); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px 0 8px; }
@@ -146,8 +149,11 @@
 .cd-passage[data-franchi] i { background: var(--cd-vert); }
 .cd-passage[data-go][data-franchi] i { background: var(--cd-or); }
 .cd-passage[data-ouvert] i { outline: 4px solid color-mix(in srgb, var(--cd-cy) 30%, transparent); }
-.cd-passage[data-attend] i { animation: cd-pulse 1s infinite; }
-@keyframes cd-pulse { 50% { background: var(--cd-or); } }
+/* La pulsation d'un passage qui attend le top anime l'OPACITÉ d'un voile (calque du compositeur) et non plus le fond du losange,
+   qu'il fallait repeindre à chaque image (audit de fluidité 07, cause 5). Le losange d'un passage « go » a déjà son liseré orange. */
+.cd-passage[data-attend] i { position: relative; }
+.cd-passage[data-attend] i::after { content: ''; position: absolute; inset: 0; border-radius: var(--rayon-petit); background: var(--cd-or); opacity: 0; animation: cd-pulse 1s infinite; }
+@keyframes cd-pulse { 50% { opacity: 1; } }
 
 /* ── les pistes ───────────────────────────────────────────── */
 .cd-pistes {
@@ -203,6 +209,7 @@
 /* ── la tête de lecture (commun/tete.css, .sr-ph) ───────────── */
 .cd-calque-tete { position: absolute; left: var(--cd-lbl); right: 0; top: 0; bottom: 26px; overflow: hidden; pointer-events: none; z-index: 7; }
 .sr-ph { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; background: var(--cd-or); pointer-events: none; z-index: var(--sr-ph-z, 9); will-change: transform; }
+/* Hachures de l'attente du top : TeteDeLecture pose left et width une fois au début de l'attente, puis ne change que le clip-path. */
 .sr-ph i { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 11px; height: 11px; border-radius: 0 0 var(--rayon-petit) var(--rayon-petit); background: var(--cd-or); }
 .cd-attente-vive {
   position: absolute; top: 110px; height: 10px; border-radius: var(--rayon-petit); left: 0; width: 0; display: none;
@@ -211,7 +218,7 @@
 
 /* ── la barre de zoom ─────────────────────────────────────── */
 .cd-zb { position: absolute; left: var(--cd-lbl); right: 14px; bottom: 8px; height: 10px; border-radius: var(--rayon-petit); background: rgba(var(--lr), .07); z-index: 6; cursor: pointer; touch-action: none; }
-.cd-zb-tete { position: absolute; top: -3px; width: 2px; height: 16px; margin-left: -1px; background: var(--cd-or); pointer-events: none; left: 0; }
+.cd-zb-tete { position: absolute; top: -3px; width: 2px; height: 16px; margin-left: -1px; background: var(--cd-or); pointer-events: none; left: 0; will-change: transform; }   /* déplacé par transform (TeteDeLecture) */
 .cd-zb-pouce { position: absolute; top: 0; height: 10px; border-radius: var(--rayon-petit); background: rgba(var(--lr), .26); cursor: grab; min-width: 2px; }
 .cd-zb-rond { position: absolute; top: -2px; width: 14px; height: 14px; border-radius: var(--rayon-rond); background: var(--cd-fond); box-shadow: inset 0 0 0 2px var(--cd-cy); cursor: ew-resize; }
 .cd-zb-rond:hover { background: var(--cd-cy); }

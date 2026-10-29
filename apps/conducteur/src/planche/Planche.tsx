@@ -8,8 +8,11 @@
 // En mode Répétition, un clic sur une étape y amène la tête de lecture (comme le design). Double-clic dans un cadre : une
 // étape ; clic droit : nouvelle étape ici, un bloc de la bibliothèque, nouvelle sortie depuis une étape. « + BLOC » : la
 // bibliothèque. Sorties et passages choisis passent par la sélection du magasin (le panneau de droite les montre).
+// Performance (lot performance-react) : la planche ne lit de la lecture que ce qui change à un GO, une pause ou une attente
+// du top (moment, étape, attente, parcours, issue, blocage) ; elle n'est donc JAMAIS ré-exécutée parce que le temps passe.
+// Le temps de l'étape en cours (reste, jauge, aperçu du bloc actif) est lu par les petits composants de MomentPlanche.tsx.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as RKeyboardEvent, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent } from 'react';
-import type { EtatLecture, Projet } from '@studio-real/modele';
+import type { Projet } from '@studio-real/modele';
 import { useMagasin } from '../etat/magasin';
 import { useInterface } from '../coquille/interface';
 import { nouveauMoment } from '../coquille/raccourcis';
@@ -52,7 +55,14 @@ export function Planche() {
   const projet = useMagasin(s => s.projet);
   const selection = useMagasin(s => s.selection);
   const mode = useMagasin(s => s.mode);
-  const lecture = useMagasin(s => s.lecture);
+  // la lecture, par valeurs simples : aucune ne change quand le temps passe
+  const aLecture = useMagasin(s => s.lecture !== null);
+  const momentCourant = useMagasin(s => s.lecture?.moment ?? null);
+  const etapeCourante = useMagasin(s => s.lecture?.etape ?? null);
+  const attenteGo = useMagasin(s => !!s.lecture?.attenteGo);
+  const bloque = useMagasin(s => !!s.lecture?.bloque);
+  const issue = useMagasin(s => s.lecture?.issue);
+  const parcours = useMagasin(s => s.lecture?.parcours);   // même référence tant que le parcours ne grandit pas (Lecteur.etat)
   const enLecture = useMagasin(s => s.enLecture);
   const verrou = useMagasin(s => s.verrou);
   const cadrage = useMagasin(s => s.cadrage);
@@ -149,12 +159,12 @@ export function Planche() {
   }), []);
 
   // ── Cadrage : moment sélectionné (ou en cours) ──
-  const indexCourant = lecture?.moment ? projet.ev.findIndex(e => e.id === lecture.moment) : -1;
-  const rectFocus = useCallback((l: EtatLecture | null): Rect | null => {
+  const indexCourant = momentCourant ? projet.ev.findIndex(e => e.id === momentCourant) : -1;
+  const rectFocus = useCallback((momentLu: string | null): Rect | null => {
     const { cadres: F, parId: P, selection: s } = etat.current;
-    if (l?.moment) {
+    if (momentLu) {
       // le moment en cours seul : le suivant est signalé par la flèche « PROCHAIN », jamais par un dézoom
-      const f = P.get(l.moment);
+      const f = P.get(momentLu);
       if (f) return f.r;
     }
     const f = (s.moment && P.get(s.moment)) || F[0];
@@ -165,7 +175,7 @@ export function Planche() {
   useEffect(() => {
     if (premierCadrage.current || taille.l < 50) return;
     premierCadrage.current = true;
-    const r = rectFocus(mode === 'spectacle' ? lecture : null);
+    const r = rectFocus(mode === 'spectacle' ? momentCourant : null);
     if (r) setCam(cadrer(r, taille.l, taille.h));
     // cadrage initial seulement
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,10 +213,10 @@ export function Planche() {
   const zSuivi = useRef<number | null>(null);
   useEffect(() => { if (mode === 'spectacle') setSuivre(true); }, [mode]);
   useEffect(() => { if (mode !== 'spectacle' || !suivre) zSuivi.current = null; }, [mode, suivre]);
-  const cleSuivi = mode === 'spectacle' && suivre && lecture?.moment ? `${lecture.moment}|${taille.l}x${taille.h}|${cadresBase.length}` : '';
+  const cleSuivi = mode === 'spectacle' && suivre && momentCourant ? `${momentCourant}|${taille.l}x${taille.h}|${cadresBase.length}` : '';
   useEffect(() => {
     if (!cleSuivi) return;
-    const r = rectFocus(useMagasin.getState().lecture);
+    const r = rectFocus(useMagasin.getState().lecture?.moment ?? null);
     if (!r) return;
     if (zSuivi.current === null) zSuivi.current = zoomDeSpectacle(etat.current.cam.z);
     const cible = cadrerSansZoom(r, etat.current.taille.l, etat.current.taille.h, zSuivi.current);
@@ -215,6 +225,8 @@ export function Planche() {
       const dt = Math.min(0.1, (now - avant) / 1000);
       avant = now;
       if (!geste.current) {
+        // arrivée : la boucle s'arrête (elle repart avec cleSuivi : autre moment, autre taille de boîte, suivi repris)
+        if (cameraProche(etat.current.cam, cible)) { raf = 0; return; }
         setCam(c => (cameraProche(c, cible) ? c : rapprocher(c, cible, dt * 3.2)));
       }
       raf = requestAnimationFrame(pas);
@@ -520,7 +532,7 @@ export function Planche() {
 
   const ouvrirBibliotheque = (x: number, y: number) => {
     setMenu(null);
-    const mo = selection.moment ?? lecture?.moment ?? cadres[0]?.moment.id ?? null;
+    const mo = selection.moment ?? momentCourant ?? cadres[0]?.moment.id ?? null;
     setBiblio(b => (b ? null : { x, y, moment: mo, wx: null, wy: null, depuis: selection.moment === mo ? selection.etape ?? null : null }));
   };
   const choisirBloc = (b: EntreeBibliotheque) => {
@@ -583,34 +595,43 @@ export function Planche() {
   // ── Données de lecture par moment (chaînes stables → pas de re-rendu des moments inchangés) ──
   const parcoursParMoment = useMemo(() => {
     const r = new Map<string, string[]>();
-    for (const [mo, et] of lecture?.parcours ?? []) r.set(mo, [...(r.get(mo) ?? []), et]);
+    for (const [mo, et] of parcours ?? []) r.set(mo, [...(r.get(mo) ?? []), et]);
     return r;
-  }, [lecture?.parcours]);
-  const lectureMin = lecture ? { moment: lecture.moment, etape: lecture.etape, parcours: lecture.parcours } : null;
+  }, [parcours]);
+  const lectureMin = useMemo(
+    () => (aLecture ? { moment: momentCourant, etape: etapeCourante, parcours: parcours ?? [] } : null),
+    [aLecture, momentCourant, etapeCourante, parcours],
+  );
+  // l'étape en cours (sans son temps : il est lu par les blocs eux-mêmes) ; une seule référence tant qu'elle ne change pas
+  const actifCourant = useMemo(
+    () => (momentCourant && etapeCourante ? { moment: momentCourant, etape: etapeCourante, bloque } : null),
+    [momentCourant, etapeCourante, bloque],
+  );
 
-  const vue = taille.l ? vueMonde(cam, taille.l, taille.h, 0.5) : null;
-  const vifSuivant = lecture?.attenteGo && indexCourant >= 0 ? projet.ev[indexCourant + 1]?.id : undefined;
+  // objet stable (mémorisé sur la caméra et la taille) : il passe à CoucheActeurs, qui est mémorisée
+  const vue = useMemo(() => (taille.l ? vueMonde(cam, taille.l, taille.h, 0.5) : null), [cam, taille.l, taille.h]);
+  const vifSuivant = attenteGo && indexCourant >= 0 ? projet.ev[indexCourant + 1]?.id : undefined;
   // Flèche « PROCHAIN » : pendant l'attente du top, si le moment suivant est hors champ, elle le désigne au bord de la vue
   // (à la place de l'ancien dézoom qui cadrait les deux moments).
   const prochain = useMemo(() => {
-    if (mode !== 'spectacle' || !lecture?.attenteGo || !vifSuivant || taille.l < 50) return null;
+    if (mode !== 'spectacle' || !attenteGo || !vifSuivant || taille.l < 50) return null;
     const suiv = parId.get(vifSuivant);
     const fleche = suiv ? flecheProchain(vueMonde(cam, taille.l, taille.h), suiv.r) : null;
     return fleche && suiv ? { ...fleche, nom: suiv.moment.name } : null;
-  }, [mode, lecture?.attenteGo, vifSuivant, taille.l, taille.h, parId, cam]);
+  }, [mode, attenteGo, vifSuivant, taille.l, taille.h, parId, cam]);
 
   // ── Passages entre moments (pointillés + losange) ──
   const passages = useMemo(() => cadres.slice(0, -1).map((fa, i) => {
     const fb = cadres[i + 1];
     const pa = parcoursParMoment.get(fa.moment.id);
-    const a = etapeDeFin(fa.moment, fa, indexCourant > i ? pa : undefined), b = etapeDEntree(fb.moment, lecture?.issue);
+    const a = etapeDeFin(fa.moment, fa, indexCourant > i ? pa : undefined), b = etapeDEntree(fb.moment, issue);
     const A = a ? fa.P[a] : undefined, B = b ? fb.P[b] : undefined;
     if (!A || !B) return null;
     const ax = A.x + LARGEUR_BLOC, ay = A.y + Y_ENTREE, e = rondEntree(B);
-    const passe = indexCourant > i, ici = indexCourant === i && !!lecture?.attenteGo;
+    const passe = indexCourant > i, ici = indexCourant === i && attenteGo;
     const go = fa.moment.gate.mode === 'go';
     return { i, d: cheminLien(ax, ay, e.x, e.y), mil: pointSurLien(ax, ay, e.x, e.y, 0.5), passe, ici, go };
-  }).filter(x => x !== null), [cadres, parcoursParMoment, lecture?.issue, lecture?.attenteGo, indexCourant]);
+  }).filter(x => x !== null), [cadres, parcoursParMoment, issue, attenteGo, indexCourant]);
 
   // ── Mini-carte ──
   const mini = useMemo(() => {
@@ -657,12 +678,12 @@ export function Planche() {
         {cadres.map(f => {
           const m = f.moment;
           const sigStatuts = lectureMin ? Object.entries(statutsMoment(m, f.index, indexCourant, lectureMin)).map(([k, v]) => k + '=' + v).join('|') : '';
-          const vif = !!lecture?.moment && (lecture.moment === m.id || vifSuivant === m.id);
-          const actif = lecture && lecture.moment === m.id && lecture.etape ? { etape: lecture.etape, tEtape: lecture.tEtape, bloque: lecture.bloque } : null;
+          const vif = !!momentCourant && (momentCourant === m.id || vifSuivant === m.id);
+          const actif = actifCourant && actifCourant.moment === m.id ? actifCourant : null;
           return (
             <MomentPlanche key={m.id} cadre={f} niveau={niveau} detail={!vue || intersecte(f.r, vue)} theme={theme}
               statuts={sigStatuts} parcours={(parcoursParMoment.get(m.id) ?? []).join('|')} actif={actif}
-              vif={vif} enAttenteTop={!!lecture?.attenteGo && lecture.moment === m.id} terne={mode === 'spectacle' && !!lecture?.moment && !vif}
+              vif={vif} enAttenteTop={attenteGo && momentCourant === m.id} terne={mode === 'spectacle' && !!momentCourant && !vif}
               selMoment={selection.moment === m.id && !selection.etape} selEtape={selection.moment === m.id ? selection.etape ?? null : null}
               selSortie={sortieSel && sortieSel.moment === m.id ? sortieSel.i : -1}
               lienDepuis={lien && lien.moment === m.id ? lien.a : null} editable={editable}
@@ -788,7 +809,7 @@ export function Planche() {
         </div>
       )}
 
-      {lecture?.bloque && (
+      {bloque && (
         <div className="planche-bandeau planche-micro" style={{ bottom: message ? 52 : 14, color: 'var(--ort)', boxShadow: `inset 0 0 0 1px ${teinte('var(--ort)', 60)}` }}>
           ÉTAPE BLOQUÉE · AUCUNE SORTIE REMPLIE · TOP RÉGIE POUR FORCER
         </div>

@@ -5,13 +5,18 @@
 // Ctrl+Maj+K = SAUTER À… (Ctrl+K reste à la recherche). PANIQUE n'a aucun raccourci : appui long de 0,7 s (jauge visible) ou double-clic, jamais le clavier.
 // Toutes les décisions (libellés, états, progression, liste des sauts) sont dans barre-etat.ts (pur, testé).
 // Sous 900 px de large, les libellés passent en icône + info-bulle.
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+// Performance (lot performance-react) : la barre ne se ré-exécute que si la STRUCTURE de la lecture change (étape, attente du
+// GO, retenue, pause…) ; le temps dans l'étape et la jauge (TempsEnCours) suivent l'horloge au quart de seconde.
+import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useMagasin } from '../etat/magasin';
+import { useHorloge, useTempsArrondi } from '../etat/horloge';
+import { mmss } from '../theme/format';
 import { IcoAller, IcoLecture, IcoPause } from './icones';
 import { useInterface } from './interface';
 import { useGoRecent } from './useGoRecent';
+import { lectureDepuis, useStructure } from './structure-lecture';
 import {
-  confirmationRequise, creerAppuiLong, filtrerSauts, listeSauts, phraseConfirmation, vueBarre, type Saut,
+  confirmationRequise, creerAppuiLong, dureeMinimale, filtrerSauts, listeSauts, phraseConfirmation, vueBarre, type Saut,
 } from './barre-etat';
 import './barre-scene.css';
 
@@ -121,8 +126,33 @@ function Sauter({ fermer }: { fermer: () => void }) {
   );
 }
 
+/** Temps dans l'étape (ou le passage), durée minimale et jauge : le seul morceau de la barre qui suit le temps (quart de seconde). */
+const TempsEnCours = memo(function TempsEnCours({ passage, dureeS, cumulTxt }: { passage: boolean; dureeS: number | null; cumulTxt: string }) {
+  const tEtape = useTempsArrondi('tEtape', 0.25);
+  const temps = mmss(tEtape);
+  const duree = passage || dureeS === null ? '' : mmss(dureeS);
+  const progres = !passage && dureeS && dureeS > 0 ? Math.max(0, Math.min(1, tEtape / dureeS)) : 0;
+  const depasse = !passage && dureeS !== null && tEtape >= dureeS - 1e-6;
+  return (
+    <>
+      <span className="bs-temps num" aria-label={'Temps dans l’étape ' + temps + (duree ? ' sur ' + duree : '')}>
+        {temps}{duree && <i> / {duree}</i>}
+        {cumulTxt && <b className="bs-plus"> {cumulTxt}</b>}
+      </span>
+      {!passage && (
+        <span className={'bs-prog' + (depasse ? ' depasse' : '')} role="progressbar" aria-label="Durée minimale de l’étape"
+          aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progres * 100)}>
+          <span style={{ width: (progres * 100).toFixed(1) + '%' }} />
+        </span>
+      )}
+    </>
+  );
+});
+
 export function BarreScene() {
-  const lecture = useMagasin(s => s.lecture);
+  const st = useStructure();
+  // « la représentation a commencé » (horloge > 0) : bascule une seule fois, au début de la lecture
+  const commence = useHorloge(h => h.t > 0);
   const enLecture = useMagasin(s => s.enLecture);
   const projet = useMagasin(s => s.projet);
   const enPanique = useMagasin(s => s.enPanique);
@@ -130,7 +160,12 @@ export function BarreScene() {
   const saut = useInterface(s => s.allerA);
   const poser = useInterface(s => s.poser);
   const goRecent = useGoRecent();
-  const v = vueBarre({ lecture, enLecture, projet, enPanique, goRecent });
+  // tout ce que la barre affiche, sauf le temps passé dans l'étape : calculé sur la structure (temps de l'étape à 0)
+  const v = useMemo(
+    () => vueBarre({ lecture: lectureDepuis(st, { t: commence ? 1 : 0, tEtape: 0 }), enLecture, projet, enPanique, goRecent }),
+    [st, commence, enLecture, projet, enPanique, goRecent],
+  );
+  const dureeS = useMemo(() => dureeMinimale(projet, st), [projet, st]);
   const m = useMagasin.getState();
   const e = v.enCours;
 
@@ -146,20 +181,7 @@ export function BarreScene() {
       <div className="bs-cue en-cours" aria-label="Étape en cours">
         <span className="bs-micro">{e?.passage ? 'PASSAGE' : 'EN COURS'}</span>
         <span className="bs-nom">{e?.nom ?? (v.termine ? 'FIN DU SPECTACLE' : '—')}</span>
-        {e && (
-          <>
-            <span className="bs-temps num" aria-label={'Temps dans l’étape ' + e.temps + (e.duree ? ' sur ' + e.duree : '')}>
-              {e.temps}{e.duree && <i> / {e.duree}</i>}
-              {v.prolonger.cumulTxt && <b className="bs-plus"> {v.prolonger.cumulTxt}</b>}
-            </span>
-            {!e.passage && (
-              <span className={'bs-prog' + (e.depasse ? ' depasse' : '')} role="progressbar" aria-label="Durée minimale de l’étape"
-                aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(e.progres * 100)}>
-                <span style={{ width: (e.progres * 100).toFixed(1) + '%' }} />
-              </span>
-            )}
-          </>
-        )}
+        {e && <TempsEnCours passage={e.passage} dureeS={dureeS} cumulTxt={v.prolonger.cumulTxt} />}
       </div>
       <div className="bs-cue prochain" aria-label="Prochaine étape">
         <span className="bs-micro">PROCHAIN</span>

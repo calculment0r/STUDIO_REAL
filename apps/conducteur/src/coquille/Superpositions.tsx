@@ -3,12 +3,13 @@
 // pupitre de représentation (avec le pupitre de la régie), ouverture de projet (onglets PROJET, SPECTACLE, LIENS), raccourcis,
 // et la fenêtre détachable de l'émulateur de téléphones (Emulateur.tsx, touche E).
 import { useMagasin } from '../etat/magasin';
+import { useHorloge, useTempsArrondi } from '../etat/horloge';
 import { prevoir } from '../etat/moteur';
 import { deconnecterSalle, useSalle } from '../etat/serveur';
 import { OuvrirProjet } from '../collab';
 import { mmss, mmssSigne } from '../theme/format';
 import { useInterface } from './interface';
-import { situation } from './derive';
+import { useSituationVive, useStructure } from './structure-lecture';
 import { PupitreRegie } from './Regie';
 import { chargerEcho, chargerLive } from './projet-live';
 import { useGoRecent } from './useGoRecent';
@@ -35,12 +36,16 @@ export function CadreEnLecture() {
 /** Repères de la piste Sécurité : bandeau rouge `lead` secondes avant (10 par défaut), à accuser réception. */
 export function AlerteSecurite() {
   const projet = useMagasin(s => s.projet);
-  const t = useMagasin(s => s.lecture?.t ?? null);
+  const aLecture = useMagasin(s => s.lecture !== null);
+  // Le temps ne sert qu'aux repères de la piste Sécurité (au quart de seconde) et à l'échéance des alertes du moteur (à la
+  // seconde) : sans repère, ce composant ne se ré-exécute qu'une fois par seconde, jamais à chaque image.
+  const avecReperes = projet.tracks.some(tk => tk.type === 'secu' && (tk.marks?.length ?? 0) > 0);
+  const t = useTempsArrondi('t', avecReperes ? 0.25 : 1);
   const accuses = useInterface(s => s.accuses);
   const poser = useInterface(s => s.poser);
   const journal = useMagasin(s => s.journalRegie);
   const alertesSorties = useSpectacle(s => s.alertes);
-  if (t === null) return null;
+  if (!aLecture) return null;
   const prev = prevoir(projet);
   const debut = (ev: string) => prev.moments.find(x => x.id === ev)?.debut ?? 0;
   for (const tk of projet.tracks) {
@@ -135,20 +140,34 @@ export function Projets() {
   );
 }
 
+/** Horloge et retard du pupitre : seule cette ligne suit le temps, à la seconde. */
+function LigneHorloge({ total }: { total: number }) {
+  const t = useTempsArrondi('t', 1);
+  const retard = useHorloge(h => Math.floor(h.retard));
+  return (
+    <span className="mono" style={{ fontSize: 8.5, letterSpacing: '.16em', color: 'var(--ink3)' }}>
+      HORLOGE {mmss(t)} / {mmss(total)} · RETARD {mmssSigne(retard)}
+    </span>
+  );
+}
+
+/** Le pupitre fermé ne calcule rien : le calcul (situation, signaux, abonnements au temps) n'existe que dans PupitreOuvert. */
 export function Pupitre() {
   const ouvert = useInterface(s => s.pupitre);
+  return ouvert ? <PupitreOuvert /> : null;
+}
+
+function PupitreOuvert() {
   const basculer = useInterface(s => s.basculer);
   const projet = useMagasin(s => s.projet);
-  const lecture = useMagasin(s => s.lecture);
+  const st = useStructure();
   const enLecture = useMagasin(s => s.enLecture);
   const mode = useMagasin(s => s.mode);
-  const sig = useMagasin(s => s.signaux)();
   const m = useMagasin.getState();
   const goRecent = useGoRecent();
-  if (!ouvert) return null;
   const spectacle = mode === 'spectacle';
-  const sit = situation(projet, lecture, sig);
-  const pret = !!lecture?.attenteGo && sit.passageGo !== null;
+  const sit = useSituationVive();
+  const pret = !!st?.attenteGo && sit.passageGo !== null;
   const go = goRecent ? 'GO ✓' : pret ? 'GO · P' + sit.passageGo : 'GO';
   return (
     <div className="pupitre" role="dialog" aria-label="Pupitre de représentation">
@@ -175,9 +194,7 @@ export function Pupitre() {
           <span className="barre" style={{ height: 4, maxWidth: 520 }}><span style={{ width: (sit.progres * 100).toFixed(1) + '%', background: 'var(--ort)' }} /></span>
           <span style={{ fontSize: 15, color: 'var(--ink2)' }}>Ensuite : <b style={{ color: 'var(--ink)', fontWeight: 600 }}>{sit.ensuite}</b></span>
           <div style={{ flex: 1 }} />
-          <span className="mono" style={{ fontSize: 8.5, letterSpacing: '.16em', color: 'var(--ink3)' }}>
-            HORLOGE {mmss(lecture?.t ?? 0)} / {mmss(prevoir(projet).total)} · RETARD {mmssSigne(lecture?.retard ?? 0)}
-          </span>
+          <LigneHorloge total={prevoir(projet).total} />
         </div>
         <div className="pup-col">
           <span className="mono" style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--ort)' }}>POUR PASSER À LA SUITE</span>
@@ -193,7 +210,7 @@ export function Pupitre() {
             </div>
           ))}
           <div style={{ flex: 1 }} />
-          <button className={'pup-go' + (pret ? ' pret' : ' attend')} onClick={() => m.go()} disabled={!!lecture?.termine}>{go}</button>
+          <button className={'pup-go' + (pret ? ' pret' : ' attend')} onClick={() => m.go()} disabled={!!st?.termine}>{go}</button>
         </div>
         <div className="pup-col pup-regie">
           <span className="mono" style={{ fontSize: 9, letterSpacing: '.2em', color: 'var(--ort)' }}>RÉGIE · ENTRÉES ET COMMANDES</span>

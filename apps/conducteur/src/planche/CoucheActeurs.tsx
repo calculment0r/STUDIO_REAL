@@ -7,7 +7,10 @@
 //   - création : tirer la poignée « envoyer » d'un bloc vers un nœud ouvre le menu des écrans de cet acteur ; clic
 //     droit sur un nœud : « envoyer un écran ici » (étape choisie), « attendre un signal » (sortie choisie).
 // Géométrie pure : ./acteurs.ts. Rien n'est écrit ailleurs que par modifierProjet.
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent, type Ref } from 'react';
+// Performance (lot performance-react) : le composant est mémorisé (la planche ne le re-rend que si la caméra, la taille, le
+// projet ou la sélection changent), ne lit PAS la lecture (seule la vignette survolée lit le moment et l'étape) et ses
+// nœuds sont mémorisés avec des rappels stables.
+import { memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent, type Ref } from 'react';
 import { vueActeur, type Acteur, type Projet } from '@studio-real/modele';
 import { useMagasin, type Selection } from '../etat/magasin';
 import { useEtatActeurs, type EtatActeur } from '../etat/acteurs';
@@ -47,15 +50,18 @@ interface Proprietes {
   dire: (t: string) => void;
 }
 
-export function CoucheActeurs({ ref, projet, cadres, cam, niveau, taille, vue, selection, editable, relatif, dire }: Proprietes) {
+export const CoucheActeurs = memo(function CoucheActeurs({ ref, projet, cadres, cam, niveau, taille, vue, selection, editable, relatif, dire }: Proprietes) {
   const repliee = useInterface(s => s.bandeRepliee);
   const liensOn = useInterface(s => s.liensActeurs);
   const etats = useEtatActeurs();
   const pastilles = usePastillesActeurs();
-  const lecture = useMagasin(s => s.lecture);
   const [defil, setDefil] = useState(0);
   const [survol, setSurvol] = useState<string | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
+  // rappels des nœuds de la bande : les mêmes d'un rendu à l'autre (NoeudBande est mémorisé), l'acteur est passé en argument
+  const entrer = useCallback((id: string) => setSurvol(id), []);
+  const sortir = useCallback((id: string) => setSurvol(s => (s === id ? null : s)), []);
+  const menuActeur = useCallback((id: string, x: number, y: number) => setMenu({ genre: 'acteur', x, y, acteur: id }), []);
   const [trait, setTrait] = useState<{ a: Point; b: Point; moment: string; etape: string } | null>(null);
   const acteurs = useMemo(() => (Array.isArray(projet.acteurs) ? projet.acteurs.filter(a => a && typeof a.id === 'string') : []), [projet.acteurs]);
   const noeuds = useMemo(() => (repliee ? [] : placerBande(acteurs, taille.h, defil)), [acteurs, taille.h, defil, repliee]);
@@ -216,8 +222,7 @@ export function CoucheActeurs({ ref, projet, cadres, cam, niveau, taille, vue, s
               {noeuds.map((n, i) => (
                 <NoeudBande key={n.id} n={n} top={i * (BANDE.hauteurNoeud + BANDE.ecart)} etat={pastilles[n.id] ?? INCONNU}
                   cible={!!trait} survole={survol === n.id}
-                  onEntrer={() => setSurvol(n.id)} onSortir={() => setSurvol(s => (s === n.id ? null : s))}
-                  onMenu={(x, y) => setMenu({ genre: 'acteur', x, y, acteur: n.id })} relatif={relatif} />
+                  onEntrer={entrer} onSortir={sortir} onMenu={menuActeur} relatif={relatif} />
               ))}
             </div>
             {!acteurs.length && (
@@ -231,7 +236,7 @@ export function CoucheActeurs({ ref, projet, cadres, cam, niveau, taille, vue, s
 
       {/* Vignette au survol d'un acteur */}
       {noeudSurvol && !menu && !trait && (
-        <Vignette n={noeudSurvol} projet={projet} lecture={lecture} etat={etats[noeudSurvol.id]} hauteurVue={taille.h} />
+        <Vignette n={noeudSurvol} projet={projet} etat={etats[noeudSurvol.id]} hauteurVue={taille.h} />
       )}
 
       {/* Menus */}
@@ -244,19 +249,19 @@ export function CoucheActeurs({ ref, projet, cadres, cam, niveau, taille, vue, s
       )}
     </>
   );
-}
+});
 
-function NoeudBande({ n, top, etat, cible, survole, onEntrer, onSortir, onMenu, relatif }: {
+const NoeudBande = memo(function NoeudBande({ n, top, etat, cible, survole, onEntrer, onSortir, onMenu, relatif }: {
   n: NoeudActeur; top: number; etat: { texte: string; couleur: string }; cible: boolean; survole: boolean;
-  onEntrer: () => void; onSortir: () => void; onMenu: (x: number, y: number) => void; relatif: (cx: number, cy: number) => Point;
+  onEntrer: (id: string) => void; onSortir: (id: string) => void; onMenu: (id: string, x: number, y: number) => void; relatif: (cx: number, cy: number) => Point;
 }) {
   const a = n.acteur;
   return (
     <div className={'acp-noeud' + (cible ? ' cible' : '') + (survole ? ' survol' : '')} data-acteur={a.id} style={{ top, height: n.h }}
       title={`${a.nom || a.id} · ${a.id} · ${etat.texte} · clic droit : envoyer, attendre`}
-      onPointerEnter={onEntrer} onPointerLeave={onSortir}
-      onContextMenu={e => { e.preventDefault(); e.stopPropagation(); const p = relatif(e.clientX, e.clientY); onMenu(p.x, p.y); }}
-      onClick={e => { const p = relatif(e.clientX, e.clientY); onMenu(p.x, p.y); }}>
+      onPointerEnter={() => onEntrer(a.id)} onPointerLeave={() => onSortir(a.id)}
+      onContextMenu={e => { e.preventDefault(); e.stopPropagation(); const p = relatif(e.clientX, e.clientY); onMenu(a.id, p.x, p.y); }}
+      onClick={e => { const p = relatif(e.clientX, e.clientY); onMenu(a.id, p.x, p.y); }}>
       <span className="acp-glyphe" style={{ color: a.rendu === 'telephone' ? 'var(--fam-ui)' : 'var(--fam-scene)' }}>
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d={glypheActeur(a.type)} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </span>
@@ -268,7 +273,7 @@ function NoeudBande({ n, top, etat, cible, survole, onEntrer, onSortir, onMenu, 
       <span className="acp-ancre" />
     </div>
   );
-}
+});
 
 const INCONNU = { texte: 'inconnu', couleur: 'rgba(var(--lr), .35)' };
 
@@ -278,12 +283,17 @@ function detailBattement(e: EtatActeur | undefined): string {
   return [e.rttMs !== undefined ? Math.round(e.rttMs) + ' ms' : '', e.batterie !== undefined ? Math.round(e.batterie) + ' % batterie' : ''].filter(Boolean).join(' · ');
 }
 
-function Vignette({ n, projet, lecture, etat, hauteurVue }: {
-  n: NoeudActeur; projet: Projet; lecture: ReturnType<typeof useMagasin.getState>['lecture'];
-  etat: EtatActeur | undefined; hauteurVue: number;
+function Vignette({ n, projet, etat, hauteurVue }: {
+  n: NoeudActeur; projet: Projet; etat: EtatActeur | undefined; hauteurVue: number;
 }) {
   const a = n.acteur;
-  const attendue = useMemo(() => (lecture ? vueActeur(projet, lecture, a.id) : null), [projet, lecture?.moment, lecture?.etape, a.id]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // la vue attendue ne dépend que du moment et de l'étape en cours (et du parcours, lu à cet instant) : jamais du temps
+  const moment = useMagasin(s => s.lecture?.moment ?? null);
+  const etape = useMagasin(s => s.lecture?.etape ?? null);
+  const attendue = useMemo(() => {
+    const lecture = useMagasin.getState().lecture;
+    return lecture ? vueActeur(projet, lecture, a.id) : null;
+  }, [projet, moment, etape, a.id]);   // eslint-disable-line react-hooks/exhaustive-deps
   // le battement dit l'écran AFFICHÉ, pas ses réglages : ceux de la vue attendue s'il s'agit du même écran
   const vu = etat?.ecran ? { ecran: etat.ecran.ecran, params: attendue && attendue.ecran === etat.ecran.ecran ? attendue.params : {} } : null;
   const montre = vu ?? (attendue ? { ecran: attendue.ecran, params: attendue.params } : null);

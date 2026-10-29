@@ -4,6 +4,7 @@
 import { useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMagasin } from '../etat/magasin';
+import { useHorloge } from '../etat/horloge';
 import { useSalle } from '../etat/serveur';
 import { actionsCollab } from './useCollab';
 import { ancreDeSelection, cleAncre, heureMinute, libelleAncre } from './ancres';
@@ -19,7 +20,11 @@ export function Commentaires({ ancre, className = '' }: PropsCommentaires) {
   const { commentaires, statut, moi } = useSalle(useShallow((s) => ({ commentaires: s.commentaires, statut: s.statut, moi: s.vous?.personne })));
   const projet = useMagasin((s) => s.projet);
   const selection = useMagasin((s) => s.selection);
-  const tLecture = useMagasin((s) => s.lecture?.t ?? null);
+  // Le temps de la lecture ne sert qu'à épingler un commentaire « à l'instant » quand rien n'est choisi : sinon on ne le suit pas.
+  const aLecture = useMagasin((s) => s.lecture !== null);
+  const suivreInstant = !selection.moment;
+  const tArrondi = useHorloge((h) => (suivreInstant ? Math.round(h.t) : 0));
+  const tLecture = aLecture ? tArrondi : null;
   const [tous, setTous] = useState(false);
   const [texte, setTexte] = useState('');
   const [erreur, setErreur] = useState('');
