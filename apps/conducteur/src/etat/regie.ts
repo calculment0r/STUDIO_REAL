@@ -200,7 +200,8 @@ export function ligneCommande(c: CommandeLecture, n: number, recu: number): Lign
 /** Ligne d'un événement du journal du moteur ; les étapes jouées dans une séquence ne vont pas au journal de régie. */
 export function ligneEvenement(e: EvenementLecture, n: number, recu: number): LigneRegie | null {
   if (e.type === 'sous-etape') return null;
-  const type = e.type === 'signal' ? 'SIGNAL' : e.type === 'memoire' ? 'MÉMOIRE' : e.type === 'mot' ? 'MOT' : 'REPRISE';
+  const type = e.type === 'signal' ? 'SIGNAL' : e.type === 'memoire' ? 'MÉMOIRE' : e.type === 'mot' ? 'MOT'
+    : e.type === 'retenir' ? 'RETENIR' : e.type === 'prolonger' ? '+30 S' : 'REPRISE';
   const v = e.valeur === undefined || e.valeur === null ? '' : typeof e.valeur === 'object' ? ' · ' + court(e.valeur, 50) : (e.type === 'memoire' ? ' = ' : ' · ') + String(e.valeur);
   const l: LigneRegie = { n, t: e.t, genre: 'entree', type, txt: e.nom + v, moment: e.moment, recu };
   if (e.etape) l.etape = e.etape;

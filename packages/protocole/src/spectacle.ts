@@ -81,10 +81,14 @@ export type OpConduite =
   | { op: 'forcer'; acteur: string; vue: { ecran: string; params?: Record<string, unknown> } }
   /** tous les acteurs sur leur écran de sécurité (noir, « regardez la scène ») ; actif:false lève la panique */
   | { op: 'panique'; actif: boolean }
+  /** tient (actif) ou relâche l'étape en cours : seul le top régie en sort (barre de scène) */
+  | { op: 'retenir'; actif: boolean }
+  /** ajoute des secondes (1 à 600) à la durée minimale de l'étape en cours, cumulable (barre de scène) */
+  | { op: 'prolonger'; secondes: number }
   /** décision sur une réplique de figurant en attente (ex `fig.valide`) */
   | { op: 'valider'; id: string; ok: boolean; texte?: string };
 export type NomOpConduite = OpConduite['op'];
-export const OPS_CONDUITE: readonly NomOpConduite[] = ['top', 'lancer', 'pause', 'allerA', 'reprendre', 'poser', 'signal', 'forcer', 'panique', 'valider'];
+export const OPS_CONDUITE: readonly NomOpConduite[] = ['top', 'lancer', 'pause', 'allerA', 'reprendre', 'poser', 'signal', 'forcer', 'panique', 'valider', 'retenir', 'prolonger'];
 
 export type MsgConduite = { t: 'conduite'; cseq: number } & OpConduite;
 

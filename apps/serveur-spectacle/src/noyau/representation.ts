@@ -77,6 +77,8 @@ function jouer(L: Lecteur, x: EntreeLecteur): void {
     case 'reprendre': L.reprendre(x.point); break;
     case 'poser': L.poser(x.nom, x.valeur); break;
     case 'signal': L.signal(x.nom, x.donnees); break;
+    case 'retenir': L.retenir(x.actif); break;
+    case 'prolonger': L.prolonger(x.secondes); break;
   }
 }
 
@@ -491,6 +493,8 @@ export class Representation {
         this.journaliser('forcer', { session, cible: op.acteur, ecran: op.vue.ecran, params: op.vue.params ?? {} });
         return ok();
       }
+      case 'retenir': this.appliquer({ k: 'retenir', actif: op.actif }); break;
+      case 'prolonger': this.appliquer({ k: 'prolonger', secondes: op.secondes }); break;
       case 'panique':
         this.e.panique = op.actif;
         this.journaliser('panique', { session, actif: op.actif });

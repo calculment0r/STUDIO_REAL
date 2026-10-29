@@ -259,3 +259,117 @@ describe('lecteur stable', () => {
     expect(s().lecture?.t).toBeCloseTo(t + 0.5, 5);
   });
 });
+
+describe('barre de scène · RETENIR, +30 s, PANIQUE', () => {
+  /** Représentation lancée, 3 s dans la première étape (10 s). */
+  function dansLEtape() {
+    s().go();
+    apresAntiRebond();
+    avancerDe(3);
+    expect(s().lecture?.etape).toBe(ids[0] + '_s');
+  }
+
+  it('retenir : la fin de l’étape n’arrive plus par le temps ; relâcher la termine aussitôt', () => {
+    dansLEtape();
+    s().retenir(true);
+    expect(s().lecture?.retenu).toBe(true);
+    avancerDe(60);
+    expect(s().lecture?.etape).toBe(ids[0] + '_s');
+    expect(s().lecture?.tEtape).toBeCloseTo(63, 5);
+    s().retenir(false);
+    expect(s().lecture?.retenu).toBe(false);
+    expect(s().lecture?.etape).toBeNull();           // l’étape a fini : un passage « go » attend
+    expect(s().lecture?.attenteGo).toBe(true);
+  });
+
+  it('retenir sans argument bascule ; le GO sort de l’étape tenue et lève la retenue', () => {
+    dansLEtape();
+    s().retenir();
+    expect(s().lecture?.retenu).toBe(true);
+    s().retenir();
+    expect(s().lecture?.retenu).toBe(false);
+    s().retenir();
+    avancerDe(20);
+    apresAntiRebond();
+    s().go();
+    expect(indexMoment()).toBe(1);
+    expect(s().lecture?.retenu).toBe(false);
+  });
+
+  it('prolonger : +30 s décale la fin de l’étape, cumulable, avec le cumul dans la lecture', () => {
+    dansLEtape();
+    s().prolonger();
+    expect(s().lecture?.prolonge).toBe(30);
+    avancerDe(20);                                   // 23 s < 10 + 30
+    expect(s().lecture?.etape).toBe(ids[0] + '_s');
+    s().prolonger(30);
+    expect(s().lecture?.prolonge).toBe(60);
+    avancerDe(40);                                   // 63 s < 10 + 60
+    expect(s().lecture?.etape).toBe(ids[0] + '_s');
+    avancerDe(8);                                    // 71 s ≥ 70
+    expect(s().lecture?.etape).toBeNull();
+    expect(s().lecture?.prolonge).toBe(0);           // remis à zéro à la sortie de l’étape
+  });
+
+  it('prolonger est refusé hors étape (passage) et quand le spectacle est terminé', () => {
+    dansLEtape();
+    avancerDe(10);                                   // l’étape est finie : le passage attend le GO
+    expect(s().lecture?.etape).toBeNull();
+    s().prolonger();
+    expect(s().lecture?.prolonge ?? 0).toBe(0);
+    expect(s().message).toMatch(/rien à prolonger/);
+  });
+
+  it('retenue et prolongation survivent à la re-création du lecteur (modification du projet en RÉPÉTITION)', () => {
+    dansLEtape();
+    s().retenir(true);
+    s().prolonger(30);
+    s().modifierProjet((p) => { p.ev[8]!.name = 'renommé'; });
+    avancerDe(0.5);
+    expect(s().lecture?.etape).toBe(ids[0] + '_s');
+    expect(s().lecture?.retenu).toBe(true);
+    expect(s().lecture?.prolonge).toBe(30);
+    avancerDe(60);
+    expect(s().lecture?.etape).toBe(ids[0] + '_s');
+  });
+
+  it('retour au début : retenue et prolongation effacées', () => {
+    dansLEtape();
+    s().retenir(true);
+    s().prolonger(30);
+    s().revenirAuDebut();
+    expect(s().lecture?.retenu).toBe(false);
+    expect(s().lecture?.prolonge).toBe(0);
+  });
+
+  it('allerA efface la retenue et la prolongation', () => {
+    dansLEtape();
+    s().retenir(true);
+    s().prolonger(30);
+    s().allerA(ids[4]!);
+    expect(s().lecture?.moment).toBe(ids[4]);
+    expect(s().lecture?.retenu).toBe(false);
+    expect(s().lecture?.prolonge).toBe(0);
+  });
+
+  it('panique : état local, sortie locale au noir tenue à la main, levée = retour à la scène automatique', async () => {
+    const { useSortie, reinitialiserRelais } = await import('../sortie/relais');
+    reinitialiserRelais();
+    expect(s().enPanique).toBe(false);
+    s().panique(true);
+    expect(s().enPanique).toBe(true);
+    expect(useSortie.getState().mode).toBe('manuel');
+    expect(useSortie.getState().scene).toMatchObject({ type: 'noir' });
+    s().panique(true);                               // idempotent
+    s().panique(false);
+    expect(s().enPanique).toBe(false);
+    expect(useSortie.getState().mode).toBe('auto');
+    reinitialiserRelais();
+  });
+
+  it('panique se déclenche même spectacle terminé ou sans lecture : rien ne la grise côté magasin', () => {
+    s().panique(true);
+    expect(s().enPanique).toBe(true);
+    s().panique(false);
+  });
+});

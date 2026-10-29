@@ -17,7 +17,7 @@ import { reglerSpectacle, reinitialiserSpectacle, relierSpectacle, useSpectacle 
 // TypeScript du Conducteur. Ce qu'on en utilise :
 interface Serveur {
   port: number;
-  representation: { etatLecture(): { moment: string | null; etape: string | null; t: number } | null };
+  representation: { etatLecture(): { moment: string | null; etape: string | null; t: number; retenu?: boolean; prolonge?: number } | null };
   arreter(): Promise<void>;
 }
 interface ModuleServeur { demarrerServeur(o: Record<string, unknown>): Promise<Serveur> }
@@ -105,5 +105,18 @@ describe.skipIf(SAUTER)('régie reliée au vrai serveur de spectacle', () => {
     ws.send(JSON.stringify({ t: 'etat', heure: Date.now(), ecran: vue && vue.ecran ? { vseq: vue.vseq, ecran: vue.ecran, depuis: Date.now() } : null, visible: true, rttMs: 21 }));
     await vi.waitFor(() => expect(etatActeurs().scene).toMatchObject({ source: 'serveur', rttMs: 21, app: { version: 'test' } }), { timeout: 5000 });
     await vi.waitFor(() => expect(resumeSalle().resumes.scene?.presents).toBe(1), { timeout: 5000 });
+  });
+
+  it('barre de scène : RETENIR et +30 s arrivent au serveur, qui les applique à son lecteur', async () => {
+    await vi.waitFor(() => expect(useSpectacle.getState().ligne).toBe('ouverte'), { timeout: 5000 });
+    await attendre(DELAI_ANTI_DOUBLE_GO_MS + 100);
+    s().retenir(true);
+    await vi.waitFor(() => expect(srv!.representation.etatLecture()!.retenu).toBe(true), { timeout: 5000 });
+    // la lecture officielle revient : la régie reflète la retenue
+    await vi.waitFor(() => expect(s().lecture!.retenu).toBe(true), { timeout: 5000 });
+    s().prolonger(30);
+    await vi.waitFor(() => expect(srv!.representation.etatLecture()!.prolonge).toBe(30), { timeout: 5000 });
+    s().retenir(false);
+    await vi.waitFor(() => expect(srv!.representation.etatLecture()!.retenu).toBe(false), { timeout: 5000 });
   });
 });

@@ -238,3 +238,71 @@ describe('retours des acteurs', () => {
     expect(conduites()).toHaveLength(0);
   });
 });
+
+describe('barre de scène · RETENIR, +30 s, PANIQUE relayés en ordres de conduite', () => {
+  it('en SPECTACLE relié : retenir part en {op:retenir}, jamais en mémoire « retenir »', () => {
+    relier();
+    s().retenir(true);
+    s().retenir();                           // bascule : relâche
+    const ops = conduites().filter(c => c.op === 'retenir');
+    expect(ops).toHaveLength(2);
+    expect(ops[0]).toMatchObject({ op: 'retenir', actif: true });
+    expect(ops[1]).toMatchObject({ op: 'retenir', actif: false });
+    expect(conduites().some(c => c.op === 'poser' && (c as { nom?: string }).nom === 'retenir')).toBe(false);
+  });
+
+  it('+30 s part en {op:prolonger, secondes}, panique en {op:panique, actif}', () => {
+    relier();
+    s().go();
+    apresAntiRebond();
+    avancerDe(2);
+    s().prolonger(30);
+    expect(conduites().find(c => c.op === 'prolonger')).toMatchObject({ op: 'prolonger', secondes: 30 });
+    s().panique(true);
+    s().panique(false);
+    const p = conduites().filter(c => c.op === 'panique');
+    expect(p.map(c => (c as { actif?: boolean }).actif)).toEqual([true, false]);
+  });
+
+  it('les gestes sont acquittés comme les autres ordres', () => {
+    relier();
+    s().go();
+    apresAntiRebond();
+    s().retenir(true);
+    const c = conduites().find(x => x.op === 'retenir')!;
+    expect(sp().enAttente.some(o => o.cseq === c.cseq && o.op === 'retenir')).toBe(true);
+    serveur.envoyer({ t: 'ack', cseq: c.cseq, statut: 'ok' });
+    expect(sp().enAttente.some(o => o.cseq === c.cseq)).toBe(false);
+  });
+
+  it('en RÉPÉTITION, rien ne part (le lecteur local agit seul)', () => {
+    relier();
+    s().changerMode('repetition');
+    const avant = conduites().length;
+    s().retenir(true);
+    s().prolonger(30);
+    s().panique(true);
+    s().panique(false);
+    expect(conduites()).toHaveLength(avant);
+    expect(s().lecture?.retenu).toBe(true);
+  });
+
+  it('lecture miroir : la retenue et la prolongation du serveur calent le lecteur local', () => {
+    relier();
+    const L = creerLecteur(projet, { mode: 'scene' });
+    L.allerA(ids[2]!);
+    L.avancer(2, { pres: 0, quorum: 0, prets: 0, bruit: 32, assis: 100 });
+    L.retenir(true);
+    L.prolonger(30);
+    serveur.envoyer({ t: 'lecture', etat: L.etat(), par: 'serveur', ts: Date.now() });
+    expect(s().lecture).toMatchObject({ moment: ids[2], retenu: true, prolonge: 30 });
+    s().lancer();
+    avancerDe(40);                           // le lecteur local ne laisse pas filer l’étape tenue
+    expect(s().lecture).toMatchObject({ moment: ids[2], retenu: true });
+    expect(s().lecture!.etape).not.toBeNull();
+    // le serveur relâche : le lecteur local suit
+    L.retenir(false);
+    serveur.envoyer({ t: 'lecture', etat: L.etat(), par: 'serveur', ts: Date.now() });
+    expect(s().lecture!.retenu).toBe(false);
+  });
+});

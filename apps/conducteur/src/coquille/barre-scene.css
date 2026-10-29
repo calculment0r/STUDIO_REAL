@@ -1,0 +1,136 @@
+/* Barre de scène : bande fixe en bas de la coquille (GO · EN COURS · PROCHAIN · RETENIR · SAUTER À… · +30 s · PAUSE ·
+   PANIQUE). Jetons du thème seulement (jamais de couleur en dur) : orange = l'action (GO), ambre = ce qui est tenu,
+   rouge = sécurité. Prévue pour 1280 px sans débordement ; sous 900 px les libellés deviennent des icônes. */
+
+.barre-scene {
+  flex: none; position: relative; z-index: 60; height: 78px; box-sizing: border-box; padding: 8px 12px;
+  display: flex; align-items: stretch; gap: 10px; background: var(--tile);
+  box-shadow: inset 0 1px 0 rgba(var(--lr), .16);
+}
+.barre-scene.en-spectacle { box-shadow: inset 0 2px 0 var(--ort); }
+.barre-scene.en-panique { box-shadow: inset 0 2px 0 var(--rec); }
+
+/* GO : le plus grand, le plus lisible */
+.bs-go {
+  flex: none; width: 132px; border: none; border-radius: 12px; cursor: pointer; padding: 0;
+  font-family: var(--f-disp); font-weight: 700; font-size: 30px; letter-spacing: .2em; text-indent: .2em;
+  background: var(--ort); color: var(--on-ort); box-shadow: 0 4px 18px var(--ombre-tap);
+}
+.bs-go:active:not(:disabled) { transform: scale(.97); }
+.bs-go.attente { animation: srp 1.1s infinite; }
+.bs-go.fait { background: var(--gdeep); color: var(--gink); }
+.bs-go:disabled { background: var(--tile2); color: var(--ink3); box-shadow: inset 0 0 0 1px rgba(var(--lr), .2); cursor: not-allowed; }
+.bs-go:focus-visible, .bs-btn:focus-visible, .bs-saut input:focus-visible { outline: 2px solid var(--cy); outline-offset: 2px; }
+
+/* EN COURS / PROCHAIN */
+.bs-cue {
+  min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 12px; border-radius: 9px;
+  background: var(--well2); box-shadow: inset 0 0 0 1px rgba(var(--lr), .12);
+}
+.bs-cue.en-cours { flex: 1.4 1 0; }
+.bs-cue.prochain { flex: 1 1 0; }
+.bs-micro { font-family: var(--f-mono); font-size: 8px; letter-spacing: .2em; color: var(--ink3); }
+.bs-cue.en-cours .bs-micro { color: var(--ort); }
+.bs-nom { font-size: 15px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bs-cue.prochain .bs-nom { color: var(--ink2); font-weight: 500; }
+.bs-temps { font-size: 12px; color: var(--cy); letter-spacing: .04em; }
+.bs-temps i { font-style: normal; color: var(--ink3); }
+.bs-plus { color: var(--amb); font-weight: 700; }
+.bs-prog { display: block; height: 4px; border-radius: 2px; background: rgba(var(--lr), .14); overflow: hidden; }
+.bs-prog > span { display: block; height: 100%; background: var(--ort); }
+.bs-prog.depasse > span { background: var(--amb); }
+
+/* boutons d'action */
+.bs-groupe { flex: none; display: flex; gap: 6px; align-items: stretch; }
+.bs-btn {
+  position: relative; overflow: hidden; min-width: 78px; padding: 0 10px; border: none; border-radius: 9px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-family: var(--f-mono); font-size: 9px; letter-spacing: .14em; white-space: nowrap;
+  background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px rgba(var(--lr), .22);
+}
+.bs-sauter { min-width: 92px; }
+.bs-btn:hover:not(:disabled) { background: var(--tile2); }
+.bs-btn:active:not(:disabled) { transform: scale(.97); }
+.bs-btn:disabled { color: var(--ink3); cursor: not-allowed; box-shadow: inset 0 0 0 1px rgba(var(--lr), .1); }
+.bs-btn .bs-ico { display: none; align-items: center; justify-content: center; position: relative; }
+.bs-btn .bs-txt { position: relative; }
+.bs-btn.enfonce { background: var(--tile2); box-shadow: inset 0 0 0 1px var(--cy); }
+.bs-plus30 { font-family: var(--f-chiffre); font-weight: 700; font-size: 12px; letter-spacing: 0; }
+
+/* RETENIR : enfoncé = ambre + pastille */
+.bs-retenir.enfonce { background: var(--amb-bg); color: var(--amb); box-shadow: inset 0 0 0 2px var(--amb); }
+.bs-pastille { position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--amb); animation: srp 1.2s infinite; }
+
+/* +30 s : cumul */
+.bs-cumul { position: absolute; top: 5px; right: 6px; font-family: var(--f-chiffre); font-weight: 700; font-size: 10px; letter-spacing: 0; color: var(--amb); }
+
+/* PANIQUE : rouge, appui long avec jauge */
+.bs-panique {
+  min-width: 96px; touch-action: none; background: rgba(var(--rec-rgb), .14); color: var(--ink);
+  box-shadow: inset 0 0 0 1.5px var(--rec); font-weight: 700;
+}
+.bs-panique:hover:not(:disabled) { background: rgba(var(--rec-rgb), .26); }
+.bs-panique.enfonce { background: var(--rec); color: var(--on-rec); box-shadow: 0 0 0 4px rgba(var(--rec-rgb), .3); animation: srp 1.1s infinite; }
+.bs-jauge {
+  position: absolute; inset: 0; background: rgba(var(--rec-rgb), .6); transform: scaleX(0); transform-origin: left center;
+  pointer-events: none;
+}
+.bs-cache { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* bandeau rouge tant que la panique dure */
+.bs-bandeau {
+  position: absolute; left: 0; right: 0; bottom: 100%; height: 24px; display: flex; align-items: center; justify-content: center;
+  background: var(--rec); color: var(--on-rec); font-family: var(--f-mono); font-size: 10px; letter-spacing: .2em;
+}
+
+/* SAUTER À… */
+.bs-fond { position: fixed; inset: 0; z-index: 64; background: transparent; }
+.bs-saut {
+  position: absolute; z-index: 66; bottom: calc(100% + 8px); right: 12px; width: min(540px, calc(100vw - 24px));
+  display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: var(--tile);
+  box-shadow: 0 10px 40px var(--ombre-3), inset 0 0 0 1px rgba(var(--lr), .22);
+}
+.bs-saut input {
+  border: none; background: var(--well2); color: var(--ink); font: inherit; font-size: 15px; padding: 12px 14px;
+  box-shadow: inset 0 -1px 0 rgba(var(--lr), .16);
+}
+.bs-saut input:focus-visible { outline-offset: -2px; }
+.bs-saut-liste { max-height: min(50vh, 380px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(var(--lr), .28) transparent; }
+.bs-saut-ligne { display: flex; align-items: baseline; gap: 10px; padding: 7px 14px; cursor: pointer; min-width: 0; }
+.bs-saut-ligne.moment { padding-top: 10px; box-shadow: inset 0 1px 0 rgba(var(--lr), .1); }
+.bs-saut-ligne.moment .t { font-weight: 700; color: var(--ort); }
+.bs-saut-ligne.etape { padding-left: 30px; }
+.bs-saut-ligne .t { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bs-saut-ligne .s { flex: none; font-family: var(--f-mono); font-size: 9px; letter-spacing: .12em; color: var(--ink3); text-transform: uppercase; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-saut-ligne.on { background: var(--tile2); box-shadow: inset 2px 0 0 var(--ort); }
+.bs-saut-vide { padding: 16px 14px; color: var(--ink3); font-size: 13px; }
+.bs-saut-pied { padding: 8px 14px; font-family: var(--f-mono); font-size: 8.5px; letter-spacing: .14em; color: var(--ink3); box-shadow: inset 0 1px 0 rgba(var(--lr), .12); }
+.bs-saut-pied.confirme { color: var(--ink); background: var(--amb-bg); box-shadow: inset 0 1px 0 var(--line-amb); font-family: var(--f-ui); font-size: 13px; letter-spacing: 0; }
+
+/* sous 1180 px : la barre se resserre */
+@media (max-width: 1180px) {
+  .bs-go { width: 112px; font-size: 26px; }
+  .bs-btn { min-width: 68px; padding: 0 7px; }
+  .bs-panique { min-width: 82px; }
+  .bs-nom { font-size: 14px; }
+}
+
+/* sous 900 px : libellés remplacés par des icônes (l'info-bulle et l'étiquette ARIA portent le nom) */
+@media (max-width: 900px) {
+  .barre-scene { gap: 6px; padding: 8px; }
+  .bs-go { width: 84px; font-size: 22px; }
+  .bs-groupe { gap: 4px; }
+  .bs-btn { min-width: 44px; padding: 0 6px; }
+  .bs-btn .bs-ico { display: flex; }
+  .bs-btn .bs-txt { display: none; }
+  .bs-panique { min-width: 48px; }
+  .bs-cue { padding: 0 8px; }
+  .bs-micro { font-size: 7px; }
+}
+@media (max-width: 640px) {
+  .bs-cue.prochain { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bs-go.attente, .bs-pastille, .bs-panique.enfonce { animation: none; }
+}

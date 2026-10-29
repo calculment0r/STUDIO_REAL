@@ -85,6 +85,8 @@ describe('journal de régie', () => {
       .toMatchObject({ n: 7, genre: 'commande', type: 'FIGURANTS', txt: 'chaud · neutre' });
     expect(ligneEvenement({ t: 3, type: 'memoire', nom: 'jauge', valeur: 600, moment: 'm' }, 1, 0)).toMatchObject({ type: 'MÉMOIRE', txt: 'jauge = 600' });
     expect(ligneEvenement({ t: 3, type: 'sous-etape', nom: 'x', moment: 'm' }, 1, 0)).toBeNull();
+    expect(ligneEvenement({ t: 4, type: 'retenir', nom: 'retenu', valeur: true, moment: 'm', etape: 'e' }, 1, 0)).toMatchObject({ type: 'RETENIR', txt: 'retenu · true', etape: 'e' });
+    expect(ligneEvenement({ t: 5, type: 'prolonger', nom: 'prolonger', valeur: 30, moment: 'm' }, 1, 0)).toMatchObject({ type: '+30 S', txt: 'prolonger · 30' });
     expect(ligneAlerte({ t: 5, moment: 'm', type: 'machine', txt: 'QLab ne répond pas' }, 2, 0)).toMatchObject({ genre: 'alerte', type: 'MACHINE' });
   });
 });

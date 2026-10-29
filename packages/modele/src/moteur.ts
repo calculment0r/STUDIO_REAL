@@ -50,6 +50,10 @@ export interface EtatLecture {
   votes?: Record<string, number>;
   /** réceptions de chaque signal depuis l'entrée dans l'étape (ou le passage) en cours (nom normalisé → nombre) */
   receptions?: Record<string, number>;
+  /** l'étape (ou le passage) en cours est tenue : seul le top régie la termine (ajout barre de scène) */
+  retenu?: boolean;
+  /** secondes ajoutées à la durée minimale de l'étape en cours, cumulées ; remis à 0 à l'entrée d'une étape */
+  prolonge?: number;
 }
 
 /** Alerte produite pendant la lecture (ajout STUDIO_REAL). */
@@ -66,7 +70,7 @@ export interface EvenementLecture {
   t: number;
   /** 'signal' reçu · 'memoire' posée de l'extérieur · 'mot' entendu (Quand le comédien dit) · 'reprise' · 'sous-etape'
    *  (étape jouée dans une séquence) */
-  type: 'signal' | 'memoire' | 'mot' | 'reprise' | 'sous-etape';
+  type: 'signal' | 'memoire' | 'mot' | 'reprise' | 'sous-etape' | 'retenir' | 'prolonger';
   nom: string;
   valeur?: unknown;
   moment: string;
@@ -133,6 +137,12 @@ export interface Lecteur {
   /** Reprend au point de reprise `nom` (ou au dernier passé) avec l'état mémorisé ; point jamais passé → le
    *  précédent (alerte « reprise »). */
   reprendre(nomPoint?: string): EtatLecture;
+  // Ajouts barre de scène : gestes de la régie sur l'étape en cours (journalisés dans `journal`).
+  /** Tient (true) ou relâche (false) l'étape en cours : tenue, elle ne se termine ni par le temps ni par un signal
+   *  (les signaux restent comptés) ; seul `top()` en sort, ce qui lève aussi la retenue. */
+  retenir(actif: boolean): EtatLecture;
+  /** Ajoute `secondes` à la durée minimale de l'étape en cours (cumulable ; sans effet si le spectacle est terminé). */
+  prolonger(secondes: number): EtatLecture;
 }
 
 export interface OptionsLecteur { mode: ModeLecture; graine?: number }

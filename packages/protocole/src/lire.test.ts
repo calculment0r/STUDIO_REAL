@@ -68,7 +68,10 @@ describe('lireMessageClient', () => {
     expect(c({ op: 'forcer', acteur: 'public:ont-vote:A', vue: { ecran: 'couleur', params: { couleur: 'rouge' } } })).toMatchObject({ acteur: 'public:ont-vote:A' });
     expect(c({ op: 'panique' })).toMatchObject({ op: 'panique', actif: true });
     expect(c({ op: 'valider', id: 'r12', ok: false, texte: 'corrigé' })).toMatchObject({ id: 'r12', ok: false, texte: 'corrigé' });
-    expect(OPS_CONDUITE).toHaveLength(10);
+    expect(c({ op: 'retenir' })).toEqual({ t: 'conduite', cseq: 9, op: 'retenir', actif: true });
+    expect(c({ op: 'retenir', actif: false })).toMatchObject({ op: 'retenir', actif: false });
+    expect(c({ op: 'prolonger', secondes: 30 })).toEqual({ t: 'conduite', cseq: 9, op: 'prolonger', secondes: 30 });
+    expect(OPS_CONDUITE).toHaveLength(12);
   });
 
   it('conduite refusée : cseq, op inconnue, mémoire objet, cible illisible', () => {
@@ -77,6 +80,11 @@ describe('lireMessageClient', () => {
     expect(refus({ t: 'conduite', cseq: 1, op: 'poser', nom: 'x', valeur: { a: 1 } })).toMatch(/valeur/);
     expect(refus({ t: 'conduite', cseq: 1, op: 'forcer', acteur: 'public:lune', vue: { ecran: 'noir' } })).toMatch(/acteur/);
     expect(refus({ t: 'conduite', cseq: 1, op: 'allerA' })).toMatch(/moment/);
+    expect(refus({ t: 'conduite', cseq: 1, op: 'retenir', actif: 'oui' })).toMatch(/actif/);
+    expect(refus({ t: 'conduite', cseq: 1, op: 'prolonger' })).toMatch(/secondes/);
+    expect(refus({ t: 'conduite', cseq: 1, op: 'prolonger', secondes: 0 })).toMatch(/secondes/);
+    expect(refus({ t: 'conduite', cseq: 1, op: 'prolonger', secondes: 601 })).toMatch(/secondes/);
+    expect(refus({ t: 'conduite', cseq: 1, op: 'prolonger', secondes: 'trente' })).toMatch(/secondes/);
   });
 
   it('in : vote, texte, réaction, prêt, présence, fin de vidéo, transcription, accusé d’affichage', () => {

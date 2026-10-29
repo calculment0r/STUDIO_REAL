@@ -5,8 +5,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { lireMessageServeur } from '@studio-real/protocole';
-import { correspond } from './representation';
-import { T0, banc, de, messages, projetBanc } from './banc-test';
+import { Representation, correspond } from './representation';
+import { T0, aleaFixe, banc, de, messages, projetBanc } from './banc-test';
 import type { Sortie } from './types';
 
 /** Banc lancé, salle connectée (régie, scène, ministre, 4 téléphones). */
@@ -451,5 +451,48 @@ describe('rail des sorties de la régie : ce que chaque acteur AFFICHE', () => {
     expect(salle.acteurs.public).toMatchObject({ presents: 4, demande: { vseq: v.vseq, ecran: 'regardez' }, parEcran: { regardez: 2, '': 2 }, rttMs: 100 });
     expect(salle.acteurs.scene!.demande).toMatchObject({ ecran: 'accueil-qr' });
     expect(lireMessageServeur(JSON.stringify(salle)).message).not.toBeNull();
+  });
+});
+
+describe('barre de scène : retenir et prolonger', () => {
+  it('retenir tient l’étape malgré le temps ; top() la libère ; l’ordre est journalisé et rejouable', () => {
+    const b = pret();
+    expect(b.envoyer('regie_1', { t: 'conduite', op: 'retenir', actif: true })[0]!.m).toMatchObject({ t: 'ack', statut: 'ok' });
+    b.secondes(30);
+    expect(b.rep.etatLecture()).toMatchObject({ etape: 'accueil', retenu: true });
+    expect(b.rep.journal().some(e => e.type === 'conduite' && e.op === 'retenir')).toBe(true);
+    // les entrées sont journalisées pour reconstruire le lecteur à l'identique
+    expect(b.rep.instantane().entrees.some(x => x.k === 'retenir' && x.actif === true)).toBe(true);
+    b.top();
+    expect(b.rep.etatLecture()!.etape).not.toBe('accueil');
+    expect(b.rep.etatLecture()!.retenu).toBe(false);
+  });
+
+  it('prolonger décale la fin de l’étape (cumulable)', () => {
+    const b = pret();
+    b.envoyer('regie_1', { t: 'conduite', op: 'prolonger', secondes: 30 });
+    b.envoyer('regie_1', { t: 'conduite', op: 'prolonger', secondes: 30 });
+    expect(b.rep.etatLecture()!.prolonge).toBe(60);
+    b.secondes(10);
+    expect(b.rep.etatLecture()!.etape).toBe('accueil'); // la durée prévue (10 s) est passée mais pas 10 + 60
+    b.secondes(60);
+    expect(b.rep.etatLecture()!.etape).not.toBe('accueil'); // 70 s écoulées
+  });
+
+  it('un instantané rejoue la retenue et la prolongation (reprise après redémarrage)', () => {
+    const b = pret();
+    b.secondes(3);
+    b.envoyer('regie_1', { t: 'conduite', op: 'retenir', actif: true });
+    b.envoyer('regie_1', { t: 'conduite', op: 'prolonger', secondes: 30 });
+    const rep = new Representation({ projet: projetBanc(), horloge: () => b.h.now, alea: aleaFixe(3) });
+    expect(rep.restaurer(JSON.parse(JSON.stringify(b.rep.instantane())))).toEqual({ divergence: false, projetModifie: false });
+    expect(rep.etatLecture()).toMatchObject({ etape: 'accueil', retenu: true, prolonge: 30 });
+  });
+
+  it('réservé à la régie', () => {
+    const b = pret();
+    const out = b.envoyer('pub_s1', { t: 'conduite', op: 'retenir', actif: true });
+    expect(out[0]!.m).toMatchObject({ t: 'ack', statut: 'refus' });
+    expect(b.rep.etatLecture()!.retenu).toBe(false);
   });
 });

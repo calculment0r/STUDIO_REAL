@@ -10,7 +10,7 @@
 //   (rouge FIXE) · jeton refusé (rouge) ; un ordre `top` non accusé : ambre, rouge à 5 s.
 // - En SPECTACLE relié, chaque geste de conduite du magasin part en `conduite` : GO → un `top` par top joué
 //   localement, saut → `allerA`, mémoire → `poser`, signal → `signal`, reprise → `reprendre`, lecture / pause →
-//   `pause`. RETENIR, PANIQUE, forcer une vue : fonctions ci-dessous (barre de scène, rail). Un ordre n'est JAMAIS mis
+//   `pause`, RETENIR → `retenir`, +30 s → `prolonger`, PANIQUE → `panique`. Forcer une vue : fonction ci-dessous (rail). Un ordre n'est JAMAIS mis
 //   en file pendant une coupure : il serait rejoué en retard ; la régie est prévenue qu'il n'est pas parti.
 // - Lecture MIROIR : chaque `lecture{etat}` reçu recale le lecteur local (`resynchroniser` du magasin) ; entre deux, le
 //   lecteur local anime la conduite à 60 i/s.
@@ -575,14 +575,18 @@ function relayerGeste(g: GesteConduite) {
     case 'poser': envoyerConduite({ op: 'poser', nom: g.nom, valeur: g.valeur }); return;
     case 'signal': envoyerConduite(g.donnees === undefined ? { op: 'signal', nom: g.nom } : { op: 'signal', nom: g.nom, donnees: g.donnees }); return;
     case 'reprendre': envoyerConduite(g.nom === undefined ? { op: 'reprendre' } : { op: 'reprendre', point: g.nom }); return;
+    case 'retenir': retenir(g.actif); return;
+    case 'prolonger': prolonger(g.secondes); return;
+    case 'panique': panique(g.actif); return;
   }
 }
 
 // ── ordres de la barre de scène et du rail ─────────────────────────────────────────────────────────────────────────
 
-/** RETENIR (touche H) : le prochain passage, même « auto », attend le top. Le lecteur ne sait pas encore le faire
- *  (rapport 3 §4.1-5, chantier 1) : la mémoire `retenir` est posée, lisible par les conditions 'mem:retenir'. */
-export const retenir = (actif = true) => envoyerConduite({ op: 'poser', nom: 'retenir', valeur: actif });
+/** RETENIR (touche H) : tient (ou relâche) l'étape en cours ; seul le top la termine (`lecteur.retenir()` du serveur). */
+export const retenir = (actif = true) => envoyerConduite({ op: 'retenir', actif });
+/** +30 s (touche J) : repousse de `secondes` la fin de l'étape en cours, cumulable (`lecteur.prolonger()` du serveur). */
+export const prolonger = (secondes = 30) => envoyerConduite({ op: 'prolonger', secondes });
 /** SAUTER À… (après confirmation de la barre de scène). */
 export const sauterA = (moment: string, etape?: string) =>
   envoyerConduite(etape === undefined ? { op: 'allerA', moment } : { op: 'allerA', moment, etape });

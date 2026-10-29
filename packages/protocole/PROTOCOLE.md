@@ -90,6 +90,8 @@ Un jeton par rôle (et par acteur nommé). Le jeton n'est jamais conservé dans 
 | `forcer` | `acteur` (acteur ou cible dans la foule), `vue{ecran, params?}` | impose une vue à la main, journalisée (remplace l'arbitrage des régies de la sortie) |
 | `panique` | `actif` (défaut vrai) | tous les acteurs sur leur écran de sécurité ; `actif:false` lève la panique |
 | `valider` | `id`, `ok`, `texte?` | décision sur une réplique de figurant en attente (ex `fig.valide`) |
+| `retenir` | `actif` (défaut vrai) | tient (`true`) ou relâche (`false`) l'étape en cours : ni le temps ni un signal ne la terminent, seul `top` en sort (`lecteur.retenir()`) |
+| `prolonger` | `secondes` (entier de 1 à 600) | ajoute des secondes à la durée minimale de l'étape en cours, cumulable (`lecteur.prolonger()`) |
 
 ### `in` : les entrées des acteurs
 

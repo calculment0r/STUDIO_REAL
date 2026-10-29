@@ -220,3 +220,128 @@ describe('allerA, reinitialiser', () => {
     expect(e.parcours).toEqual([['e1', 'portes', 0]]);
   });
 });
+
+describe('retenir et prolonger (barre de scène)', () => {
+  const deuxEtapes = (extra: Parameters<typeof projet>[1] = {}) =>
+    projet([moment('m', [etape('a', 10), etape('b', 10)], [sortie('a', 'b')])], extra);
+
+  it('retenir : l’étape ne se termine pas par le temps, même très au-delà de sa durée', () => {
+    const L = creerLecteur(deuxEtapes(), { mode: 'repetition' });
+    avancerN(L, 3);
+    const e = L.retenir(true);
+    expect(e.retenu).toBe(true);
+    const f = avancerN(L, 120);
+    expect(f.etape).toBe('a');
+    expect(f.retenu).toBe(true);
+    expect(f.bloque).toBe(false);
+    expect(f.tEtape).toBe(123);
+  });
+
+  it('retenir : les signaux sont comptés mais n’évaluent pas la sortie', () => {
+    const p = projet([moment('m', [etape('a', 10), etape('b', 10)], [sortie('a', 'b', [cond('sig:go', '≥', 1)])])]);
+    const L = creerLecteur(p, { mode: 'repetition' });
+    L.retenir(true);
+    avancerN(L, 20);
+    const e = L.signal('go');
+    expect(e.etape).toBe('a');
+    expect(e.receptions?.go).toBe(1);
+    expect(avancerN(L, 5).etape).toBe('a');
+  });
+
+  it('top() sort de l’étape tenue et lève la retenue', () => {
+    const L = creerLecteur(deuxEtapes(), { mode: 'repetition' });
+    L.retenir(true);
+    avancerN(L, 30);
+    const e = L.top();
+    expect(e.etape).toBe('b');
+    expect(e.retenu).toBe(false);
+    // la nouvelle étape suit son cours normal
+    expect(avancerN(L, 9).etape).toBe('b');
+  });
+
+  it('relâcher une étape dont la durée est échue la termine aussitôt', () => {
+    const L = creerLecteur(deuxEtapes(), { mode: 'repetition' });
+    L.retenir(true);
+    avancerN(L, 30);
+    const e = L.retenir(false);
+    expect(e.retenu).toBe(false);
+    expect(e.etape).toBe('b');
+  });
+
+  it('retenir est idempotent et journalisé une seule fois par changement', () => {
+    const L = creerLecteur(deuxEtapes(), { mode: 'repetition' });
+    L.retenir(true);
+    L.retenir(true);
+    const e = L.retenir(false);
+    const j = (e.journal ?? []).filter(x => x.type === 'retenir');
+    expect(j.map(x => x.valeur)).toEqual([true, false]);
+  });
+
+  it('retenir tient aussi un passage « auto » jusqu’au top', () => {
+    const p = projet([
+      moment('m1', [etape('a', 10)], []),
+      moment('m2', [etape('b', 10)], []),
+    ]);
+    const L = creerLecteur(p, { mode: 'repetition' });
+    avancerN(L, 3);
+    L.retenir(true);
+    expect(avancerN(L, 40).moment).toBe('m1');
+    expect(L.top().moment).toBe('m2');
+  });
+
+  it('prolonger : décale la fin de l’étape, de façon cumulable', () => {
+    const L = creerLecteur(deuxEtapes(), { mode: 'repetition' });
+    avancerN(L, 5);
+    expect(L.prolonger(30).prolonge).toBe(30);
+    const e = L.prolonger(30);
+    expect(e.prolonge).toBe(60);
+    expect(avancerN(L, 64).etape).toBe('a'); // t = 69 < 10 + 60
+    const f = avancerN(L, 1);
+    expect(f.etape).toBe('b'); // t = 70
+    expect(f.prolonge).toBe(0); // remis à zéro à l’entrée de l’étape
+  });
+
+  it('prolonger : journalisé, ignoré si la valeur est nulle ou négative', () => {
+    const L = creerLecteur(deuxEtapes(), { mode: 'repetition' });
+    L.prolonger(0);
+    L.prolonger(-5);
+    L.prolonger(Number.NaN);
+    const e = L.prolonger(12);
+    expect(e.prolonge).toBe(12);
+    expect((e.journal ?? []).filter(x => x.type === 'prolonger').map(x => x.valeur)).toEqual([12]);
+  });
+
+  it('prolonger redonne du temps à une étape déjà bloquée', () => {
+    const p = projet([moment('m', [etape('a', 10), etape('b', 10)], [sortie('a', 'b', [cond('quorum', '≥', 90)])])]);
+    const L = creerLecteur(p, { mode: 'repetition' });
+    expect(avancerN(L, 11).bloque).toBe(true);
+    expect(L.prolonger(30).bloque).toBe(false);
+  });
+
+  it('sans effet quand le spectacle est terminé', () => {
+    const L = creerLecteur(projet([moment('m', [etape('a', 10)], [])]), { mode: 'repetition' });
+    expect(avancerN(L, 12).termine).toBe(true);
+    const e = L.prolonger(30);
+    expect(e.prolonge).toBe(0);
+    expect(L.retenir(true).retenu).toBe(false);
+  });
+
+  it('allerA et reinitialiser effacent la retenue et la prolongation', () => {
+    const p = projet([
+      moment('m1', [etape('a', 10)], []),
+      moment('m2', [etape('b', 10)], []),
+    ]);
+    const L = creerLecteur(p, { mode: 'repetition' });
+    L.retenir(true);
+    L.prolonger(30);
+    const e = L.allerA('m2');
+    expect(e.retenu).toBe(false);
+    expect(e.prolonge).toBe(0);
+    L.retenir(true);
+    L.prolonger(30);
+    const f = L.reinitialiser();
+    expect(f.retenu).toBe(false);
+    expect(f.prolonge).toBe(0);
+    expect(f.journal).toEqual([]);
+  });
+});

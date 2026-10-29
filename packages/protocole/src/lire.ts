@@ -200,6 +200,8 @@ function lireOp(m: Brut): OpConduite {
       };
     }
     case 'panique': return { op, actif: m.actif === undefined ? true : booleen(m.actif, 'actif') };
+    case 'retenir': return { op, actif: m.actif === undefined ? true : booleen(m.actif, 'actif') };
+    case 'prolonger': return { op, secondes: entier(m.secondes, 'secondes', 1, 600) };
     case 'valider':
       return avec<OpConduite>({ op, id: court(m.id, 'id'), ok: booleen(m.ok, 'ok') }, { texte: opt(m.texte, v => texte(v, 'texte')) });
   }

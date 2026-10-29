@@ -33,7 +33,9 @@ export type EntreeLecteur =
   | { k: 'allerA'; moment: string; etape?: string }
   | { k: 'reprendre'; point?: string }
   | { k: 'poser'; nom: string; valeur: number | string | boolean }
-  | { k: 'signal'; nom: string; donnees?: unknown };
+  | { k: 'signal'; nom: string; donnees?: unknown }
+  | { k: 'retenir'; actif: boolean }
+  | { k: 'prolonger'; secondes: number };
 
 export interface Run {
   id: string;
