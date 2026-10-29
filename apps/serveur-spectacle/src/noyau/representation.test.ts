@@ -538,13 +538,27 @@ describe('le mur nourri par le serveur : pseudos, messages, figurants, voix, que
     // reconnexion (nouvelle session, même personne, autre pseudo proposé) : le pseudo ne change pas
     expect(bienvenue(b.hello('p1b____', 'acteur', 'public', 'tel_101', { pseudo: 'Autre' })).pseudo).toBe('Léa_du_3e');
     expect(bienvenue(b.hello('p5b____', 'acteur', 'public', 'tel_105')).pseudo).toBe(sans);
-    // un acteur nommé prend son id ; un agent et la régie n'ont pas de pseudo
-    expect(bienvenue(b.hello('mini_2_', 'acteur', 'ministre', 'mini_2_')).pseudo).toBe('ministre_2');
+    // un acteur nommé prend son NOM (fenêtre Acteurs), unique lui aussi ; un hello.pseudo explicite garde la priorité ;
+    // un agent et la régie n'ont pas de pseudo
+    expect(b.rep.instantane().salle.scene!.scene_1!.pseudo).toBe('Écran_scène');
+    expect(bienvenue(b.hello('scene_2', 'acteur', 'scene', 'scene_2')).pseudo).toBe('Écran_scène_2');
+    expect(bienvenue(b.hello('mini_2_', 'acteur', 'ministre', 'mini_2_')).pseudo).toBe('Ministre_2');
+    expect(bienvenue(b.hello('mini_3_', 'acteur', 'ministre', 'mini_3_', { pseudo: 'Mme_la_Ministre' })).pseudo).toBe('Mme_la_Ministre');
     expect(bienvenue(b.hello('fig_1__', 'agent', 'figurants'))).not.toHaveProperty('pseudo');
     expect(bienvenue(b.hello('regie_2', 'regie'))).not.toHaveProperty('pseudo');
     const salle = b.rep.instantane().salle.public!;
     expect(salle.tel_101).toMatchObject({ pseudo: 'Léa_du_3e', couleur: expect.stringMatching(/^--(cy|or|grn2|amb|coral-3|ink2|coral-2)$/) });
     for (const s of b.hello('p6_____', 'acteur', 'public', 'tel_106', { pseudo: 'Zoé' })) expect(lireMessageServeur(JSON.stringify(s.m)).raison).toBeUndefined();
+  });
+
+  it('acteur nommé dont le nom ne passe pas le filtre : son identifiant, à défaut', () => {
+    const acteurs = projetBanc().acteurs!.map(a => (a.id === 'ministre' ? { ...a, nom: '★' } : a));
+    const b = banc(projetMur(1), 42, { interdits: INTERDITS, votes: QUESTIONS });
+    const b2 = banc({ ...projetMur(1), acteurs }, 42, { interdits: INTERDITS, votes: QUESTIONS });
+    b.lancer();
+    b2.lancer();
+    expect(bienvenue(b.hello('mini_1', 'acteur', 'ministre')).pseudo).toBe('Ministre');
+    expect(bienvenue(b2.hello('mini_1', 'acteur', 'ministre')).pseudo).toBe('ministre');
   });
 
   it('message du public : fx `message` chez l’écran scène et la régie, pas chez le public ; accusé en premier', () => {

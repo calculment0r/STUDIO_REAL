@@ -13,18 +13,23 @@ const env = process.env;
 const DOSSIER_BANQUES = join(RACINE, 'prototypes', 'figurants', 'banques');
 
 /**
- * Banques du mur, lues sur disque et passées au noyau (qui ne lit aucun fichier) : la liste des mots interdits
- * (prototypes/figurants/banques/interdits.txt, une entrée par ligne, « # » = commentaire) et les questions des votes
- * (prototypes/figurants/banques/<banque>/votes.json, <banque> = `agent.config.banques` de l'acteur figurants du projet).
- * Un fichier absent ou illisible est signalé et ignoré : le serveur tourne sans.
+ * Banques du mur, lues sur disque et passées au noyau (qui ne lit aucun fichier) : les mots interdits = la liste
+ * générale (prototypes/figurants/banques/interdits.txt) PLUS la liste propre au projet
+ * (prototypes/figurants/banques/<banque>/interdits.txt) quand elle existe, concaténées et dédoublonnées (une entrée par
+ * ligne, « # » = commentaire) ; et les questions des votes (prototypes/figurants/banques/<banque>/votes.json).
+ * <banque> = `agent.config.banques` de l'acteur figurants du projet. Un fichier absent ou illisible est signalé et
+ * ignoré : le serveur tourne sans.
  */
 function chargerBanques(rep: Representation): void {
   const b: BanquesRepresentation = {};
-  const fichierInterdits = join(DOSSIER_BANQUES, 'interdits.txt');
-  try {
-    if (existsSync(fichierInterdits)) b.interdits = lireInterdits(readFileSync(fichierInterdits, 'utf8'));
-  } catch (e) { console.warn(`Liste des mots interdits illisible (${fichierInterdits}) : ${(e as Error).message}`); }
   const banque = banqueFigurants(rep.projet);
+  const interdits: string[] = [];
+  for (const fichier of [join(DOSSIER_BANQUES, 'interdits.txt'), ...(banque ? [join(DOSSIER_BANQUES, banque, 'interdits.txt')] : [])]) {
+    try {
+      if (existsSync(fichier)) interdits.push(...lireInterdits(readFileSync(fichier, 'utf8')));
+    } catch (e) { console.warn(`Liste des mots interdits illisible (${fichier}) : ${(e as Error).message}`); }
+  }
+  if (interdits.length) b.interdits = [...new Set(interdits)];
   const fichierVotes = banque ? join(DOSSIER_BANQUES, banque, 'votes.json') : null;
   try {
     if (fichierVotes && existsSync(fichierVotes)) {
