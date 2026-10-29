@@ -10,8 +10,10 @@
 // Pupitre de la régie (chantier INTÉGRATION) : `poserMemoire`, `envoyerSignal`, `reprendreAuPoint` (entrées extérieures
 // du moteur) et `journalRegie` (commandes émises par les blocs, entrées reçues, alertes ; voir src/etat/regie.ts).
 // Serveur de spectacle (src/etat/spectacle.ts) : `surConduiteLocale` annonce chaque geste de conduite (GO et le nombre
-// de tops qu'il a joués, saut, mémoire, signal, reprise) pour qu'il parte en `conduite` ; `resynchroniser(etat)` cale
+// de tops qu'il a joués, saut, mémoire, signal, reprise, retenir, +30 s, panique) pour qu'il parte en `conduite` ; `resynchroniser(etat)` cale
 // le lecteur local, devenu MIROIR, sur l'état officiel reçu du serveur (`lecture`).
+// Barre de scène (coquille/BarreScene.tsx) : `retenir`, `prolonger`, `panique` (état local `enPanique`) ; la pause / reprise
+// reste `basculerLecture`.
 import { create } from 'zustand';
 import {
   exempleDemo,
@@ -19,6 +21,7 @@ import {
 } from '@studio-real/modele';
 import { creerLecteur, signauxSalle } from './moteur';
 import { ASSETS_DEMO } from './assets';
+import { publierScene, relacherScene } from '../sortie/relais';
 import { ligneAlerte, ligneCommande, ligneEvenement, type LigneRegie, type ValeurMemoire } from './regie';
 import {
   ecrireCourant, ecrireVersions, emballer, lireCourant, lireFichier, lireVersions, oublierCourant, telecharger,
@@ -83,11 +86,24 @@ export interface Magasin {
   /** GO : « le cue suivant, maintenant » (règle 4.1-2). Si un passage attend, il est franchi ; sinon, si l'étape en
    *  cours mène à un passage « go » (cas d'Écho), l'étape est terminée de force PUIS le passage franchi, dans la même
    *  action ; si la lecture était arrêtée, elle repart. Un appui = un cue ; rien n'est armé pour plus tard ; un second
-   *  GO moins de DELAI_ANTI_DOUBLE_GO_MS après le précédent est ignoré. Partagé par le TAP, les GO de l'en-tête, du
+   *  GO moins de DELAI_ANTI_DOUBLE_GO_MS après le précédent est ignoré. Partagé par la barre de scène, les GO de l'en-tête, du
    *  pupitre et du panneau, Espace (SPECTACLE) et T / G. */
   go: () => void;
   /** Ancien nom de `go` (contrat ARCHITECTURE.md) : même action. */
   top: () => void;
+  /** RETENIR (barre de scène, touche H) : tient (`actif` vrai) ou relâche l'étape en cours, sans argument bascule.
+   *  Tenue, l'étape ne se termine ni par le temps ni par un signal ; seul le GO en sort et lève la retenue. Agit sur
+   *  le lecteur local ; en SPECTACLE relié, le geste part aussi au serveur (`conduite{op:'retenir'}`). */
+  retenir: (actif?: boolean) => void;
+  /** +30 s (barre de scène, touche J) : repousse de `secondes` la fin de l'étape en cours, cumulable ; refusé hors
+   *  étape (passage, spectacle terminé). En SPECTACLE relié, part aussi au serveur (`conduite{op:'prolonger'}`). */
+  prolonger: (secondes?: number) => void;
+  /** PANIQUE : `actif` vrai la déclenche, faux la lève. Localement, la sortie écran scène reçoit la scène « noir » (mode
+   *  manuel du relais de sortie) jusqu'à la levée ; en SPECTACLE relié, le geste part au serveur (tous les acteurs sur
+   *  leur écran de sécurité). */
+  panique: (actif: boolean) => void;
+  /** Vrai entre `panique(true)` et `panique(false)` (le nom `panique` est pris par l'action). */
+  enPanique: boolean;
   /** Instant (Date.now()) du dernier GO accepté : le bouton affiche « GO ✓ » pendant l'anti-rebond. */
   dernierGo: number;
   allerA: (moment: string, etape?: string) => void;
@@ -167,7 +183,10 @@ export type GesteConduite =
   | { k: 'allerA'; moment: string; etape?: string }
   | { k: 'poser'; nom: string; valeur: ValeurMemoire }
   | { k: 'signal'; nom: string; donnees?: unknown }
-  | { k: 'reprendre'; nom?: string };
+  | { k: 'reprendre'; nom?: string }
+  | { k: 'retenir'; actif: boolean }
+  | { k: 'prolonger'; secondes: number }
+  | { k: 'panique'; actif: boolean };
 const ecouteursConduite = new Set<(g: GesteConduite) => void>();
 /** S'abonne aux gestes de conduite de ce Conducteur ; renvoie le désabonnement. */
 export function surConduiteLocale(fn: (g: GesteConduite) => void): () => void {
@@ -259,6 +278,9 @@ export const useMagasin = create<Magasin>((set, get) => {
       let e = nouveau.allerA(m.id, etape);
       // on attendait le passage de ce moment : on s'y replace (sans rejouer l'étape depuis son début)
       if (avant.etape === null && avant.phase !== 'fin') e = placerAuPassage(nouveau, m.id);
+      // l'étape tenue le reste, et la prolongation demandée est gardée
+      if (avant.retenu && !e.termine) e = nouveau.retenir(true);
+      if ((avant.prolonge ?? 0) > 0 && e.etape !== null) e = nouveau.prolonger(avant.prolonge!);
       decalT = avant.t - e.t; decalRetard = avant.retard - e.retard;
       // les mémoires de la soirée (blocs Mémoire, entrées de la régie) survivent à une modification du projet
       for (const [k, v] of Object.entries(avant.memoires ?? {})) if (e.memoires[k] !== v) nouveau.poser(k, v);
@@ -468,6 +490,38 @@ export const useMagasin = create<Magasin>((set, get) => {
     top: go,
     dernierGo: 0,
 
+    retenir: (actif) => {
+      const l = assurerLecteur(), e0 = l.etat();
+      if (e0.termine) { signaler('Le spectacle est terminé.'); return; }
+      const voulu = actif ?? !(get().lecture?.retenu ?? e0.retenu ?? false);
+      publier(l.retenir(voulu));
+      journal('retenir', { actif: voulu });
+      annoncer({ k: 'retenir', actif: voulu });
+      signaler(voulu ? 'RETENU · l’étape attend le GO' : 'Retenue levée');
+    },
+    prolonger: (secondes = 30) => {
+      const l = assurerLecteur(), e0 = l.etat();
+      if (e0.termine) { signaler('Le spectacle est terminé.'); return; }
+      if (e0.etape === null) { signaler('Pas d’étape en cours : rien à prolonger.'); return; }
+      const n = Math.max(1, Math.min(600, Math.round(secondes)));
+      const e = l.prolonger(n);
+      publier(e);
+      journal('prolonger', { secondes: n });
+      annoncer({ k: 'prolonger', secondes: n });
+      signaler('+' + n + ' s · fin de l’étape repoussée (cumul +' + Math.round(e.prolonge ?? n) + ' s)');
+    },
+    enPanique: false,
+    panique: (actif) => {
+      if (actif === get().enPanique) return;
+      set({ enPanique: actif });
+      // sortie locale : noir tenu à la main (relais de sortie), puis retour à la scène automatique à la levée
+      if (actif) publierScene({ scene: 'noir' }, { fondu: 0 });
+      else relacherScene();
+      journal('panique', { actif });
+      annoncer({ k: 'panique', actif });
+      signaler(actif ? 'PANIQUE · écrans de sécurité, sortie au noir' : 'Fin de la panique');
+    },
+
     // Saut explicite : le lecteur prend les modifications en attente (on rentre de toute façon dans un moment).
     allerA: (moment, etape) => {
       set({ selection: { moment, etape } });
@@ -639,6 +693,9 @@ export const useMagasin = create<Magasin>((set, get) => {
         if (etat.etape === null && etat.phase !== 'fin') e = placerAuPassage(l, m.id);
       }
       for (const [k, v] of Object.entries(etat.memoires ?? {})) if (e.memoires[k] !== v) e = l.poser(k, v);
+      // retenue et prolongation de l'étape : celles du serveur
+      if (!etat.termine && !!etat.retenu !== !!e.retenu) e = l.retenir(!!etat.retenu);
+      if ((etat.prolonge ?? 0) > (e.prolonge ?? 0)) e = l.prolonger((etat.prolonge ?? 0) - (e.prolonge ?? 0));
       // ce que le lecteur local a émis en se replaçant n'est pas nouveau pour la régie
       vus = { c: e.commandes?.length ?? 0, j: e.journal?.length ?? 0, a: e.alertes?.length ?? 0 };
       decalT = etat.t - e.t; decalRetard = etat.retard - e.retard;

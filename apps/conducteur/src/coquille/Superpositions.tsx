@@ -206,9 +206,11 @@ export function Pupitre() {
 
 const RACCOURCIS: [string, string][] = [
   ['Espace', 'SPECTACLE : GO · RÉPÉTITION : lecture / pause'], ['Maj + Espace', 'SPECTACLE : lecture / pause'],
-  ['T / G', 'GO (le cue suivant, maintenant)'], ['P', 'Pupitre de représentation'], ['Ctrl + Espace', 'Tiroir des assets'],
+  ['T / G', 'GO (le cue suivant, maintenant)'], ['H', 'RETENIR : tient l’étape en cours (le GO seul en sort)'], ['J', '+30 s : repousse la fin de l’étape'],
+  ['P', 'Pupitre de représentation'], ['Ctrl + Espace', 'Tiroir des assets'],
   ['E', 'Émulateur de téléphones'], ['Ctrl + Z', 'Annuler'], ['Ctrl + Maj + Z', 'Rétablir'], ['M', 'Nouveau moment'], ['K', 'Note de régie à la tête de lecture'],
-  ['+ / −', 'Zoom de la conduite'], ['F', 'Plein écran (sur la planche : recadrer)'], ['V / C', 'Outils de la conduite : sélection / couper'], ['Ctrl + K', 'Rechercher'],
+  ['+ / −', 'Zoom de la conduite'], ['F', 'Plein écran (sur la planche : recadrer)'], ['V / C', 'Outils de la conduite : sélection / couper'], ['Ctrl + K', 'Rechercher'], ['Ctrl + Maj + K', 'SAUTER À… un moment ou une étape'],
+  ['PANIQUE', 'Aucune touche : appui long 0,7 s ou double-clic sur le bouton rouge'],
   ['Échap', 'Fermer / désélectionner'], ['?', 'Raccourcis'],
 ];
 

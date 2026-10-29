@@ -93,6 +93,10 @@ interface Interne {
   mot?: string;
   /** l'événement « 10 s restantes » du chrono courant est parti */
   dixSecondes: boolean;
+  /** étape (ou passage) tenue : ni le temps ni un signal ne la terminent, seul le top régie sort */
+  retenu: boolean;
+  /** secondes ajoutées à la durée minimale de l'étape en cours (cumulables) */
+  prolonge: number;
   /** étapes entrées depuis le dernier appel de l'API (garde-fou contre les enchaînements sans fin) */
   chaine: number;
 }
@@ -123,7 +127,7 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
       t: 0, im: -1, etape: null, tEtape: 0, phase: 'etape', attenteGo: false, retard: 0, bloque: false, termine: false,
       issue: undefined, votes: undefined, memoires: { ...(projet.memoires ?? {}) }, parcours: [], attentes: {}, alertes: [],
       tours: {}, tirage: null, cadres: [], receptions: {}, valeursSignaux: {}, journal: [], commandes: [], reprises: [],
-      mot: undefined, dixSecondes: false, chaine: 0,
+      mot: undefined, dixSecondes: false, retenu: false, prolonge: 0, chaine: 0,
     };
   }
 
@@ -174,6 +178,7 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
         return p;
       }),
       receptions: { ...s.receptions },
+      retenu: s.retenu, prolonge: s.prolonge,
     };
     if (s.votes) e.votes = { ...s.votes };
     if (c && s.etape) e.sequence = { id: c.seq.id, nom: c.seq.nom, etape: s.etape, tEtape: s.tEtape, chemin: s.cadres.map(x => x.seq.nom) };
@@ -187,6 +192,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.cadres = [];
     s.attenteGo = false;
     s.bloque = false;
+    s.retenu = false;
+    s.prolonge = 0;
     const m = moment();
     if (!m) { terminer(); return; }
     const id = etapeId ?? entreeMoment(m, s.issue);
@@ -206,6 +213,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.receptions = {};
     s.mot = undefined;
     s.dixSecondes = false;
+    s.retenu = false;
+    s.prolonge = 0;
     const c = cadre();
     if (c) journaliser('sous-etape', c.seq.nom, id);
     else s.parcours.push([m.id, id, s.t]);
@@ -301,6 +310,7 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.tEtape = 0;
     s.bloque = false;
     s.attenteGo = false;
+    s.prolonge = 0;   // la prolongation ne vaut que pour l'étape où elle a été demandée
     s.receptions = {};
     // Sans condition, le passage se décide tout de suite ; avec conditions, on attend les signaux du passage
     // (prochain avancer), le temps du passage repartant de zéro comme dans le design.
@@ -313,6 +323,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.cadres = [];
     s.attenteGo = false;
     s.bloque = false;
+    s.retenu = false;
+    s.prolonge = 0;
     s.termine = true;
     if (s.im >= projet.ev.length) s.im = projet.ev.length - 1;
   }
@@ -335,7 +347,9 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
   function evaluerEtape(force: boolean) {
     const st = etapeCourante();
     if (!moment() || !st) { finConteneur(); return; }
-    const d = dureeEtape(st) * facteur();
+    // Étape tenue : seul le top régie (force) la termine ; les signaux restent comptés mais n'évaluent pas la sortie.
+    if (s.retenu && !force) return;
+    const d = dureeEtape(st) * facteur() + s.prolonge;
     const outs = sortiesDe(st.id);
     const c = ctx();
     const comp = comportementBloc(st.ty);
@@ -458,7 +472,7 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     const m = moment();
     if (!m) { terminer(); return; }
     if (force) { franchir(); return; }
-    if (s.attenteGo) return;
+    if (s.retenu || s.attenteGo) return;
     const g = m.gate ?? { mode: 'auto' as const, g: [] };
     const pret = sortieRemplie({ g: g.g, mode: 'all' }, ctx()) || s.tEtape >= PLAFOND_ATTENTE;
     if (!pret) return;
@@ -521,6 +535,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     top() {
       demarrerSiBesoin();
       if (s.termine) return etat();
+      // Le top régie lève la retenue : l'étape tenue sort alors comme une étape bloquée (son « sinon »).
+      s.retenu = false;
       if (s.phase === 'passage') evaluerPassage(true);
       else if (s.phase === 'etape') evaluerEtape(true);
       return etat();
@@ -537,6 +553,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
       s.t = ep ? ep.debut : (pl?.debut ?? s.t);
       s.termine = false;
       s.phase = 'etape';
+      s.retenu = false;
+      s.prolonge = 0;
       entrerMoment(i, cible);
       return etat();
     },
@@ -572,6 +590,29 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
         if (mot !== undefined) { s.mot = mot; journaliser('mot', mot, texte); }
       }
       reevaluer();
+      return etat();
+    },
+    retenir(actif: boolean) {
+      demarrerSiBesoin();
+      if (s.termine) return etat();
+      const voulu = !!actif;
+      if (voulu === s.retenu) return etat();
+      s.retenu = voulu;
+      journaliser('retenir', voulu ? 'retenu' : 'relâché', voulu);
+      // Relâcher réévalue aussitôt : une étape dont la durée est échue repart sans attendre le prochain pas de temps.
+      if (!voulu) reevaluer();
+      return etat();
+    },
+    prolonger(secondes: number) {
+      demarrerSiBesoin();
+      if (s.termine || !Number.isFinite(secondes) || secondes <= 0) return etat();
+      s.prolonge += secondes;
+      journaliser('prolonger', 'prolonger', secondes);
+      // Une étape déclarée bloquée (durée échue sans sortie remplie) retrouve du temps devant elle.
+      if (s.bloque && s.phase === 'etape') {
+        const st = etapeCourante();
+        if (st && s.tEtape < dureeEtape(st) * facteur() + s.prolonge) s.bloque = false;
+      }
       return etat();
     },
     reprendre(nomPoint?: string) {

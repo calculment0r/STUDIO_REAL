@@ -2,7 +2,7 @@
 // tiroir des assets, superpositions. Assemble <Planche/> (chantier PLANCHE) et <Conduite/> (chantier CONDUITE).
 // Au démarrage : `?projet=live` ouvre le spectacle LIVE, `?projet=echo` le spectacle ÉCHO ; sinon la dernière salle collaborative est rouverte si son jeton
 // est connu (sans serveur : statut « hors ligne », tout reste local, aucun message bloquant).
-import { BoutonTap } from './BoutonTap';
+import { BarreScene } from './BarreScene';
 import { useEffect, useRef, type DragEvent } from 'react';
 import { reprendreDerniereSalle } from '../collab';
 import { chargerEcho, chargerLive, projetDemandeParAdresse } from './projet-live';
@@ -143,7 +143,7 @@ export function App() {
           </div>
         )}
       </div>
-      <BoutonTap />
+      <BarreScene />
       <TiroirAssets />
       <Recherche />
       <FenetreEmulateur />

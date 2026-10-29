@@ -4,14 +4,23 @@
 import type { EtatLecture } from '@studio-real/modele';
 import type { ModeConducteur } from '../etat/magasin';
 
-export type ActionTouche = 'go' | 'lecture';
+export type ActionTouche = 'go' | 'lecture' | 'retenir' | 'prolonger' | 'sauter';
 
-/** Touche → action de lecture. SPECTACLE : Espace = GO, Maj+Espace = lecture / pause. RÉPÉTITION : Espace = lecture /
- *  pause (Maj+Espace aussi). T ou G = GO dans les deux modes. null : la touche n'est pas une commande de lecture. */
-export function actionTouche(e: { code?: string; key?: string; shiftKey?: boolean }, mode: ModeConducteur): ActionTouche | null {
-  if (e.code === 'Space' || e.key === ' ') return mode === 'spectacle' && !e.shiftKey ? 'go' : 'lecture';
+/** Touche → action de la barre de scène. SPECTACLE : Espace = GO, Maj+Espace = lecture / pause. RÉPÉTITION : Espace =
+ *  lecture / pause (Maj+Espace aussi). T ou G = GO dans les deux modes. H = RETENIR, J = +30 s, Ctrl+Maj+K = SAUTER À… (Ctrl+K reste à la recherche)
+ *  PANIQUE n'a JAMAIS de touche (appui long ou double-clic seulement). Toute autre combinaison avec Ctrl, Méta ou Alt
+ *  n'est pas une commande de lecture. null : la touche n'est pas une commande de la barre. */
+export function actionTouche(
+  e: { code?: string; key?: string; shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean },
+  mode: ModeConducteur,
+): ActionTouche | null {
   const k = e.key ?? '';
+  if (e.ctrlKey || e.metaKey) return (k === 'k' || k === 'K') && !e.altKey && !!e.shiftKey ? 'sauter' : null;
+  if (e.altKey) return null;
+  if (e.code === 'Space' || k === ' ') return mode === 'spectacle' && !e.shiftKey ? 'go' : 'lecture';
   if (k === 't' || k === 'T' || k === 'g' || k === 'G') return 'go';
+  if (k === 'h' || k === 'H') return 'retenir';
+  if (k === 'j' || k === 'J') return 'prolonger';
   return null;
 }
 
