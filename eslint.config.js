@@ -44,7 +44,8 @@ const ZONES_REACT = [
   'apps/telephone/**/*.{ts,tsx}',
 ]
 const FICHIERS_TEST = ['**/*.test.{ts,tsx,js,mjs}', '**/test-outils/**', '**/tests/**']
-const FICHIERS_TEST_TS = ['**/*.test.{ts,tsx}', '**/test-outils/**/*.{ts,tsx}', '**/tests/**/*.{ts,tsx}']
+const FICHIERS_TEST_TS = ['**/*.test.{ts,tsx}', '**/test-outils/**/*.{ts,tsx}', '**/tests/**/*.{ts,tsx}',
+  'outils/fluidite/**/*.ts']   // outil de mesure : il lit le JSON brut du protocole du navigateur (any toléré, en avertissement)
 
 export default tseslint.config(
   {

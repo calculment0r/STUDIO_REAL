@@ -434,7 +434,7 @@ class Banc {
     await attendreJusqua(dureeS);
     if (def.edition) await this.ev(regie, EXPR_SPECTACLE);
 
-    const tFin = avecTrace ? await this.marqueur(regie, 'fl-fin') : 0;
+    if (avecTrace) await this.marqueur(regie, 'fl-fin');
     const ph1 = await this.ev<Photo>(regie, '__fl.photo()'), ps1 = sortie ? await this.ev<Photo>(sortie, '__fl.photo()') : null;
     const m1 = await nav.metriques(regie), ms1 = sortie ? await nav.metriques(sortie) : null;
     for (const p of pages) await this.ev(p, '__fl.enregistrer = false');

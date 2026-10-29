@@ -300,6 +300,7 @@ export function analyserProfil(p: ProfilBrut, nbHaut = 25): AnalyseProfil {
   return {
     dureeMs: arrondi(total), occupePct: arrondi((occupe / (total || 1)) * 100), inactifPct: arrondi((inactif / (total || 1)) * 100),
     propre: toutes.filter(hors).sort((a, b) => (sp.get(b) ?? 0) - (sp.get(a) ?? 0)).slice(0, nbHaut).map(ligne),
+    // eslint-disable-next-line no-control-regex -- le profileur sépare le nom du composant par un caractère nul
     composants: toutes.filter((k) => /^[A-Z][A-Za-z0-9]+\u0000/.test(k) && !/^(Object|Array|Map|Set|Promise|Error|Date|Number|String|Symbol|Function|Math|JSON|Proxy|Reflect)\u0000/.test(k))
       .sort((a, b) => (si.get(b) ?? 0) - (si.get(a) ?? 0)).slice(0, nbHaut).map(ligne),
     notables: toutes.filter((k) => NOTABLES.test(k.split('\u0000')[0]!)).sort((a, b) => (si.get(b) ?? 0) - (si.get(a) ?? 0)).slice(0, 15).map(ligne),
