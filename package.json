@@ -15,6 +15,7 @@
     "test:lent": "vitest run --project conducteur-lent --project serveur-integration",
     "test:tout": "vitest run",
     "verifier-projets": "npm run verifier -w @studio-real/modele",
+    "fluidite": "node --import tsx outils/fluidite/mesurer.ts",
     "typecheck": "tsc -b",
     "lint": "npm run lint -w conducteur",
     "pages": "npm run pages -w conducteur",
