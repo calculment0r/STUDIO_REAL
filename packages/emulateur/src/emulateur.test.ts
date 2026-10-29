@@ -191,7 +191,7 @@ describe('Écho converti, 120 spectateurs « soirée »', () => {
     expect(b.arrives).toBe(120);
     expect(emu.signaux().pres).toBe(b.connectes);
     expect(b.connectes).toBeGreaterThanOrEqual(110);
-  });
+  }, 15_000);   // 3 s seul ; le poste de régie fait tourner plusieurs agents de code en parallèle (29/10 : 5,9 s mesurés)
 
   it('GO par GO jusqu’à Q1 : 95 % affichent le vote en moins de 1 s ; faireVoter → quorum de 90 % avant 30 s ; le passage part au top', async () => {
     const emu2 = await soiree({ auto: false });
