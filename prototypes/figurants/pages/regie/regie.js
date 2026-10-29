@@ -342,7 +342,7 @@ $('formMain').addEventListener('submit', (ev) => {
 // ---------- chat complet ----------
 const tipsLignes = new WeakMap();
 const dejaVus = new Set();
-function ligneChat(m, ancien) {
+function ligneChat(m, _ancien) {
   if (m.id != null) { if (dejaVus.has(m.id)) return; dejaVus.add(m.id); }
   const o = ORIGINES.includes(m.origine) ? m.origine : 'humain';
   comptes[o] += 1;

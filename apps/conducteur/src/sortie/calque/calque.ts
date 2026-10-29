@@ -66,12 +66,11 @@ export class CalqueReactions {
     this.eclairG = new Graphics();
     this.eclairG.alpha = 0;
     couches.flash.addChild(this.eclairG);
-    const soi = this;
     this.ctx = {
       kit, theme, couches, pBack, pFront, W: 1920, H: HAUTEUR, temps: 0, zone: null, eviter: {},
       rectsAEviter() { return [this.zone, ...Object.values(this.eviter)].filter((r): r is Rect => !!r); },
-      secouer(a) { soi.secousse = Math.max(soi.secousse, a); },
-      eclair(couleur, a) { soi.eclairG.tint = couleur; soi.eclairA = Math.max(soi.eclairA, Math.min(a, 0.3)); },
+      secouer: (a) => { this.secousse = Math.max(this.secousse, a); },
+      eclair: (couleur, a) => { this.eclairG.tint = couleur; this.eclairA = Math.max(this.eclairA, Math.min(a, 0.3)); },
       couleurPseudo: (nom) => theme.palette[hachage(nom) % theme.palette.length],
     };
     this.pops = new Pops(this.ctx); this.danmaku = new Danmaku(this.ctx); this.vedette = new Vedette(this.ctx);

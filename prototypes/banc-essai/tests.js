@@ -361,7 +361,7 @@ export function creerTests(B) {
           try {
             await rf.call(document.documentElement);
             await sleep(400);
-            const t = await essai();
+            await essai();
             return { auto: 'partiel', detail: `Verrouillage accepté seulement en plein écran (sans : ${erreur(e1)}).`, donnees: { sansPleinEcran: false, erreurSans: erreur(e1) } };
           } catch (e2) {
             return ko(`Verrouillage refusé, même en plein écran : ${erreur(e2)}`, { erreurSans: erreur(e1), erreurAvec: erreur(e2) });
@@ -600,6 +600,7 @@ export function creerTests(B) {
       if (!('NDEFReader' in window)) return ko('NDEFReader absent (attendu sur iPhone et sur Chrome de bureau).');
       const ctrl = new AbortController();
       try {
+        // eslint-disable-next-line no-undef -- API Web NFC, absente des globals ESLint
         const lecteur = new NDEFReader();
         const lu = new Promise((res) => {
           lecteur.addEventListener('reading', (e) => res(e), { once: true });

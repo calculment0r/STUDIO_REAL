@@ -9,7 +9,7 @@
 // la main dans le Conducteur seraient écrasées : exporter d'abord).
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { planifier, validerProjet, formatMMSS, type Projet, type Etape, type Sortie, type Moment, type Condition, type Piste } from '../../packages/modele/src/index.ts';
+import { planifier, validerProjet, formatMMSS, type Projet, type Etape, type Moment, type Condition, type Piste } from '../../packages/modele/src/index.ts';
 
 const RACINE = fileURLToPath(new URL('.', import.meta.url));
 const NOM_FICHIER = 'echo-complet.conducteur.json';

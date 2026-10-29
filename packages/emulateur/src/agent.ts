@@ -148,6 +148,7 @@ export class TelephoneSalle implements TelephoneEmule {
       acteur: this.acteur, personne: this.personne, session: this.session, pseudo: this.pseudo, cseq: this.cseqGarde,
       demanderPseudo: this.acteur === 'public',
     });
+    // eslint-disable-next-line prefer-const -- le magasin est affecté après la création du transport, dont le rappel hello le lit
     let m!: Magasin;
     const hello: FabriqueHello = () => messageHello(m.lire(), { app: { ...APP_EMULEE }, capacites: nomsCapacites(this.profil.capacites) });
     const reel = this.ctx.reel;

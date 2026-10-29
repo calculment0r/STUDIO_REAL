@@ -33,8 +33,6 @@ jobs:
       - name: Projets vérifiés
         run: npm run verifier-projets
 
-      # Le lint peut être rouge tant que le lot « lint-racine » n'est pas fusionné.
-      # À faire ensuite : retirer continue-on-error de cette étape.
+      # Bloquant : 0 erreur exigée (eslint.config.js à la racine). Les avertissements ne font pas échouer l'étape.
       - name: Lint
         run: npm run lint
-        continue-on-error: true

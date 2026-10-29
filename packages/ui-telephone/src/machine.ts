@@ -184,6 +184,7 @@ export const estMessage = (s: Sortie): s is MessageClient => 't' in s;
 
 /** LA règle du pseudo : 2 à 20 caractères (après avoir retiré les @ du début et changé les espaces en _). */
 export function validerPseudo(brut: string): { ok: string } | { erreur: string } {
+  // eslint-disable-next-line no-control-regex -- on retire volontairement les caractères de contrôle
   const p = String(brut ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().replace(/^@+/, '').replace(/\s+/g, '_');
   if (p.length < 2) return { erreur: 'Au moins 2 caractères.' };
   if (p.length > 20) return { erreur: '20 caractères au plus.' };
@@ -192,6 +193,7 @@ export function validerPseudo(brut: string): { ok: string } | { erreur: string }
 
 const FILE_MAX = 500;
 const TEXTE_MAX = 2000;
+// eslint-disable-next-line no-control-regex -- on exclut volontairement les caractères de contrôle
 const RE_COURT = /^[^\s\u0000-\u001f]{1,64}$/;
 const estTexte = (x: unknown): x is string => typeof x === 'string' && x.trim().length > 0;
 const estNombre = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);

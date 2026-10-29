@@ -484,7 +484,8 @@ export function Planche() {
     const p = depuis ? f.P[depuis] : undefined;
     if (p) {
       const pris = (x: number, y: number) => Object.values(f.P).some(q => Math.abs(q.x - x) < LARGEUR_BLOC && Math.abs(q.y - y) < 120);
-      let x = p.x + LARGEUR_BLOC + 160, y = p.y;
+      const x = p.x + LARGEUR_BLOC + 160;
+      let y = p.y;
       while (pris(x, y) && y < p.y + 2000) y += 320;
       return { x, y };
     }
