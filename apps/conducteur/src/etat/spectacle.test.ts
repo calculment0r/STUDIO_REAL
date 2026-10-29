@@ -8,8 +8,8 @@ import echo from '../../../../projets/echo/echo.conducteur.json';
 import { DELAI_ANTI_DOUBLE_GO_MS, avancerDe, useMagasin } from './magasin';
 import { etatActeurs, oublierActeurs, resumeSalle } from './acteurs';
 import {
-  ACCUSE_ROUGE_MS, adresseWebSocket, baseTelephone, lienActeur, lienPublic, lireReglages, reglerSpectacle, reinitialiserSpectacle,
-  relierSpectacle, surveiller, useSpectacle, voyantSpectacle,
+  ACCUSE_ROUGE_MS, adresseWebSocket, baseTelephone, lienActeur, lienPublic, lireFragmentRegie, lireReglages, reglerSpectacle,
+  reinitialiserSpectacle, relierSpectacle, surveiller, useSpectacle, voyantSpectacle,
 } from './spectacle';
 
 const s = () => useMagasin.getState();
@@ -236,5 +236,19 @@ describe('retours des acteurs', () => {
     expect(sp().alertes.map(a => a.code)).toContain('jeton');
     s().go();
     expect(conduites()).toHaveLength(0);
+  });
+});
+
+describe('fragment d’adresse du script de lancement', () => {
+  it('lit #spectacle=…&jeton=… (forme posée par lancer-spectacle.ps1)', () => {
+    expect(lireFragmentRegie('#spectacle=ws://localhost:8790/ws&jeton=sr_regie_abc')).toEqual({ adresse: 'ws://localhost:8790/ws', jetonRegie: 'sr_regie_abc' });
+    expect(lireFragmentRegie('spectacle=wss://spectacle.exemple/ws&jeton=j')).toEqual({ adresse: 'wss://spectacle.exemple/ws', jetonRegie: 'j' });
+  });
+  it('refuse un fragment incomplet ou une adresse illisible', () => {
+    expect(lireFragmentRegie('')).toBeNull();
+    expect(lireFragmentRegie('#jeton=j')).toBeNull();
+    expect(lireFragmentRegie('#spectacle=ws://localhost:8790/ws')).toBeNull();
+    expect(lireFragmentRegie('#spectacle=pas-une-adresse&jeton=j')).toBeNull();
+    expect(lireFragmentRegie('#acteur=scene&jeton=j')).toBeNull();
   });
 });

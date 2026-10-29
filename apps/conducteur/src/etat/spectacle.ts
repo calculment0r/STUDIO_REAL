@@ -629,9 +629,34 @@ export function arreterSurveillance(): void {
   minuteur = undefined;
 }
 
-/** Au démarrage du Conducteur : surveillance, et liaison si les réglages de l'onglet sont complets. */
+/**
+ * Fragment d'adresse posé par le script de lancement (exploitation/lancer-spectacle.ps1) :
+ * `#spectacle=ws://hôte:port/ws&jeton=<jeton régie>`. Même forme que la sortie (sortie/client-spectacle.ts). Le jeton ne
+ * doit jamais rester dans l'adresse : l'appelant efface le fragment une fois lu. null : pas de fragment lisible.
+ */
+export function lireFragmentRegie(hash: string): { adresse: string; jetonRegie: string } | null {
+  const f = new URLSearchParams(hash.replace(/^#/, ''));
+  const adresse = f.get('spectacle')?.trim() ?? '';
+  const jetonRegie = f.get('jeton')?.trim() ?? '';
+  if (!adresse || !jetonRegie || !adresseWebSocket(adresse)) return null;
+  return { adresse, jetonRegie };
+}
+
+/**
+ * Au démarrage du Conducteur : surveillance, puis liaison. Un fragment `#spectacle=…&jeton=…` (page ouverte par le
+ * script de lancement) règle l'onglet et est effacé de l'adresse ; sinon, liaison si les réglages de l'onglet sont
+ * complets. Avant le 29/10 le fragment était ignoré : le Conducteur ouvert par le script restait « non relié » (régie : 0
+ * sur la page de santé).
+ */
 export function demarrerSpectacle(): () => void {
   demarrerSurveillance();
+  if (typeof location !== 'undefined') {
+    const frag = lireFragmentRegie(location.hash);
+    if (frag) {
+      reglerSpectacle({ adresse: frag.adresse, jetonRegie: frag.jetonRegie });
+      try { history.replaceState(null, '', location.pathname + location.search); } catch { /* adresse figée */ }
+    }
+  }
   const r = lireReglages();
   if (r.adresse && r.jetonRegie) relierSpectacle();
   return () => { arreterSurveillance(); delierInterne(false); };
