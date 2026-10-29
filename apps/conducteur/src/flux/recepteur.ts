@@ -315,7 +315,7 @@ function creerIncrustation(): HTMLDivElement {
   const d = document.createElement('div');
   d.setAttribute('data-flux-stats', '');
   d.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2147483647;pointer-events:none;padding:4px 8px;'
-    + 'font:11px/1.3 var(--f-mono, monospace);letter-spacing:.04em;color:var(--cy);background:var(--ombre-3);border-radius:var(--r1, 4px)';
+    + 'font:11px/1.3 var(--f-mono, monospace);letter-spacing:.04em;color:var(--cy);background:var(--ombre-3);border-radius:var(--rayon-petit)';
   document.body.append(d);
   return d;
 }

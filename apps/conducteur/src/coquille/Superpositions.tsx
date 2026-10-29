@@ -189,7 +189,7 @@ export function Pupitre() {
                 <span className="mono" style={{ flex: 1, fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase' }}>{l.lab}</span>
                 <span className="num" style={{ fontSize: 14 }}>{l.val}</span>
               </div>
-              <span className="barre" style={{ height: 5, borderRadius: 3 }}><span style={{ width: (l.progres * 100).toFixed(1) + '%', background: l.ok ? 'var(--gt)' : 'var(--ort)' }} /></span>
+              <span className="barre" style={{ height: 5, borderRadius: 'var(--rayon-petit)' }}><span style={{ width: (l.progres * 100).toFixed(1) + '%', background: l.ok ? 'var(--gt)' : 'var(--ort)' }} /></span>
             </div>
           ))}
           <div style={{ flex: 1 }} />

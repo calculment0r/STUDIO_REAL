@@ -168,3 +168,18 @@
 
   color-scheme: light;
 }
+
+/* ============================================================
+   RAYONS : l'interface globale a les ANGLES CARRÉS (demande du propriétaire, octobre 2026). Réglage central :
+   plus aucun `border-radius` n'est écrit en dur dans les feuilles de style du thème, du Conducteur, de la sortie, du
+   téléphone ni des pages d'exploitation ; chacun lit l'un de ces trois jetons. Ils ne dépendent pas du thème
+   (sombre ou clair) : un seul bloc. Un test (apps/conducteur/src/theme/rayons.test.ts) interdit les valeurs en dur.
+   Hors périmètre : la PLANCHE (apps/conducteur/src/planche/ : cartes de moments, blocs, liens, mini-carte) et le calque
+   PixiJS de la sortie gardent leurs rayons propres, ils n'utilisent pas ces jetons.
+   Pour arrondir de nouveau, c'est ICI, une valeur à changer (ex. --rayon: 8px; --rayon-petit: 4px;).
+   ============================================================ */
+:root {
+  --rayon:       0;     /* cartes, panneaux, fenêtres, menus, champs, boutons, puces, vignettes, bandeaux, barres */
+  --rayon-petit: 0;     /* petits boutons, étiquettes, repères, curseurs, pastilles carrées */
+  --rayon-rond:  50%;   /* pastilles d'état et boutons RONDS : un cercle, pas un arrondi (mettre 0 pour des carrés) */
+}

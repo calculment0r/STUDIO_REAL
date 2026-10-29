@@ -2,7 +2,7 @@
    Spectacle / Liens. Jetons du thème seulement : vert = relié / joue, ambre = attend un humain, rouge = perdu. */
 
 /* pastilles */
-.rs-p { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ink3); }
+.rs-p { width: 8px; height: 8px; border-radius: var(--rayon-rond); flex: none; background: var(--ink3); }
 .rs-p.verte { background: var(--gt); }
 .rs-p.ambre { background: var(--amb); }
 .rs-p.rouge { background: var(--rec); }
@@ -10,7 +10,7 @@
 
 /* voyant de l'en-tête */
 .rs-voyant {
-  height: 28px; padding: 0 9px; border-radius: 6px; display: flex; align-items: center; gap: 7px; flex: none; cursor: pointer;
+  height: 28px; padding: 0 9px; border-radius: var(--rayon-petit); display: flex; align-items: center; gap: 7px; flex: none; cursor: pointer;
   background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); color: var(--ink2); border: none;
   font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .16em; white-space: nowrap;
 }
@@ -34,7 +34,7 @@
 .rs-cartes { display: flex; gap: 8px; padding: 0 12px 8px 34px; overflow-x: auto; scrollbar-width: thin; }
 
 .rs-carte {
-  flex: none; width: 200px; display: flex; flex-direction: column; gap: 5px; padding: 7px 8px; border-radius: 8px; cursor: pointer; text-align: left;
+  flex: none; width: 200px; display: flex; flex-direction: column; gap: 5px; padding: 7px 8px; border-radius: var(--rayon); cursor: pointer; text-align: left;
   background: var(--tile); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); color: var(--ink); border: none; font: inherit;
 }
 .rs-carte:hover { box-shadow: inset 0 0 0 1px rgba(var(--lr), .35); }
@@ -44,12 +44,12 @@
 .rs-carte-h { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .rs-nom { font-family: var(--f-disp); font-weight: 700; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .rs-n { font-family: var(--f-chiffre); font-weight: 700; font-size: 10px; color: var(--ink2); font-variant-numeric: tabular-nums; }
-.rs-vue { height: 62px; border-radius: 5px; background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+.rs-vue { height: 62px; border-radius: var(--rayon-petit); background: var(--bg); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
 .rs-vue .so-apercu { height: 100%; width: auto; }
 .rs-vue .so-apercu-legende, .rs-vue .so-apercu-bandeau { display: none; }
 .rs-ecran { font-family: var(--f-disp); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); text-align: center; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .rs-ecran.vide { color: var(--ink3); font-size: 10px; }
-.rs-tel { width: 36px; height: 54px; border-radius: 7px; box-shadow: inset 0 0 0 1px rgba(var(--lr), .3); display: flex; align-items: center; justify-content: center; }
+.rs-tel { width: 36px; height: 54px; border-radius: var(--rayon); box-shadow: inset 0 0 0 1px rgba(var(--lr), .3); display: flex; align-items: center; justify-content: center; }
 .rs-tel .rs-ecran { font-size: 7px; letter-spacing: .1em; padding: 0 2px; white-space: normal; }
 .rs-vue.tel { gap: 10px; justify-content: flex-start; padding: 0 10px; }
 .rs-ligne { display: flex; align-items: center; gap: 6px; font-family: var(--f-mono); font-size: 8px; letter-spacing: .08em; color: var(--ink2); white-space: nowrap; overflow: hidden; }
@@ -58,7 +58,7 @@
 .rs-alerte.rouge { color: var(--rec); font-weight: 600; }
 
 /* barre empilée du public */
-.rs-barre { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--tile2); width: 100%; }
+.rs-barre { display: flex; height: 6px; border-radius: var(--rayon-petit); overflow: hidden; background: var(--tile2); width: 100%; }
 .rs-barre > span { height: 100%; }
 .rs-barre > span:nth-child(1) { background: var(--gt); }
 .rs-barre > span:nth-child(2) { background: var(--cy); }
@@ -69,11 +69,11 @@
 
 /* menu du clic droit */
 .rs-menu {
-  position: fixed; z-index: 170; min-width: 190px; padding: 4px; border-radius: 8px; background: var(--tile2);
+  position: fixed; z-index: 170; min-width: 190px; padding: 4px; border-radius: var(--rayon); background: var(--tile2);
   box-shadow: inset 0 0 0 1px rgba(var(--lr), .2), 0 14px 40px var(--ombre-2); display: flex; flex-direction: column;
 }
 .rs-menu button {
-  border: none; background: none; color: var(--ink); text-align: left; padding: 7px 10px; border-radius: 5px; cursor: pointer; font: inherit; font-size: 12px;
+  border: none; background: none; color: var(--ink); text-align: left; padding: 7px 10px; border-radius: var(--rayon-petit); cursor: pointer; font: inherit; font-size: 12px;
 }
 .rs-menu button:hover:not(:disabled) { background: var(--tile); }
 .rs-menu button:disabled { color: var(--ink3); cursor: default; }
@@ -81,7 +81,7 @@
 
 /* section SORTIES du panneau Régie */
 .rs-sorties { display: flex; flex-direction: column; gap: 4px; }
-.rs-so { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 6px; background: var(--bg); cursor: pointer; }
+.rs-so { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: var(--rayon-petit); background: var(--bg); cursor: pointer; }
 .rs-so.choisie { box-shadow: inset 0 0 0 1px var(--cy); }
 .rs-so-h { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .rs-so-h .rs-nom { font-size: 8.5px; }
@@ -91,22 +91,22 @@
 .rs-so-act { display: flex; gap: 4px; flex-wrap: wrap; }
 
 /* fenêtre Projet : onglets, réglages du spectacle, liens d'acteurs */
-.pj-onglets { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--bg); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); align-self: flex-start; }
+.pj-onglets { display: flex; gap: 2px; padding: 2px; border-radius: var(--rayon); background: var(--bg); box-shadow: inset 0 0 0 1px rgba(var(--lr), .14); align-self: flex-start; }
 .pj-onglets button {
-  height: 26px; padding: 0 12px; border-radius: 6px; border: none; background: none; color: var(--ink2); cursor: pointer;
+  height: 26px; padding: 0 12px; border-radius: var(--rayon-petit); border: none; background: none; color: var(--ink2); cursor: pointer;
   font-family: var(--f-disp); font-weight: 700; font-size: 9px; letter-spacing: .14em;
 }
 .pj-onglets button.on { background: var(--tile2); color: var(--ink); }
 .sp-form { display: grid; grid-template-columns: 150px 1fr; gap: 8px 10px; align-items: center; }
 .sp-form label { font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .16em; color: var(--ink3); text-transform: uppercase; }
 .sp-champ {
-  height: 30px; padding: 0 9px; border-radius: 6px; border: none; background: var(--bg); color: var(--ink); font: inherit; font-size: 12px;
+  height: 30px; padding: 0 9px; border-radius: var(--rayon-petit); border: none; background: var(--bg); color: var(--ink); font: inherit; font-size: 12px;
   box-shadow: inset 0 0 0 1px rgba(var(--lr), .2); min-width: 0;
 }
 .sp-champ:focus { outline: none; box-shadow: inset 0 0 0 1px var(--cy); }
 .sp-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .sp-bouton {
-  height: 30px; padding: 0 14px; border-radius: 7px; border: none; cursor: pointer; background: var(--tile2); color: var(--ink);
+  height: 30px; padding: 0 14px; border-radius: var(--rayon); border: none; cursor: pointer; background: var(--tile2); color: var(--ink);
   font-family: var(--f-disp); font-weight: 700; font-size: 9px; letter-spacing: .14em;
 }
 .sp-bouton.plein { background: var(--ort); color: var(--on-ort); }
@@ -115,9 +115,9 @@
 .sp-note { font-size: 11px; color: var(--ink2); line-height: 1.45; }
 .sp-note.alerte { color: var(--rec); }
 .li-liste { display: flex; flex-direction: column; gap: 10px; }
-.li-acteur { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 10px; border-radius: 9px; background: var(--bg); align-items: start; }
+.li-acteur { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 10px; border-radius: var(--rayon); background: var(--bg); align-items: start; }
 .li-acteur.vise { box-shadow: inset 0 0 0 1px var(--cy); }
-.li-qr { width: 112px; height: 112px; border-radius: 8px; background: var(--ink); padding: 6px; }
+.li-qr { width: 112px; height: 112px; border-radius: var(--rayon); background: var(--ink); padding: 6px; }
 .li-qr svg { display: block; width: 100%; height: 100%; }
 .li-qr .fond { fill: var(--ink); }
 .li-qr .modules { fill: var(--well2); }

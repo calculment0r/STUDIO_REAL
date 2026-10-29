@@ -43,7 +43,7 @@
 .cd-barre { height: 36px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 34px; position: relative; z-index: 20; }
 .cd-titre { font-family: var(--cd-f-disp); font-size: 11px; letter-spacing: .14em; flex: none; }
 .cd-bt {
-  height: 26px; padding: 0 9px; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; flex: none;
+  height: 26px; padding: 0 9px; border-radius: var(--rayon-petit); display: flex; align-items: center; gap: 6px; cursor: pointer; flex: none;
   background: transparent; border: none; box-shadow: inset 0 0 0 1px var(--cd-filet2);
   font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .14em; color: var(--cd-encre); white-space: nowrap;
 }
@@ -51,7 +51,7 @@
 .cd-bt b { color: var(--cd-or); font-size: 12px; font-weight: 400; line-height: 1; }
 .cd-message { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--cd-encre2); }
 .cd-espace { flex: 1; min-width: 0; }
-.cd-zoom { display: flex; align-items: center; height: 24px; border-radius: 6px; background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-filet); flex: none; }
+.cd-zoom { display: flex; align-items: center; height: 24px; border-radius: var(--rayon-petit); background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-filet); flex: none; }
 .cd-zoom button { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--cd-encre2); font-size: 13px; background: none; border: none; padding: 0; }
 .cd-zoom button:hover { color: var(--cd-encre); }
 .cd-zoom .cd-zoom-val { font-family: var(--cd-f-disp); font-size: 8px; width: 42px; text-align: center; color: var(--cd-encre); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -62,17 +62,17 @@
 
 /* menus (ajouter une piste, clic droit) */
 .cd-menu {
-  position: absolute; width: 250px; padding: 6px; border-radius: 10px; background: var(--cd-tuile); z-index: 40;
+  position: absolute; width: 250px; padding: 6px; border-radius: var(--rayon); background: var(--cd-tuile); z-index: 40;
   box-shadow: inset 0 0 0 1px var(--cd-filet2), 0 14px 40px var(--cd-ombre); display: flex; flex-direction: column; gap: 2px;
 }
 .cd-menu.fixe { position: fixed; width: 230px; }
-.cd-menu-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 6px; cursor: pointer; background: none; border: none; text-align: left; color: var(--cd-encre); font-family: inherit; }
+.cd-menu-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: var(--rayon-petit); cursor: pointer; background: none; border: none; text-align: left; color: var(--cd-encre); font-family: inherit; }
 .cd-menu-item:hover { background: var(--cd-tuile2); }
 .cd-menu-item:disabled { opacity: .4; cursor: default; background: none; }
 .cd-menu-item .n { font-size: 12px; font-weight: 600; }
 .cd-menu-item .d { font-size: 10.5px; color: var(--cd-encre3); }
 .cd-menu-item .col { display: flex; flex-direction: column; gap: 3px; }
-.cd-menu-item .pastille { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.cd-menu-item .pastille { width: 10px; height: 10px; border-radius: var(--rayon-petit); flex: none; }
 .cd-menu-tete { padding: 4px 8px; font-family: var(--cd-f-mono); font-size: 7px; letter-spacing: .16em; color: var(--cd-encre3); }
 
 /* ── le corps ─────────────────────────────────────────────── */
@@ -101,7 +101,7 @@
 
 /* les actes */
 .cd-acte {
-  position: absolute; top: 30px; height: 26px; border-radius: 6px; display: flex; align-items: center; gap: 9px; padding: 0 9px;
+  position: absolute; top: 30px; height: 26px; border-radius: var(--rayon-petit); display: flex; align-items: center; gap: 9px; padding: 0 9px;
   overflow: hidden; cursor: pointer; background: var(--cd-acte-0); color: var(--cd-sur-or);
 }
 .cd-acte[data-n="1"] { background: var(--cd-acte-1); }
@@ -110,11 +110,11 @@
 .cd-acte[data-n="4"] { background: var(--cd-acte-4); color: var(--cd-sur-sourd); }
 .cd-acte .num { font-family: var(--cd-f-disp); font-size: 15px; line-height: 1; flex: none; }
 .cd-acte .nom { font-family: var(--cd-f-disp); font-size: 8.5px; letter-spacing: .12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
-.cd-acte input { min-width: 0; flex: 1; height: 18px; border: none; outline: none; border-radius: 4px; padding: 0 5px; background: var(--cd-fond); color: var(--cd-encre); font-family: var(--cd-f-ui); font-size: 11px; }
+.cd-acte input { min-width: 0; flex: 1; height: 18px; border: none; outline: none; border-radius: var(--rayon-petit); padding: 0 5px; background: var(--cd-fond); color: var(--cd-encre); font-family: var(--cd-f-ui); font-size: 11px; }
 
 /* les moments */
 .cd-moment {
-  position: absolute; top: 62px; height: 40px; border-radius: 7px; background: var(--cd-tuile); display: flex; align-items: center;
+  position: absolute; top: 62px; height: 40px; border-radius: var(--rayon); background: var(--cd-tuile); display: flex; align-items: center;
   overflow: hidden; cursor: pointer; box-shadow: inset 0 0 0 1px var(--cd-acc, var(--cd-filet2));
 }
 .cd-moment::before {
@@ -129,7 +129,7 @@
 .cd-moment .poignee { position: absolute; right: 0; top: 0; bottom: 0; width: 7px; cursor: ew-resize; }
 .cd-moment .poignee:hover { background: color-mix(in srgb, var(--cd-cy) 25%, transparent); }
 .cd-plus {
-  position: absolute; width: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  position: absolute; width: 24px; border-radius: var(--rayon-petit); display: flex; align-items: center; justify-content: center; cursor: pointer;
   background: transparent; border: none; box-shadow: inset 0 0 0 1px var(--cd-filet2); color: var(--cd-or); font-size: 14px; padding: 0;
 }
 .cd-plus:hover { background: var(--cd-tuile2); }
@@ -137,11 +137,11 @@
 /* les passages */
 .cd-passage-attente { position: absolute; top: 115px; height: 0; border-top: 2px dotted var(--cd-vert); pointer-events: none; }
 .cd-passage-retenue {
-  position: absolute; top: 110px; height: 10px; border-radius: 2px; pointer-events: none;
+  position: absolute; top: 110px; height: 10px; border-radius: var(--rayon-petit); pointer-events: none;
   background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cd-or) 55%, transparent) 0 3px, transparent 3px 6px);
 }
 .cd-passage { position: absolute; top: 104px; width: 22px; height: 22px; margin-left: -11px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 3; background: none; border: none; padding: 0; }
-.cd-passage i { width: 12px; height: 12px; transform: rotate(45deg); border-radius: 2px; background: var(--cd-fond); box-shadow: inset 0 0 0 1.5px var(--cd-vert); }
+.cd-passage i { width: 12px; height: 12px; transform: rotate(45deg); border-radius: var(--rayon-petit); background: var(--cd-fond); box-shadow: inset 0 0 0 1.5px var(--cd-vert); }
 .cd-passage[data-go] i { box-shadow: inset 0 0 0 1.5px var(--cd-or); }
 .cd-passage[data-franchi] i { background: var(--cd-vert); }
 .cd-passage[data-go][data-franchi] i { background: var(--cd-or); }
@@ -172,9 +172,9 @@
 .cd-piste-voie { position: absolute; left: var(--cd-lbl); right: 0; top: 0; bottom: 0; overflow: hidden; }
 .cd-piste-defile { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transform: translateX(var(--cd-x, 0px)); }
 .cd-courbe { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
-.cd-point { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--cd-fond); box-shadow: inset 0 0 0 2px var(--cd-piste); cursor: ns-resize; z-index: 2; }
+.cd-point { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: var(--rayon-rond); background: var(--cd-fond); box-shadow: inset 0 0 0 2px var(--cd-piste); cursor: ns-resize; z-index: 2; }
 .cd-clip {
-  position: absolute; border-radius: 5px; background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-piste); overflow: hidden;
+  position: absolute; border-radius: var(--rayon-petit); background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-piste); overflow: hidden;
   cursor: grab; display: flex; align-items: flex-end; z-index: 1;
 }
 .cd-clip[data-actif] { box-shadow: inset 0 0 0 1px var(--cd-cy), 0 0 0 2px color-mix(in srgb, var(--cd-cy) 25%, transparent); z-index: 2; cursor: grabbing; }
@@ -186,16 +186,16 @@
 .cd-repere[data-actif] { z-index: 2; cursor: grabbing; }
 .cd-repere .drapeau { width: 2px; align-self: stretch; background: var(--cd-piste); flex: none; }
 .cd-repere[data-actif] .drapeau { background: var(--cd-cy); }
-.cd-repere .txt { font-size: 10.5px; color: var(--cd-encre); background: var(--cd-tuile2); padding: 3px 7px; border-radius: 4px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.cd-repere .txt { font-size: 10.5px; color: var(--cd-encre); background: var(--cd-tuile2); padding: 3px 7px; border-radius: var(--rayon-petit); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .cd-repere[data-actif] .txt { box-shadow: inset 0 0 0 1px var(--cd-cy); }
 .cd-preavis {
-  position: absolute; top: 4px; bottom: 4px; border-radius: 3px 0 0 3px; pointer-events: none;
+  position: absolute; top: 4px; bottom: 4px; border-radius: var(--rayon-petit) 0 0 var(--rayon-petit); pointer-events: none;
   background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cd-piste) 40%, transparent) 0 3px, transparent 3px 6px);
 }
 .cd-preavis-poignee { position: absolute; top: 4px; bottom: 4px; width: 6px; margin-left: -3px; cursor: ew-resize; z-index: 2; }
 .cd-preavis-poignee:hover { background: color-mix(in srgb, var(--cd-piste) 45%, transparent); }
 .cd-ajout-piste {
-  position: absolute; left: 22px; height: 28px; padding: 0 12px; border-radius: 6px; display: flex; align-items: center; gap: 8px; cursor: pointer;
+  position: absolute; left: 22px; height: 28px; padding: 0 12px; border-radius: var(--rayon-petit); display: flex; align-items: center; gap: 8px; cursor: pointer;
   background: none; border: none; box-shadow: inset 0 0 0 1px var(--cd-filet2); font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .14em; color: var(--cd-encre2);
 }
 .cd-ajout-piste b { color: var(--cd-or); font-size: 12px; font-weight: 400; }
@@ -203,17 +203,17 @@
 /* ── la tête de lecture (commun/tete.css, .sr-ph) ───────────── */
 .cd-calque-tete { position: absolute; left: var(--cd-lbl); right: 0; top: 0; bottom: 26px; overflow: hidden; pointer-events: none; z-index: 7; }
 .sr-ph { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; background: var(--cd-or); pointer-events: none; z-index: var(--sr-ph-z, 9); will-change: transform; }
-.sr-ph i { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 11px; height: 11px; border-radius: 0 0 var(--r1, 4px) var(--r1, 4px); background: var(--cd-or); }
+.sr-ph i { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 11px; height: 11px; border-radius: 0 0 var(--rayon-petit) var(--rayon-petit); background: var(--cd-or); }
 .cd-attente-vive {
-  position: absolute; top: 110px; height: 10px; border-radius: 2px; left: 0; width: 0; display: none;
+  position: absolute; top: 110px; height: 10px; border-radius: var(--rayon-petit); left: 0; width: 0; display: none;
   background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cd-or) 55%, transparent) 0 3px, transparent 3px 6px);
 }
 
 /* ── la barre de zoom ─────────────────────────────────────── */
-.cd-zb { position: absolute; left: var(--cd-lbl); right: 14px; bottom: 8px; height: 10px; border-radius: 5px; background: rgba(var(--lr), .07); z-index: 6; cursor: pointer; touch-action: none; }
+.cd-zb { position: absolute; left: var(--cd-lbl); right: 14px; bottom: 8px; height: 10px; border-radius: var(--rayon-petit); background: rgba(var(--lr), .07); z-index: 6; cursor: pointer; touch-action: none; }
 .cd-zb-tete { position: absolute; top: -3px; width: 2px; height: 16px; margin-left: -1px; background: var(--cd-or); pointer-events: none; left: 0; }
-.cd-zb-pouce { position: absolute; top: 0; height: 10px; border-radius: 5px; background: rgba(var(--lr), .26); cursor: grab; min-width: 2px; }
-.cd-zb-rond { position: absolute; top: -2px; width: 14px; height: 14px; border-radius: 50%; background: var(--cd-fond); box-shadow: inset 0 0 0 2px var(--cd-cy); cursor: ew-resize; }
+.cd-zb-pouce { position: absolute; top: 0; height: 10px; border-radius: var(--rayon-petit); background: rgba(var(--lr), .26); cursor: grab; min-width: 2px; }
+.cd-zb-rond { position: absolute; top: -2px; width: 14px; height: 14px; border-radius: var(--rayon-rond); background: var(--cd-fond); box-shadow: inset 0 0 0 2px var(--cd-cy); cursor: ew-resize; }
 .cd-zb-rond:hover { background: var(--cd-cy); }
 .cd-zb-rond.g { left: -7px; }
 .cd-zb-rond.d { right: -7px; }
@@ -221,17 +221,17 @@
 /* ── la carte d'un passage ─────────────────────────────────── */
 .cd-carte {
   position: absolute; top: 132px; width: 300px; max-height: calc(100% - 140px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
-  padding: 14px; border-radius: 12px; background: var(--cd-tuile); z-index: 8; cursor: default; scrollbar-width: thin;
+  padding: 14px; border-radius: var(--rayon); background: var(--cd-tuile); z-index: 8; cursor: default; scrollbar-width: thin;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-or) 55%, transparent), 0 14px 40px var(--cd-ombre);
 }
 .cd-carte .tag { font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .18em; color: var(--cd-encre3); text-transform: uppercase; display: flex; justify-content: space-between; }
 .cd-carte .tag button { background: none; border: none; color: var(--cd-encre2); cursor: pointer; font-size: 12px; padding: 0; }
 .cd-carte .titre { font-family: var(--cd-f-disp); font-size: 10px; letter-spacing: .1em; line-height: 1.4; }
-.cd-seg { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--cd-fond); box-shadow: inset 0 0 0 1px var(--cd-filet); }
-.cd-seg button { flex: 1; height: 26px; border-radius: 6px; border: none; background: none; cursor: pointer; font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .14em; color: var(--cd-encre2); }
+.cd-seg { display: flex; gap: 2px; padding: 2px; border-radius: var(--rayon); background: var(--cd-fond); box-shadow: inset 0 0 0 1px var(--cd-filet); }
+.cd-seg button { flex: 1; height: 26px; border-radius: var(--rayon-petit); border: none; background: none; cursor: pointer; font-family: var(--cd-f-mono); font-size: 7.5px; letter-spacing: .14em; color: var(--cd-encre2); }
 .cd-seg button[data-on] { background: var(--cd-tuile2); color: var(--cd-encre); box-shadow: inset 0 0 0 1px var(--cd-filet2); }
 .cd-carte .cond { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.cd-carte .cond i { width: 7px; height: 7px; border-radius: 50%; background: var(--cd-vert); flex: none; }
+.cd-carte .cond i { width: 7px; height: 7px; border-radius: var(--rayon-rond); background: var(--cd-vert); flex: none; }
 .cd-carte .cond i[data-go] { background: var(--cd-or); }
 .cd-carte .temps { font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .12em; color: var(--cd-encre3); font-variant-numeric: tabular-nums; }
 
@@ -242,19 +242,19 @@
 
 /* bouton M (piste muette), outils, plein écran de la conduite */
 .cd-muet {
-  width: 18px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex: none; cursor: pointer; padding: 0;
+  width: 18px; height: 16px; border-radius: var(--rayon-petit); display: flex; align-items: center; justify-content: center; flex: none; cursor: pointer; padding: 0;
   font-family: var(--cd-f-mono); font-size: 8px; background: transparent; color: var(--cd-encre3); border: none; box-shadow: inset 0 0 0 1px var(--cd-filet2);
 }
 .cd-muet[aria-pressed="true"] { background: var(--cd-or); color: var(--cd-sur-or); box-shadow: none; }
 .cd-piste[data-muet] .cd-piste-defile { opacity: .45; }
 .cd-carre {
-  width: 24px; height: 24px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; padding: 0; border: none;
+  width: 24px; height: 24px; border-radius: var(--rayon-petit); display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; padding: 0; border: none;
   background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-filet); color: var(--cd-encre2);
 }
 .cd-carre:hover { color: var(--cd-encre); background: var(--cd-tuile2); }
-.cd-outils { display: flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-filet); flex: none; }
+.cd-outils { display: flex; gap: 2px; padding: 2px; border-radius: var(--rayon); background: var(--cd-tuile); box-shadow: inset 0 0 0 1px var(--cd-filet); flex: none; }
 .cd-outils button {
-  height: 24px; padding: 0 8px; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; border: none;
+  height: 24px; padding: 0 8px; border-radius: var(--rayon-petit); display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; border: none;
   font-family: var(--cd-f-mono); font-size: 8px; letter-spacing: .16em; background: transparent; color: var(--cd-encre2);
 }
 .cd-outils button[data-on] { background: var(--gdeep); color: var(--gink); }
@@ -262,14 +262,14 @@
 
 /* Collaboration (chantier INTÉGRATION) : commentaires ouverts épinglés sur un instant ou un moment (rangée TEMPS). */
 .cd-com {
-  position: absolute; top: 3px; transform: translateX(-50%); z-index: 6; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px 8px 8px 0;
+  position: absolute; top: 3px; transform: translateX(-50%); z-index: 6; min-width: 16px; height: 16px; padding: 0 4px; border-radius: var(--rayon) var(--rayon) var(--rayon) 0;
   border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: var(--ort); color: var(--on-ort);
   font-family: var(--f-chiffre); font-weight: 700; font-size: 8px; font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px var(--bg);
 }
 
 /* Pistes par acteur (dérivées des envois, lecture seule) : pavés colorés par écran (--cd-pave : jeton d'une famille) */
 .cd-piste-acteur .cd-piste-tete { align-items: center; }
-.cd-pave { position: absolute; top: 5px; bottom: 5px; border-radius: 4px; overflow: hidden; cursor: pointer; display: flex; align-items: center;
+.cd-pave { position: absolute; top: 5px; bottom: 5px; border-radius: var(--rayon-petit); overflow: hidden; cursor: pointer; display: flex; align-items: center;
   background: color-mix(in srgb, var(--cd-pave) 22%, var(--cd-tuile)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cd-pave) 70%, transparent); }
 .cd-pave[data-passe] { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--cd-pave) 22%, transparent) 0 4px, transparent 4px 8px); }
 .cd-pave[data-actif] { box-shadow: inset 0 0 0 1px var(--cd-cy), 0 0 0 2px color-mix(in srgb, var(--cd-cy) 25%, transparent); z-index: 2; }
