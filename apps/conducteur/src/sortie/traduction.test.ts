@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandeLecture, EtatLecture, Projet } from '@studio-real/modele';
 import brutLive from '../../../../projets/live/live.conducteur.json?raw';
-import { configParDefaut, sceneValide, type ConfigSortie } from './protocole';
+import { adresseLisible, configParDefaut, sceneValide, type ConfigSortie } from './protocole';
 import { ASSET_FLUX_DEFAUT, clipActif, ECRANS_SORTIE, lireFxScene, sceneDeNom, sceneDeVue, tempsDansMoment, traduire } from './traduction';
 
 const LIVE = (JSON.parse(brutLive) as { project: Projet }).project;
@@ -154,6 +154,20 @@ describe('vue de l’acteur scene → scène (sceneDeVue)', () => {
   it('accueil-qr (et qr) : le QR de la configuration, réglable', () => {
     expect(scene('accueil-qr')).toEqual({ type: 'accueil-qr', adresse: 'https://exemple.test/live/?r=K7Q2', titre: 'LIVE', consigne: 'Scannez pour entrer', code: 'K7Q2' });
     expect(scene('qr', { titre: 'ÉCHO', code: 'Z9' })).toMatchObject({ type: 'accueil-qr', titre: 'ÉCHO', code: 'Z9', adresse: 'https://exemple.test/live/?r=Z9' });
+  });
+
+  it('lien du public du serveur (jeton public dans le fragment) : QR d’accueil et QR du mur, sauf adresse imposée par la vue', () => {
+    const c: ConfigSortie = { ...CONFIG, lienPublic: 'https://spectacle.exemple/t/#jeton=sr_public_abc' };
+    const lien = 'https://spectacle.exemple/t/?r=K7Q2#jeton=sr_public_abc';
+    const r = sceneDeVue({ ecran: 'accueil-qr', params: {}, at: 5000 }, c);
+    expect(r).toEqual({ scene: { type: 'accueil-qr', adresse: lien, titre: 'LIVE', consigne: 'Scannez pour entrer', code: 'K7Q2' } });
+    expect(sceneDeVue({ ecran: 'mur', params: { qr: true }, at: 5000 }, c)).toMatchObject({ scene: { type: 'mur', qr: lien } });
+    // adresse imposée par la vue : elle passe avant
+    expect(sceneDeVue({ ecran: 'qr', params: { adresse: 'https://autre.test/x/' }, at: 5000 }, c)).toMatchObject({ scene: { adresse: 'https://autre.test/x/?r=K7Q2' } });
+    // sans lien du serveur : l'adresse de la configuration, comme avant
+    expect(sceneDeVue({ ecran: 'accueil-qr', params: {}, at: 5000 }, CONFIG)).toMatchObject({ scene: { adresse: 'https://exemple.test/live/?r=K7Q2' } });
+    // la ligne sous le QR n'affiche pas le jeton
+    expect(adresseLisible(lien)).toBe('spectacle.exemple/t/?r=K7Q2');
   });
 
   it('video : asset local, boucle par défaut ; sans asset (ou avec un chemin) : refus invalide', () => {

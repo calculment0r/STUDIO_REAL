@@ -24,8 +24,18 @@ Fait tourner le lecteur en représentation, tient l'état officiel, calcule la v
 - `exploitation/spectacle.config.json` (sinon `spectacle.config.exemple.json`) : adresses publique et locale, port
   (8790), projet, dossier des médias, dossiers des clients construits, `tunnel` (`type` : `aucun`, `cloudflare-nomme` ou
   `tailscale-funnel` ; `nom` du tunnel nommé). Sans secret.
-- `exploitation/spectacle.secrets.json` (ignoré par git) : créé au premier lancement, un jeton aléatoire par rôle
-  (`regie`, `acteur`, `agent`). La console dit OÙ il est, jamais sa valeur ; le serveur ne garde que l'empreinte SHA-256.
+- `exploitation/spectacle.secrets.json` (ignoré par git) : créé au premier lancement,
+  `{"jetons": {"regie", "agent", "public", "acteurs": {"<id>": "<jeton>"}}}` : un jeton pour la régie, un pour les agents, un
+  `public` pour la foule (acteurs de cardinalité n) et **un jeton par acteur nommé** du projet (cardinalité 1, hors agents et
+  régie : `scene`, `ministre`, `franck`…), créé à la demande au démarrage quand un acteur apparaît dans le projet. La
+  console dit OÙ il est, jamais sa valeur ; le serveur ne garde que l'empreinte SHA-256 (comparaison à temps constant).
+- Vérification du `hello` : `role:'regie'` → `jetons.regie` ; `role:'agent'` → `jetons.agent` ; `role:'acteur'` → `jetons.public`
+  si l'acteur est de cardinalité n (la foule), sinon `jetons.acteurs[<acteur>]`. Un jeton d'acteur nommé ne vaut que pour cet
+  acteur : le jeton public ne peut réclamer ni la scène ni un téléphone nommé (refus 4003), ni le jeton de `ministre` celui de
+  `scene`. `GET /ice` accepte le jeton de n'importe quel rôle ou acteur ; `POST /arret`, la régie seulement.
+- Migration : un ancien fichier `{"jetons": {"regie", "acteur", "agent"}}` est réécrit au démarrage : l'ancien jeton `acteur`
+  devient `public` (les QR déjà donnés à la foule restent valables), chaque acteur nommé reçoit un jeton neuf (ses liens et QR
+  sont à refaire depuis la page LIENS du Conducteur) et la console l'écrit. L'entrée `turn` collée à la main est gardée.
 - Jeton faux : `refus{fatal}` puis fermeture 4003. Session reprise ailleurs : 4001. Hello refusé (acteur inconnu) : 4400.
 
 ## Santé, journal, reprise
@@ -54,7 +64,7 @@ Le mur est l'écran `mur` de tout acteur qui le déclare (l'écran scène d'Éch
 
 ## Pas encore fait
 
-Latences d'affichage agrégées (rapport 2 §4.3) · jetons par acteur nommé · capteurs bruit et assis (valeurs neutres) ·
+Latences d'affichage agrégées (rapport 2 §4.3) · capteurs bruit et assis (valeurs neutres) ·
 rejeu de la fin du journal postérieure à l'instantané · orchestrateur,
 Whisper, ElevenLabs, R2, TURN, sortie · adaptateur Durable Object · alertes poussées à la régie et pastilles dans le Conducteur.
 Fait par le lot exploitation : script de lancement et d'arrêt, tunnel (fichiers et procédure seulement : rien n'est créé chez Cloudflare), page de santé, check-list.

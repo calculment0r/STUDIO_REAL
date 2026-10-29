@@ -29,7 +29,7 @@ const projet = (echo as unknown as { project: Projet }).project;
 const ids = projet.ev.map(m => m.id);
 /** Jetons générés pour ce test (jamais écrits ailleurs que dans le dossier temporaire du serveur). */
 const alea = () => Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-const JETONS = { regie: 'regie-' + alea(), acteur: 'acteur-' + alea(), agent: 'agent-' + alea() };
+const JETONS = { regie: 'regie-' + alea(), agent: 'agent-' + alea(), public: 'public-' + alea(), acteurs: { scene: 'scene-' + alea() } as Record<string, string> };
 
 let dossier = '';
 let srv: Serveur | null = null;
@@ -99,7 +99,7 @@ describe.skipIf(SAUTER)('régie reliée au vrai serveur de spectacle', () => {
     const recus: { t: string; vue?: { vseq: number; ecran: string | null } }[] = [];
     ws.onmessage = ev => recus.push(JSON.parse(String(ev.data)));
     await new Promise<void>((ok, ko) => { ws.onopen = () => ok(); ws.onerror = () => ko(new Error('connexion de l’écran scène')); });
-    ws.send(JSON.stringify({ t: 'hello', v: 2, role: 'acteur', acteur: 'scene', session: 'scene_integration', jeton: JETONS.acteur, app: { version: 'test', build: 'test' } }));
+    ws.send(JSON.stringify({ t: 'hello', v: 2, role: 'acteur', acteur: 'scene', session: 'scene_integration', jeton: JETONS.acteurs.scene, app: { version: 'test', build: 'test' } }));
     await vi.waitFor(() => expect(recus.some(m => m.t === 'bienvenue')).toBe(true));
     const vue = recus.find(m => m.t === 'bienvenue')!.vue;
     ws.send(JSON.stringify({ t: 'etat', heure: Date.now(), ecran: vue && vue.ecran ? { vseq: vue.vseq, ecran: vue.ecran, depuis: Date.now() } : null, visible: true, rttMs: 21 }));

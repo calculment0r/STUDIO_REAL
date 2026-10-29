@@ -1,15 +1,17 @@
 // Fenêtre Projet, onglets SPECTACLE et LIENS (audit 2026-10, rapport 2 §4.2 d ; rapport 5 §4.2 et §4.4).
 // - SPECTACLE : réglages du client régie (etat/spectacle.ts) : adresse du serveur de spectacle, adresse publique (celle
-//   des téléphones en 4G), jeton de la régie et jeton des acteurs. Les jetons ne sont JAMAIS lus dans l'adresse de la
-//   page ni écrits ailleurs que dans le sessionStorage de cet onglet : `/config.json` ne les publie pas, la régie les
-//   saisit une fois (ils sont dans exploitation/spectacle.secrets.json, sur la machine du serveur).
-// - LIENS : pour chaque acteur nommé, l'adresse de l'application téléphone `<adresse publique>/t/#acteur=<id>&jeton=<jeton>`
-//   (jeton dans le FRAGMENT), son QR et son état de connexion ; le QR du public (sans jeton nommé) est celui que la
-//   sortie projette (sortie/protocole.ts le lit dans le même réglage). Généralise streamer/page-accueil.ts.
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+//   des téléphones en 4G), jeton de la régie et table des jetons des acteurs (public + un par acteur nommé). Les jetons
+//   ne sont JAMAIS lus dans l'adresse de la page ni écrits ailleurs que dans le sessionStorage de cet onglet :
+//   `/config.json` ne les publie pas, la régie les colle une fois (ils sont dans exploitation/spectacle.secrets.json, sur
+//   la machine du serveur) et l'écran n'en montre plus jamais les valeurs.
+// - LIENS : pour chaque acteur nommé, l'adresse de l'application téléphone `<adresse publique>/t/#acteur=<id>&jeton=<son jeton>`
+//   (jeton PROPRE à l'acteur, dans le FRAGMENT), son QR et son état de connexion ; pour le public, un QR avec le jeton
+//   `public` (`/t/#jeton=<jeton public>`). Généralise streamer/page-accueil.ts.
+import { useEffect, useMemo, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import QRCode from 'qrcode';
 import {
-  delierSpectacle, jetonActeurSpectacle, lienActeur, lienPublic, reglerSpectacle, relierSpectacle, useSpectacle,
+  delierSpectacle, jetonDeLActeur, jetonPublicSpectacle, jetonsActeursSpectacle, lienActeur, lienPublic, lireJetonsColles,
+  reglerSpectacle, relierSpectacle, useSpectacle,
 } from '../etat/spectacle';
 import { magasinActeurs, libelleEcran } from '../etat/acteurs';
 import { ouvrirSortieScene } from '../sortie';
@@ -78,17 +80,28 @@ export function ReglagesSpectacle() {
   const [adresse, setAdresse] = useState(reglages.adresse);
   const [publique, setPublique] = useState(reglages.adressePublique);
   const [jetonRegie, setJetonRegie] = useState('');
-  const [jetonActeur, setJetonActeur] = useState('');
+  const [jetonsColles, setJetonsColles] = useState('');
+  const [erreurJetons, setErreurJetons] = useState<string | null>(null);
   useEffect(() => { setPublique(reglages.adressePublique); }, [reglages.adressePublique]);
 
-  const enregistrer = () => {
+  /** Enregistre les réglages ; faux si le JSON des jetons collé est illisible (rien d'autre n'est alors perdu). */
+  const enregistrer = (): boolean => {
+    let jetonsActeurs: ReturnType<typeof jetonsActeursSpectacle> | undefined;
+    if (jetonsColles.trim()) {
+      const lu = lireJetonsColles(jetonsColles);
+      if ('erreur' in lu) { setErreurJetons(lu.erreur); jetonsActeurs = undefined; } else { jetonsActeurs = lu.jetons; setErreurJetons(null); }
+    }
     reglerSpectacle({
       adresse, adressePublique: publique,
-      ...(jetonRegie.trim() ? { jetonRegie } : {}), ...(jetonActeur.trim() ? { jetonActeur } : {}),
+      ...(jetonRegie.trim() ? { jetonRegie } : {}), ...(jetonsActeurs ? { jetonsActeurs } : {}),
     });
-    setJetonRegie(''); setJetonActeur('');
+    setJetonRegie('');
+    if (jetonsActeurs) setJetonsColles('');
+    return !(jetonsColles.trim() && !jetonsActeurs);
   };
   const relier = () => { enregistrer(); relierSpectacle(); };
+  const connus = jetonsActeursSpectacle();
+  const nommes = connus ? Object.keys(connus.acteurs) : [];
   const pret = !!adresse.trim() && (reglages.jetonRegie || !!jetonRegie.trim());
   return (
     <div className="sr-co-bloc">
@@ -113,15 +126,24 @@ export function ReglagesSpectacle() {
         <input id="sp-jeton-regie" className="sp-champ" type="password" autoComplete="off" value={jetonRegie}
           placeholder={reglages.jetonRegie ? 'connu dans cet onglet · saisir pour remplacer' : 'exploitation/spectacle.secrets.json'}
           onChange={e => setJetonRegie(e.target.value)} onKeyDown={arreter} />
-        <label htmlFor="sp-jeton-acteur">Jeton des acteurs</label>
-        <input id="sp-jeton-acteur" className="sp-champ" type="password" autoComplete="off" value={jetonActeur}
-          placeholder={reglages.jetonActeur ? 'connu dans cet onglet · saisir pour remplacer' : 'pour les liens des téléphones nommés'}
-          onChange={e => setJetonActeur(e.target.value)} onKeyDown={arreter} />
+        <label htmlFor="sp-jetons-acteurs">Coller le JSON des jetons</label>
+        <textarea id="sp-jetons-acteurs" className="sp-champ" rows={3} autoComplete="off" spellCheck={false} value={jetonsColles}
+          style={{ WebkitTextSecurity: 'disc' } as CSSProperties}
+          placeholder={reglages.jetonsActeurs ? 'jetons connus dans cet onglet · coller pour remplacer' : 'contenu de exploitation/spectacle.secrets.json (ou son objet « jetons ») : public et un jeton par acteur'}
+          onChange={e => { setJetonsColles(e.target.value); setErreurJetons(null); }} onKeyDown={arreter} />
       </div>
+      {erreurJetons && <span className="sp-note alerte">{erreurJetons}</span>}
+      {connus && (
+        <span className="sp-note">
+          Jetons des acteurs connus dans cet onglet : {connus.public ? 'public' : 'pas de jeton public'}
+          {nommes.length ? ' · acteurs nommés : ' + nommes.join(', ') : ''} (valeurs jamais affichées).
+        </span>
+      )}
       <div className="sp-actions">
         <button className="sp-bouton plein" disabled={!pret} onClick={relier}>{ligne === 'eteinte' ? 'RELIER' : 'RELIER DE NOUVEAU'}</button>
-        <button className="sp-bouton" onClick={enregistrer}>ENREGISTRER</button>
+        <button className="sp-bouton" onClick={() => { enregistrer(); }}>ENREGISTRER</button>
         <button className="sp-bouton" disabled={ligne === 'eteinte'} onClick={delierSpectacle}>DÉLIER</button>
+        <button className="sp-bouton" disabled={!reglages.jetonsActeurs} onClick={() => reglerSpectacle({ jetonsActeurs: null })}>OUBLIER LES JETONS DES ACTEURS</button>
       </div>
       <span className="sp-note">
         Les jetons restent dans cet onglet (sessionStorage) : ni dans l’adresse, ni dans le projet, ni dans un journal.
@@ -137,9 +159,9 @@ export function LiensActeurs() {
   const vignettes = useVignettes();
   const reglages = useSpectacle(s => s.reglages);
   const vise = useOngletProjet(s => s.vise);
-  const jeton = reglages.jetonActeur ? jetonActeurSpectacle() : null;
   const publique = reglages.adressePublique;
-  const lienDuPublic = lienPublic(publique);
+  const jetonPublic = reglages.jetonsActeurs ? jetonPublicSpectacle() : null;
+  const lienDuPublic = jetonPublic ? lienPublic(publique, jetonPublic) : null;
   const [copie, setCopie] = useState<string | null>(null);
   const copier = (id: string, l: string) => {
     try { void navigator.clipboard.writeText(l).then(() => setCopie(id), () => setCopie(null)); } catch { setCopie(null); }
@@ -152,11 +174,12 @@ export function LiensActeurs() {
   return (
     <div className="sr-co-bloc">
       {!publique && <span className="sp-note alerte">Adresse publique inconnue : la régler dans l’onglet SPECTACLE (ou relier le serveur, qui la donne).</span>}
-      {publique && !jeton && <span className="sp-note">Jeton des acteurs non saisi dans cet onglet : seuls le public et l’écran scène ont un lien.</span>}
+      {publique && !reglages.jetonsActeurs && <span className="sp-note">Jetons des acteurs non collés dans cet onglet (SPECTACLE › Coller le JSON des jetons) : aucun lien n’est possible, chaque acteur ayant son propre jeton.</span>}
       <div className="li-liste">
         {vignettes.filter(v => v.type !== 'agent').map(v => {
           const foule = v.cardinalite === 'n';
-          const lien = v.type === 'ecran' ? null : foule ? lienDuPublic : jeton ? lienActeur(publique, v.id, jeton) : null;
+          const jetonActeur = v.type === 'ecran' || foule || !reglages.jetonsActeurs ? null : jetonDeLActeur(v.id);
+          const lien = v.type === 'ecran' ? null : foule ? lienDuPublic : jetonActeur ? lienActeur(publique, v.id, jetonActeur) : null;
           const e = etats[v.id];
           const etat = foule
             ? `${v.agregats?.connectes ?? 0} connectés · ${v.agregats?.majoritaire?.libelle ?? 'aucun écran'}`
@@ -169,7 +192,7 @@ export function LiensActeurs() {
                 ? <div className="li-qr vide">SORTIE DE CETTE MACHINE</div>
                 : <Qr texte={lien} etiquette={'QR de ' + v.nom} />}
               <div className="li-texte">
-                <span className="li-nom"><span className={'rs-p ' + v.diag.pastille} />{v.nom}{foule ? ' · QR projeté par la sortie' : ''}</span>
+                <span className="li-nom"><span className={'rs-p ' + v.diag.pastille} />{v.nom}{foule ? ' · QR du public (jeton public)' : ''}</span>
                 <span className="li-etat">{etat}</span>
                 {v.type === 'ecran' ? (
                   <div className="sp-actions"><button className="sp-bouton" onClick={() => ouvrirSortieScene()}>OUVRIR LA FENÊTRE DE SORTIE</button></div>
@@ -181,7 +204,7 @@ export function LiensActeurs() {
                       {copie === v.id && <span className="sp-note">copié ✓ {foule ? '' : '· à envoyer au comédien (SMS, AirDrop), pas à diffuser'}</span>}
                     </div>
                   </>
-                ) : <span className="sp-note">Lien à régler (adresse publique{foule ? '' : ', jeton des acteurs'}).</span>}
+                ) : <span className="sp-note">Lien à régler (adresse publique, {foule ? 'jeton public' : 'jeton de cet acteur'}).</span>}
               </div>
             </div>
           );

@@ -2,7 +2,9 @@
 // - exploitation/spectacle.config.json : versionnable, SANS secret (adresses, port, projet, dossiers) ; à défaut,
 //   exploitation/spectacle.config.exemple.json (versionné) ;
 // - exploitation/spectacle.secrets.json : IGNORÉ par git, créé au premier lancement avec un jeton aléatoire par rôle
-//   (regie, acteur, agent). Le serveur n'en garde que l'empreinte SHA-256 ; aucun jeton n'est écrit dans un journal.
+//   (regie, agent), un jeton `public` pour la foule et UN JETON PAR ACTEUR NOMMÉ (jetons.acteurs.<id> : scene, ministre,
+//   franck…) : le jeton public ne peut ni réclamer la scène ni un téléphone nommé. Le serveur n'en garde que
+//   l'empreinte SHA-256 ; aucun jeton n'est écrit dans un journal.
 // - Relais TURN de la visio (facultatif) : `turn.cleId` (identifiant de la clé Cloudflare Realtime TURN, pas secret) dans
 //   la configuration, `turn.jeton` (le jeton de l'API, SECRET) dans les secrets ; ou les variables CF_TURN_CLE_ID et
 //   CF_TURN_CLE_JETON. Il faut les deux, sinon STUN seul (voir ice.ts et exploitation/LISEZMOI.md, « Relais TURN »).
@@ -11,13 +13,22 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import type { Projet } from '@studio-real/modele';
+import { preparerProjet } from '../noyau/projet';
 import { DUREE_TURN_DEFAUT_S, type ReglagesTurn } from './ice';
 
 /** Racine du dépôt (apps/serveur-spectacle/src/hote → ../../../..). */
 export const RACINE = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
 export const PORT_DEFAUT = 8790;
-export const ROLES_JETON = ['regie', 'acteur', 'agent'] as const;
+/** Jetons « de rôle » : la régie, les agents (un seul jeton pour tous) et la foule (acteurs de cardinalité n). */
+export const ROLES_JETON = ['regie', 'agent', 'public'] as const;
 export type RoleJeton = (typeof ROLES_JETON)[number];
+
+/** Tous les jetons du serveur, EN CLAIR (lus dans les secrets) : un par rôle, plus un par acteur nommé. */
+export interface JetonsSpectacle extends Record<RoleJeton, string> {
+  /** jeton de chaque acteur nommé (cardinalité 1, hors agents) : valable pour cet acteur seulement */
+  acteurs: Record<string, string>;
+}
 
 /** Tunnel qui donne au serveur son adresse publique (le script de lancement le démarre ; le serveur sonde l'adresse). */
 export const TYPES_TUNNEL = ['aucun', 'cloudflare-nomme', 'tailscale-funnel'] as const;
@@ -46,7 +57,7 @@ export interface ConfigSpectacle {
 }
 
 export interface Secrets {
-  jetons: Record<RoleJeton, string>;
+  jetons: JetonsSpectacle;
   /** jeton de l'API Cloudflare Realtime TURN (collé à la main par le propriétaire ; jamais créé par le code) */
   turn?: { jeton: string };
 }
@@ -129,26 +140,54 @@ export function lireConfig(racine = RACINE, env: NodeJS.ProcessEnv = process.env
   return { config, source };
 }
 
-/** Jeton aléatoire (32 octets, base64url) préfixé par son rôle. */
-export const nouveauJeton = (role: RoleJeton) => `sr_${role}_${randomBytes(32).toString('base64url')}`;
+/** Jeton aléatoire (32 octets, base64url) préfixé par son étiquette (le rôle, ou `acteur_<id>`). */
+export const nouveauJeton = (etiquette: string) => `sr_${etiquette}_${randomBytes(32).toString('base64url')}`;
 
 /**
- * Lit les secrets ; crée le fichier (et les jetons manquants) au premier lancement. Ne renvoie jamais les jetons au
- * journal : l'appelant n'affiche que le CHEMIN du fichier.
+ * Acteurs nommés du projet, c'est-à-dire ceux qui reçoivent un jeton à eux : cardinalité 1, hors agents (jeton `agent`)
+ * et hors régie (jeton `regie`). Ce sont les acteurs que JOUE le serveur (déclarés, ou déduits/convertis d'un projet du
+ * prototype), pas seulement ceux écrits dans le fichier du projet.
  */
-export function lireOuCreerSecrets(fichier: string): { secrets: Secrets; cree: boolean } {
+export function acteursNommes(projet: Projet): string[] {
+  const acteurs = preparerProjet(projet).projet.acteurs ?? [];
+  return acteurs.filter(a => a.cardinalite === 1 && a.type !== 'agent' && a.type !== 'regie').map(a => a.id);
+}
+
+const jetonLu = (x: unknown): string | null => (typeof x === 'string' && x.length >= 16 ? x : null);
+
+/**
+ * Lit les secrets ; crée le fichier (et les jetons manquants, dont celui de chaque acteur de `acteurs`) au premier
+ * lancement ou quand un acteur nommé est apparu dans le projet. Ne renvoie jamais les jetons au journal : l'appelant
+ * n'affiche que le CHEMIN du fichier.
+ * Migration : un ancien fichier `{jetons:{regie, acteur, agent}}` est réécrit — l'ancien jeton `acteur` devient le jeton
+ * `public` (les QR déjà diffusés à la foule continuent de marcher), les acteurs nommés reçoivent chacun un jeton neuf
+ * (le jeton public ne leur donne plus accès) — et `migre` vaut vrai.
+ */
+export function lireOuCreerSecrets(fichier: string, acteurs: readonly string[] = []): { secrets: Secrets; cree: boolean; migre: boolean; ajoutes: string[] } {
   let brut: unknown = {};
   const existe = existsSync(fichier);
   if (existe) {
     try { brut = JSON.parse(readFileSync(fichier, 'utf8')); } catch (e) { throw new Error(`Secrets illisibles (${fichier}) : ${(e as Error).message}`); }
   }
   const jetonsLus = estObjet(brut) && estObjet(brut.jetons) ? brut.jetons : {};
-  const jetons = {} as Record<RoleJeton, string>;
-  let cree = !existe;
+  const ancien = jetonLu(jetonsLus.acteur);
+  const migre = ancien !== null && jetonLu(jetonsLus.public) === null;
+  let cree = !existe || 'acteur' in jetonsLus;   // l'ancienne clé `acteur` disparaît à la réécriture
+  const jetons = { acteurs: {} } as unknown as JetonsSpectacle;
   for (const role of ROLES_JETON) {
-    const j = jetonsLus[role];
-    if (typeof j === 'string' && j.length >= 16) jetons[role] = j;
+    const j = role === 'public' ? (jetonLu(jetonsLus.public) ?? ancien) : jetonLu(jetonsLus[role]);
+    if (j) jetons[role] = j;
     else { jetons[role] = nouveauJeton(role); cree = true; }
+  }
+  // les jetons d'acteurs déjà présents sont gardés, même pour un acteur qui n'est plus (ou pas encore) dans le projet
+  const acteursLus = estObjet(jetonsLus.acteurs) ? jetonsLus.acteurs : {};
+  for (const [id, j] of Object.entries(acteursLus)) { const v = jetonLu(j); if (v) jetons.acteurs[id] = v; }
+  const ajoutes: string[] = [];
+  for (const id of acteurs) {
+    if (jetons.acteurs[id]) continue;
+    jetons.acteurs[id] = nouveauJeton(`acteur_${id}`);
+    ajoutes.push(id);
+    cree = true;
   }
   if (cree) {
     mkdirSync(dirname(fichier), { recursive: true });
@@ -157,7 +196,7 @@ export function lireOuCreerSecrets(fichier: string): { secrets: Secrets; cree: b
     writeFileSync(fichier, JSON.stringify({ ...autres, jetons }, null, 2) + '\n', { encoding: 'utf8', mode: 0o600 });
   }
   const turn = jetonTurnDe(brut);
-  return { secrets: { jetons, ...(turn ? { turn: { jeton: turn } } : {}) }, cree };
+  return { secrets: { jetons, ...(turn ? { turn: { jeton: turn } } : {}) }, cree, migre, ajoutes };
 }
 
 function jetonTurnDe(brut: unknown): string | null {
@@ -192,9 +231,24 @@ export function versionGit(racine = RACINE): string | null {
   }
 }
 
-/** Partie publique de la configuration (`GET /config.json`) : aucune donnée secrète, aucun chemin de fichier. */
-export function configPublique(config: ConfigSpectacle, extra: { version: string | null; run: string | null; turn?: boolean }) {
+/**
+ * Lien d'entrée du public sur une adresse : `<adresse>/t/#jeton=<jeton public>` (jeton dans le FRAGMENT). Le jeton
+ * `public` n'est pas un secret (il est imprimé sur chaque QR) et ne donne accès qu'à la foule.
+ */
+export function lienPublicSur(adresse: string, jetonPublic: string): string {
+  const base = adresse.trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+  return `${base.endsWith('/t') ? base : base + '/t'}/#jeton=${encodeURIComponent(jetonPublic)}`;
+}
+
+/**
+ * Partie publique de la configuration (`GET /config.json`) : aucune donnée secrète, aucun chemin de fichier. Le seul
+ * jeton qui y figure est le jeton PUBLIC, dans `lienPublic` / `lienLocal` (jamais ceux de la régie, des agents ni des acteurs nommés).
+ */
+export function configPublique(config: ConfigSpectacle, extra: { version: string | null; run: string | null; turn?: boolean; jetonPublic?: string }) {
   return {
+    ...(extra.jetonPublic
+      ? { lienPublic: lienPublicSur(config.adresses.publique, extra.jetonPublic), lienLocal: lienPublicSur(config.adresses.locale, extra.jetonPublic) }
+      : {}),
     spectacle: config.spectacle,
     representation: config.representation ?? null,
     adresses: config.adresses,

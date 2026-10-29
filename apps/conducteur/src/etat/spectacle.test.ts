@@ -7,8 +7,10 @@ import { transportMemoire, type CoteServeurMemoire } from '@studio-real/ui-telep
 import echo from '../../../../projets/echo/echo.conducteur.json';
 import { DELAI_ANTI_DOUBLE_GO_MS, avancerDe, useMagasin } from './magasin';
 import { etatActeurs, oublierActeurs, resumeSalle } from './acteurs';
+import { lienDeLActeur } from '../coquille/rail-etat';
 import {
-  ACCUSE_ROUGE_MS, adresseWebSocket, baseTelephone, lienActeur, lienPublic, lireFragmentRegie, lireReglages, reglerSpectacle,
+  ACCUSE_ROUGE_MS, adresseWebSocket, baseTelephone, jetonDeLActeur, jetonPublicSpectacle, lienActeur, lienPublic, lireFragmentRegie,
+  lireJetonsColles, lireReglages, reglerSpectacle,
   reinitialiserSpectacle, relierSpectacle, surveiller, useSpectacle, voyantSpectacle,
 } from './spectacle';
 
@@ -71,13 +73,51 @@ describe('adresses et liens', () => {
     expect(l).toBe('https://spectacle.exemple/t/#acteur=franck&jeton=sr_acteur_a%2Bb%2Fc');
     expect(l).not.toContain('?');
     expect(lienPublic('https://spectacle.exemple/')).toBe('https://spectacle.exemple/t/');
+    expect(lienPublic('https://spectacle.exemple/', 'sr_public_a+b')).toBe('https://spectacle.exemple/t/#jeton=sr_public_a%2Bb');
     expect(lienPublic('')).toBeNull();
   });
 
+  it('un jeton par acteur : chaque lien porte le jeton de SON acteur, le public celui du public, jamais l’un pour l’autre', () => {
+    const secrets = { jetons: {
+      regie: 'sr_regie_secret-0123456789', agent: 'sr_agent_secret-0123456789', public: 'sr_public_foule-0123456789',
+      acteurs: { ministre: 'sr_acteur_ministre-0123456789', franck: 'sr_acteur_franck-0123456789' },
+    } };
+    const lu = lireJetonsColles(JSON.stringify(secrets));
+    expect(lu).toEqual({ jetons: { public: secrets.jetons.public, acteurs: secrets.jetons.acteurs } });   // ni régie ni agent retenus
+    expect(lireJetonsColles(JSON.stringify(secrets.jetons))).toEqual(lu);                                  // l'objet « jetons » seul
+    reglerSpectacle({ adresse: 'https://spectacle.exemple', adressePublique: 'https://spectacle.exemple', jetonsActeurs: (lu as { jetons: never }).jetons });
+    expect(lireReglages().jetonsActeurs).toBe(true);
+    expect(jetonPublicSpectacle()).toBe('sr_public_foule-0123456789');
+    expect(jetonDeLActeur('franck')).toBe('sr_acteur_franck-0123456789');
+    expect(jetonDeLActeur('scene')).toBeNull();                                                              // pas de repli sur le jeton public
+    const ministre = lienDeLActeur({ id: 'ministre', cardinalite: 1, type: 'telephone' });
+    const franck = lienDeLActeur({ id: 'franck', cardinalite: 1, type: 'comedien' });
+    const foule = lienDeLActeur({ id: 'public', cardinalite: 'n', type: 'public' });
+    expect(ministre).toBe('https://spectacle.exemple/t/#acteur=ministre&jeton=sr_acteur_ministre-0123456789');
+    expect(franck).toBe('https://spectacle.exemple/t/#acteur=franck&jeton=sr_acteur_franck-0123456789');
+    expect(foule).toBe('https://spectacle.exemple/t/#jeton=sr_public_foule-0123456789');
+    expect(lienDeLActeur({ id: 'scene', cardinalite: 1, type: 'ecran' })).toBeNull();
+    expect(lienDeLActeur({ id: 'figurants', cardinalite: 1, type: 'agent' })).toBeNull();
+    expect(lienDeLActeur({ id: 'inconnu', cardinalite: 1, type: 'telephone' })).toBeNull();                 // pas de jeton connu : pas de lien
+    for (const l of [ministre, franck, foule]) { expect(l).not.toContain('secret'); expect(l).not.toContain('?'); }
+    expect(ministre).not.toContain('franck-');
+    expect(foule).not.toContain('acteur=');
+  });
+
+  it('JSON des jetons collé : refus clairs, sans citer le texte collé', () => {
+    for (const mauvais of ['', 'pas du json', '[]', '{}', '{"jetons":{"acteurs":[]}}', '{"public":"avec espace"}', '{"acteurs":{"x y":"jeton-ok-0123456789"}}', '{"acteurs":{"franck":"court court"}}']) {
+      const r = lireJetonsColles(mauvais);
+      expect(r, mauvais).toHaveProperty('erreur');
+    }
+    const r = lireJetonsColles('{"public":"sr_public_secretissime-0123456789","acteurs":{"x y":"jeton"}}');
+    expect(JSON.stringify(r)).not.toContain('secretissime');
+    expect(lireJetonsColles('{"public":"sr_public_seul-0123456789"}')).toEqual({ jetons: { public: 'sr_public_seul-0123456789', acteurs: {} } });
+  });
+
   it('les jetons restent dans l’onglet : les réglages disent seulement s’ils sont connus', () => {
-    reglerSpectacle({ adresse: 'https://spectacle.exemple', jetonRegie: JETON, jetonActeur: 'acteur-xyz' });
+    reglerSpectacle({ adresse: 'https://spectacle.exemple', jetonRegie: JETON, jetonsActeurs: { public: 'public-xyz', acteurs: { franck: 'acteur-xyz' } } });
     const r = lireReglages();
-    expect(r).toEqual({ adresse: 'https://spectacle.exemple', adressePublique: '', jetonRegie: true, jetonActeur: true });
+    expect(r).toEqual({ adresse: 'https://spectacle.exemple', adressePublique: '', jetonRegie: true, jetonsActeurs: true });
     expect(JSON.stringify(sp())).not.toContain(JETON);
   });
 });

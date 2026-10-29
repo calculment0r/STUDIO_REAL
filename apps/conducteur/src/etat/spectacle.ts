@@ -3,7 +3,8 @@
 // relie au serveur de spectacle, lui envoie ses ordres de conduite et voit ce que chaque sortie affiche vraiment.
 //
 // - Réglages (fenêtre Projet › Spectacle, jamais dans l'adresse) : adresse du serveur et adresse publique (localStorage),
-//   jeton de la régie et jeton des acteurs (sessionStorage seulement : saisis une fois par onglet, jamais écrits ailleurs).
+//   jeton de la régie et table des jetons des acteurs (public + un par acteur nommé, collée depuis le fichier des secrets ;
+//   sessionStorage seulement : saisis une fois par onglet, jamais écrits ailleurs).
 // - Liaison : `hello{role:'regie'}` par le transport WebSocket de l'application téléphone (@studio-real/ui-telephone :
 //   reconnexion à attente croissante, ping toutes les 2 s, horloge), session et `cseq` gardés dans l'onglet.
 // - Voyant (en-tête, rail) : relié (vert) · connexion (ambre) · absent (rouge) · périmé = sans nouvelles depuis 5 s
@@ -41,7 +42,7 @@ const CLES = {
   adresse: 'studio-real:spectacle:adresse',
   publique: 'studio-real:spectacle:adresse-publique',
   jetonRegie: 'studio-real:spectacle:jeton-regie',
-  jetonActeur: 'studio-real:spectacle:jeton-acteur',
+  jetonsActeurs: 'studio-real:spectacle:jetons-acteurs',
   session: 'studio-real:spectacle:session',
   cseq: 'studio-real:spectacle:cseq',
 } as const;
@@ -112,14 +113,50 @@ export function baseTelephone(adressePublique: string): string | null {
   } catch { return null; }
 }
 
-/** Lien d'un acteur nommé : jeton dans le FRAGMENT (jamais dans `?` : ni envoyé au serveur, ni journalisé). */
+/** Lien d'un acteur nommé : SON jeton (celui de cet acteur, jetons.acteurs.<id> du fichier des secrets) dans le
+ *  FRAGMENT (jamais dans `?` : ni envoyé au serveur, ni journalisé). */
 export function lienActeur(adressePublique: string, acteur: string, jeton: string): string | null {
   const base = baseTelephone(adressePublique);
   if (!base) return null;
   return `${base}#acteur=${encodeURIComponent(acteur)}&jeton=${encodeURIComponent(jeton)}`;
 }
-/** Lien du public : l'application téléphone sans jeton nommé (QR projeté par la sortie). */
-export const lienPublic = (adressePublique: string): string | null => baseTelephone(adressePublique);
+/** Lien du public : l'application téléphone avec le jeton `public` (le seul que le serveur accepte pour la foule) dans
+ *  le fragment ; sans jeton, l'adresse nue (le téléphone se présentera sans jeton et sera refusé). */
+export function lienPublic(adressePublique: string, jeton?: string | null): string | null {
+  const base = baseTelephone(adressePublique);
+  if (!base) return null;
+  return jeton ? `${base}#jeton=${encodeURIComponent(jeton)}` : base;
+}
+
+// ── jetons des acteurs (collés depuis exploitation/spectacle.secrets.json) ─────────────────────────────────────────
+
+/** Table des jetons des téléphones : `public` (la foule) et un jeton par acteur nommé. */
+export interface JetonsActeurs { public?: string; acteurs: Record<string, string> }
+
+const estObjet = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
+const jetonImprimable = (x: unknown): x is string => typeof x === 'string' && /^[!-~]{1,512}$/.test(x);
+
+/**
+ * Lit le JSON collé par la régie : le fichier `spectacle.secrets.json` entier (`{"jetons": {…}}`) ou seulement son
+ * objet `jetons` (`{"regie", "agent", "public", "acteurs": {…}}`). Ne garde QUE `public` et `acteurs` : les jetons de
+ * la régie et des agents ne servent pas à fabriquer des liens et ne sont pas retenus. Le message d'erreur ne cite jamais
+ * le texte collé.
+ */
+export function lireJetonsColles(texte: string): { jetons: JetonsActeurs } | { erreur: string } {
+  let brut: unknown;
+  try { brut = JSON.parse(texte); } catch { return { erreur: 'JSON illisible (coller le contenu de spectacle.secrets.json, ou son objet « jetons »).' }; }
+  const jetons = estObjet(brut) && estObjet(brut.jetons) ? brut.jetons : brut;
+  if (!estObjet(jetons)) return { erreur: 'Objet JSON attendu (« jetons » : public, acteurs).' };
+  const acteurs: Record<string, string> = {};
+  if (jetons.acteurs !== undefined && !estObjet(jetons.acteurs)) return { erreur: '« acteurs » doit être un objet {identifiant: jeton}.' };
+  for (const [id, j] of Object.entries(estObjet(jetons.acteurs) ? jetons.acteurs : {})) {
+    if (!/^[A-Za-z0-9_:-]{1,64}$/.test(id) || !jetonImprimable(j)) return { erreur: `Jeton illisible pour l'acteur « ${id.slice(0, 40)} ».` };
+    acteurs[id] = j;
+  }
+  if (jetons.public !== undefined && !jetonImprimable(jetons.public)) return { erreur: 'Jeton « public » illisible.' };
+  if (jetons.public === undefined && !Object.keys(acteurs).length) return { erreur: 'Aucun jeton « public » ni « acteurs » dans ce JSON.' };
+  return { jetons: { ...(jetons.public !== undefined ? { public: jetons.public as string } : {}), acteurs } };
+}
 
 // ── réglages ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -128,31 +165,46 @@ export interface Reglages {
   adressePublique: string;
   /** les jetons ne sortent pas de ce module : on dit seulement s'ils sont connus */
   jetonRegie: boolean;
-  jetonActeur: boolean;
+  /** la table des jetons des acteurs (public + un par acteur nommé) a été collée dans cet onglet */
+  jetonsActeurs: boolean;
 }
 export function lireReglages(): Reglages {
   return {
     adresse: local.lire(CLES.adresse) ?? '',
     adressePublique: local.lire(CLES.publique) ?? '',
     jetonRegie: !!onglet.lire(CLES.jetonRegie),
-    jetonActeur: !!onglet.lire(CLES.jetonActeur),
+    jetonsActeurs: jetonsActeursSpectacle() !== null,
   };
 }
-/** Jeton des acteurs (liens des téléphones nommés) ; null s'il n'a pas été saisi dans cet onglet. */
-export const jetonActeurSpectacle = (): string | null => onglet.lire(CLES.jetonActeur);
+/** Table des jetons des acteurs (liens et QR des téléphones) ; null si elle n'a pas été collée dans cet onglet. */
+export function jetonsActeursSpectacle(): JetonsActeurs | null {
+  try {
+    const brut: unknown = JSON.parse(onglet.lire(CLES.jetonsActeurs) ?? 'null');
+    if (!estObjet(brut)) return null;
+    const acteurs: Record<string, string> = {};
+    if (estObjet(brut.acteurs)) for (const [id, j] of Object.entries(brut.acteurs)) if (jetonImprimable(j)) acteurs[id] = j;
+    const pub = jetonImprimable(brut.public) ? brut.public : undefined;
+    if (pub === undefined && !Object.keys(acteurs).length) return null;
+    return { ...(pub !== undefined ? { public: pub } : {}), acteurs };
+  } catch { return null; }
+}
+/** Jeton `public` (QR de la foule) ; null s'il est inconnu. */
+export const jetonPublicSpectacle = (): string | null => jetonsActeursSpectacle()?.public ?? null;
+/** Jeton PROPRE à cet acteur nommé ; null s'il est inconnu (le jeton public n'en tient jamais lieu). */
+export const jetonDeLActeur = (id: string): string | null => jetonsActeursSpectacle()?.acteurs[id] ?? null;
 
 /** Adresse publique retenue (QR du public, liens d'acteurs) ; '' si aucune. Lue aussi par sortie/protocole.ts. */
 export const adressePubliqueSpectacle = (): string => local.lire(CLES.publique) ?? '';
 
 /** Change les réglages. Une valeur vide efface ; `undefined` laisse tel quel. Relie de nouveau si l'adresse ou le
  *  jeton de la régie change pendant une liaison. */
-export function reglerSpectacle(r: Partial<{ adresse: string; adressePublique: string; jetonRegie: string; jetonActeur: string }>): void {
+export function reglerSpectacle(r: Partial<{ adresse: string; adressePublique: string; jetonRegie: string; jetonsActeurs: JetonsActeurs | null }>): void {
   const avant = lireReglages();
   const jetonAvant = onglet.lire(CLES.jetonRegie);
   if (r.adresse !== undefined) local.ecrire(CLES.adresse, r.adresse.trim() || null);
   if (r.adressePublique !== undefined) local.ecrire(CLES.publique, r.adressePublique.trim() || null);
   if (r.jetonRegie !== undefined) onglet.ecrire(CLES.jetonRegie, r.jetonRegie.trim() || null);
-  if (r.jetonActeur !== undefined) onglet.ecrire(CLES.jetonActeur, r.jetonActeur.trim() || null);
+  if (r.jetonsActeurs !== undefined) onglet.ecrire(CLES.jetonsActeurs, r.jetonsActeurs ? JSON.stringify(r.jetonsActeurs) : null);
   const apres = lireReglages();
   useSpectacle.setState({ reglages: apres });
   // le QR du public (sortie) suit l'adresse publique du spectacle

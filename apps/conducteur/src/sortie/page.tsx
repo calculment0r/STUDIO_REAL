@@ -44,7 +44,7 @@ import { ContexteServices, ContexteTemps, Fondus, Scene1080, type Services } fro
 import { SonDeSalle } from './son-salle';
 import { lireFxScene, traduire } from './traduction';
 import { viderFluxVisio } from './flux-visio';
-import { configurationVisio, creerVisioRtc, type VisioRtc } from './visio-rtc';
+import { configurationVisio, creerVisioRtc, origineHttpDe, type VisioRtc } from './visio-rtc';
 import { PoolVideos } from './videos';
 
 type Liaison = 'attente' | 'connecte' | 'perdu';
@@ -352,7 +352,7 @@ export function PageSortie() {
     if (!spectacle) { etatSpectacleRef.current = null; setEtatSpectacle(null); return; }
     const c = new ClientSortieSpectacle({
       ouvrir: (hello) => transportWebSocket(spectacle.url, spectacle.jeton, { hello }),
-      config: () => configRef.current, session: sessionOnglet(stockageOnglet()), personne: id,
+      config: () => configRef.current, urlHttp: origineHttpDe(spectacle.url), session: sessionOnglet(stockageOnglet()), personne: id,
       ...(spectacle.acteur ? { acteur: spectacle.acteur } : {}),
     });
     client.current = c;

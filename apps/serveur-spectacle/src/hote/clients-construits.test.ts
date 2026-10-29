@@ -17,7 +17,10 @@ const DIST_TELEPHONE = join(DEPOT, 'apps', 'telephone', 'dist');
 const CONSTRUITS = existsSync(join(DIST_CONDUCTEUR, 'sortie.html')) && existsSync(join(DIST_TELEPHONE, 'index.html'));
 const RAISON = 'clients non construits (npm run build)';
 
-const JETONS = { regie: 'jeton-regie-de-test-0123456789', acteur: 'jeton-acteur-de-test-0123456789', agent: 'jeton-agent-de-test-0123456789' };
+const JETONS = {
+  regie: 'jeton-regie-de-test-0123456789', agent: 'jeton-agent-de-test-0123456789', public: 'jeton-public-de-test-0123456789',
+  acteurs: { scene: 'jeton-scene-de-test-0123456789', ministre: 'jeton-ministre-de-test-0123456789' } as Record<string, string>,
+};
 
 /** Les adresses des fichiers qu'une page HTML charge (src=, href=), sans les liens externes ni les ancres. */
 function fichiersDe(html: string): string[] {
