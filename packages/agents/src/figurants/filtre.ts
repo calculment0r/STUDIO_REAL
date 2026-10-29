@@ -11,7 +11,7 @@ export const LONGUEUR_MAX = 80;
 export function nettoyer(texte: unknown): string {
   return String(texte ?? '')
     .normalize('NFKC')
-    .replace(/[​-‏‪-‮⁠-⁤﻿­]/g, '')
+    .replace(/[​-‏‪-‮⁠-⁤﻿­]/g, '')   // caractères invisibles (largeur nulle, sens d’écriture, BOM, trait d’union conditionnel), en codes Unicode pour rester lisibles
     .replace(/[\p{Cc}\p{Cs}\p{Co}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();

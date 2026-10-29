@@ -270,6 +270,7 @@ export class SalleReelle {
   creerLigne(o: { id: string; acteur: string; personne: string; hello: FabriqueHello; bloquee?: boolean; regie?: boolean }): LigneReelle {
     const regie = o.regie === true;
     const ligne = new LigneImpl(this, o.id, o.acteur, o.personne, o.bloquee === true, regie);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias -- le `this` du constructeur ci-dessous est la socket, pas la salle
     const salle = this;
     const Ctor = function (this: unknown, url: string) { return new SocketMesuree(salle, ligne, url); } as unknown as new (url: string) => WebSocketMinimal;
     const brut = transportWebSocket(this.url, regie ? this.jetonRegie ?? '' : this.jeton, { hello: o.hello, env: { WebSocket: Ctor } });
