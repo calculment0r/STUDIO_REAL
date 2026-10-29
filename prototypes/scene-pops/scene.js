@@ -223,7 +223,6 @@ async function main() {
     const b = document.querySelector(`[data-fx="${name}"]`);
     if (b) b.setAttribute('aria-pressed', String(on));
   }
-  const toggles = { pops: 'pops', danmaku: 'danmaku', fireworks: 'fireworks', hearts: 'hearts', gauge: 'gauge' };
   const actions = {
     featured: triggerFeatured, vote: triggerVote, burst: triggerBurst, rocket: triggerRocket,
     zone() { const on = zoneEl.dataset.edit !== '1'; zoneEl.dataset.edit = on ? '1' : '0'; zoneEl.classList.toggle('show', on); $('#btn-zone').setAttribute('aria-pressed', String(on)); },
@@ -272,7 +271,7 @@ async function main() {
 
   /* ---------- boucle ---------- */
   const hud = $('#fps'), hudInfo = $('#info');
-  const frames = []; let hudT = 0, secT = 0, lastLoad = 0;
+  const frames = []; let hudT = 0, secT = 0;
   const shakeEl = $('#shake');
   let bdT = 0;
 

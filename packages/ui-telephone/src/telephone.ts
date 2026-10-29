@@ -69,6 +69,7 @@ export function demarrerTelephone(o: OptionsTelephone): Telephone {
   let veilleVoulue = false;
   let debloque = false;
 
+  // eslint-disable-next-line prefer-const -- le magasin est affecté plus bas ; le transport et le préchargeur le lisent par fermeture
   let magasin: Magasin;
   const transport = o.creerTransport(() => messageHello(magasin.lire(), { app: o.app, capacites }));
   const prechargeur = o.prechargeur !== undefined ? o.prechargeur : navigateur

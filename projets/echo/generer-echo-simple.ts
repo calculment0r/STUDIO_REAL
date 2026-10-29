@@ -64,9 +64,6 @@ const BLOCS: Bloc[] = [
   ] },
 ];
 
-/** k[0] tel que la durée prévue (k0 × 6 + 10 s) approche les minutes données : la durée n'est qu'un repère, le top fait foi. */
-const k0 = (min: number) => Math.max(0, Math.round((min * 60 - 10) / 6));
-
 // Ce que montre la sortie Écran scène du Conducteur à chaque étape : le QR et le noir en natif ; le mur du serveur du
 // spectacle (réponses, vote, « @x a voté ») et la visio en page plein écran.
 const SERVEUR = 'https://highway-regions-temperatures-penn.trycloudflare.com';

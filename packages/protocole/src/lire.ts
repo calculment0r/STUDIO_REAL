@@ -29,6 +29,7 @@ export const RE_SESSION = /^[A-Za-z0-9_-]{6,64}$/;
 /** Jeton : caractères imprimables sans espace. */
 export const RE_JETON = /^[\x21-\x7e]{1,512}$/;
 /** Identifiant court (moment, étape, question, id d'effet). */
+// eslint-disable-next-line no-control-regex -- on exclut volontairement les caractères de contrôle
 const RE_COURT = /^[^\s\u0000-\u001f]{1,64}$/;
 /** Nom de capacité, genre d'entrée d'agent, type de commande. */
 const RE_NOM = /^[a-z][a-z0-9.:_-]{0,63}$/;
