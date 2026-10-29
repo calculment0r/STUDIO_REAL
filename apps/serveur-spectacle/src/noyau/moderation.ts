@@ -58,7 +58,7 @@ export const couleurPseudo = (pseudo: string): string => COULEURS_HUMAINS[hache(
 export function nettoyer(texte: string): string {
   return String(texte ?? '')
     .normalize('NFKC')
-    .replace(/[​-‏‪-‮⁠-⁤﻿­]/g, '')   // caractères invisibles (largeur nulle, sens d'écriture, BOM, trait d'union conditionnel), écrits en codes Unicode pour rester lisibles
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]/g, '')   // caractères invisibles (largeur nulle, sens d'écriture, BOM, trait d'union conditionnel), écrits en codes Unicode pour rester lisibles
     .replace(/[\p{Cc}\p{Cs}\p{Co}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -66,7 +66,7 @@ export function nettoyer(texte: string): string {
 
 /** Un caractère en forme B : minuscule, sans accent, homoglyphe ramené au latin. */
 function caractereB(c: string): string {
-  const s = c.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const s = c.toLowerCase().normalize('NFD').replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]/g, '');
   return [...s].map(x => HOMOGLYPHES[x] ?? x).join('');
 }
 

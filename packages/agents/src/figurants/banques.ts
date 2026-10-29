@@ -24,7 +24,7 @@ const COULEURS = ['--coral-2', '--cy', '--or', '--grn', '--amb', '--coral-3', '-
 
 function lireJson(fichier: string): Brut | undefined | null {
   let t: string;
-  try { t = fs.readFileSync(fichier, 'utf8').replace(/^﻿/, ''); } catch { return undefined; }
+  try { t = fs.readFileSync(fichier, 'utf8').replace(/^\uFEFF/, ''); } catch { return undefined; }
   try { return JSON.parse(t); } catch { /* tolérance : commentaires // et virgules finales */ }
   try { return JSON.parse(t.replace(/^\s*\/\/.*$/gm, '').replace(/,\s*([}\]])/g, '$1')); } catch { return null; }
 }

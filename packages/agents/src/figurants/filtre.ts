@@ -11,7 +11,7 @@ export const LONGUEUR_MAX = 80;
 export function nettoyer(texte: unknown): string {
   return String(texte ?? '')
     .normalize('NFKC')
-    .replace(/[​-‏‪-‮⁠-⁤﻿­]/g, '')   // caractères invisibles (largeur nulle, sens d’écriture, BOM, trait d’union conditionnel), en codes Unicode pour rester lisibles
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]/g, '')   // caractères invisibles (largeur nulle, sens d’écriture, BOM, trait d’union conditionnel), en codes Unicode pour rester lisibles
     .replace(/[\p{Cc}\p{Cs}\p{Co}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -29,7 +29,7 @@ const RE_URL = [
 ];
 const RE_MAIL = /[a-z0-9._%+-]+\s*(?:@|\(\s*at\s*\)|\[\s*at\s*\]|\sarobase\s)\s*[a-z0-9-]+\s*(?:\.|\spoint\s)\s*[a-z]{2,}/;
 const RE_TEL = /(?:\+?\d[\s.\-()/]{0,2}){9,}/;
-const RE_CHIFFRES = /\d[\s.\-]?\d[\s.\-]?\d[\s.\-]?\d/;
+const RE_CHIFFRES = /\d[\s.-]?\d[\s.-]?\d[\s.-]?\d/;
 
 export interface VerdictLocal { ok: boolean; texte: string; raison?: string }
 
