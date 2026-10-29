@@ -1,0 +1,32 @@
+{
+  "nom": "Écho · répétition à 150 téléphones",
+  "description": "Arrivées étalées sur 60 s, puis la trame d'Écho sur 5 minutes : flux (la vidéo se termine), choix abonne puis « pourquoi » avec des messages (30/min), notification « vu », puis trois questions avec un vote à 70 %. Deux coupures de 10 % des téléphones pendant 20 s, chacune avec un GO pendant la coupure. Chaque GO fait avancer d'un moment (règle du Conducteur) ; les notes disent le moment ATTEINT par le GO.",
+  "telephones": 150,
+  "melange": "soiree",
+  "duree": 300,
+  "graine": 2026,
+  "auto": false,
+  "arrivees": { "surS": 60 },
+  "seuils": { "p95AckMs": 2000, "refus": 0, "reconnexionsRatees": 0 },
+  "etapes": [
+    { "a": 62, "faire": "go", "note": "b1_flux : le fil Instagram" },
+    { "a": 64, "faire": "toucher", "selecteur": "fin-video", "part": 1, "dansS": 8, "note": "la vidéo du flux se termine, le choix s'affiche" },
+    { "a": 95, "faire": "go", "note": "b1_choix : abonne / désabonne + pourquoi" },
+    { "a": 97, "faire": "toucher", "selecteur": "abonne", "part": 1, "dansS": 8 },
+    { "a": 108, "faire": "ecrire", "parMinute": 30, "dureeS": 60, "part": 1, "note": "le « pourquoi » : messages du public, 30 par minute" },
+    { "a": 175, "faire": "go", "note": "b2_lecture" },
+    { "a": 185, "faire": "go", "note": "b3_junon" },
+    { "a": 195, "faire": "go", "note": "b4_notif : la notification" },
+    { "a": 197, "faire": "toucher", "selecteur": "bouton", "part": 0.9, "dansS": 5 },
+    { "a": 210, "faire": "go", "note": "b5_q1 : première question" },
+    { "a": 212, "faire": "vote", "repartition": { "A": 60, "B": 30, "C": 10 }, "part": 0.7, "dansS": 15 },
+    { "a": 230, "faire": "coupure", "part": 0.1, "dureeS": 20, "note": "10 % des téléphones perdent la ligne 20 s" },
+    { "a": 240, "faire": "go", "note": "b5_q1_res, pendant la coupure" },
+    { "a": 255, "faire": "go", "note": "b5_q2" },
+    { "a": 257, "faire": "vote", "repartition": { "A": 50, "B": 40, "C": 10 }, "part": 0.7, "dansS": 10 },
+    { "a": 270, "faire": "coupure", "part": 0.1, "dureeS": 20, "note": "seconde coupure" },
+    { "a": 278, "faire": "go", "note": "b5_q2_res, pendant la coupure" },
+    { "a": 290, "faire": "go", "note": "b5_q3" },
+    { "a": 292, "faire": "vote", "repartition": { "A": 40, "B": 50, "C": 10 }, "part": 0.7, "dansS": 6 }
+  ]
+}

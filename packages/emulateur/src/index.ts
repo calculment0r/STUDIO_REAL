@@ -11,8 +11,9 @@
 //
 // Les signaux (pres, quorum, prets, votes, issue) sont ceux que le noyau calcule sur la salle : COMPTÉS sur les
 // téléphones émulés, pas tirés d'une formule. `rejouer(journal)` rejoue une vraie soirée (journal JSONL du serveur).
-// Pas fait (rapport 2 §4.4) : le branchement des agents sur un vrai serveur (essai de charge à 150 bots, rapport 5
-// §4.8) ; les agents en Web Worker ; l'import des capacités d'un rapport du banc d'essai.
+// Essai de charge (rapport 5 §4.8) : `transport: { url, jeton, jetonRegie }` branche les mêmes agents sur un VRAI serveur de
+// spectacle par WebSocket (transport-reel.ts) : latence vraie, temps réel, mesures sur le fil (`mesures()`).
+// Pas fait (rapport 2 §4.4) : les agents en Web Worker ; l'import des capacités d'un rapport du banc d'essai.
 export * from './types';
 export * from './alea';
 export * from './horloge';
@@ -22,5 +23,8 @@ export {
   APP_EMULEE, BATTEMENT_MS, TelephoneSalle, indexReponse, personneEmulee, sessionEmulee,
   type ContexteTelephone, type OptionsTelephone,
 } from './agent';
-export { creerEmulateur, type EmulateurSalle } from './emulateur';
+export { creerEmulateur, type EmulateurReel, type EmulateurSalle } from './emulateur';
+export {
+  SEUIL_RECONNEXION_MS, SalleReelle, percentile, type ConstructeurWS, type LigneReelle, type MesuresReelles, type OptionsSalleReelle,
+} from './transport-reel';
 export { lireJournal, rejouerJournal, type HoteRejeu } from './rejouer';

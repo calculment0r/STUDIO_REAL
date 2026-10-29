@@ -5,7 +5,8 @@
 //   l'avance avec `avancer(ms)` (tests) ou `tempsReel(vitesse)` (Conducteur, ×1 à ×20) ;
 // - `EtatTelephone` s'appelle `EtatTelephoneEmule` (le nom est pris par l'état de la machine de ui-telephone) ;
 // - `Capacites` est celle de ui-telephone (avec `cache`) ;
-// - `transport: { url }` (essai de charge sur un vrai serveur) est déclaré mais pas encore fait : refusé à la création ;
+// - `transport: { url, jeton, jetonRegie? }` : essai de charge sur un VRAI serveur de spectacle (transport-reel.ts) : les
+//   téléphones se connectent par WebSocket, le temps est le temps réel, la régie est un client `role:'regie'` ;
 // - les actions en masse renvoient le nombre (ou la liste) des téléphones touchés.
 import type { Projet, SalleSimulee, Signaux } from '@studio-real/modele';
 import type { MsgAck, OpConduite, VueDiffusee } from '@studio-real/protocole';
@@ -115,6 +116,16 @@ export type EvenementSalle =
   | { type: 'lecture'; moment: string | null; etape: string | null; t: number }
   | { type: 'resync'; raison: string; t: number };
 
+/** Branchement sur un vrai serveur de spectacle (essai de charge, rapport 5 §4.8). */
+export interface OptionsTransportReel {
+  /** adresse WebSocket du serveur : ws:// ou wss://…/ws */
+  url: string;
+  /** jeton du rôle « acteur » (public et téléphones nommés) : obligatoire en réel */
+  jeton?: string;
+  /** jeton du rôle « regie » : sans lui, `conduite` et `go` lèvent une erreur */
+  jetonRegie?: string;
+}
+
 export interface OptionsEmulateur {
   graine: number;
   /** le projet joué par la salle émulée (préparé comme par le serveur : conversion d'Écho si besoin) */
@@ -125,7 +136,9 @@ export interface OptionsEmulateur {
   acteurs?: { acteur: string; id?: string }[];
   /** 'salle' : courbe `pres` de packages/modele/src/salle.ts ; 'toutes' : tout le monde dans les 2 premières s */
   arrivees?: 'salle' | 'toutes' | { surS: number };
-  transport?: 'memoire' | { url: string; jeton?: string };
+  /** 'memoire' : la salle émulée (défaut). `{ url, jeton, jetonRegie? }` : un vrai serveur de spectacle par WebSocket.
+   *  Le temps est alors le temps réel : `avancer(ms)` est sans effet. */
+  transport?: 'memoire' | OptionsTransportReel;
   /** 'aucun' : tests sous Node ; sinon l'adresse de l'application téléphone pour les iframes de vitrine */
   rendu?: { vitrineMax: number; urlTelephone?: string } | 'aucun';
   /** origine de l'horloge émulée (ms) ; défaut : Date.now() */

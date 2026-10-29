@@ -1,8 +1,9 @@
 // Projets vitest (vitest 3.2 : `test.projects` remplace le fichier vitest.workspace.ts, devenu obsolète) : un projet
 // par famille de tests, pour séparer le rapide du lent.
-//   rapides (npm test)        : modele, protocole, conducteur-rapide, serveur-logique, figurants, outils-medias, outils-banc-media, serveur-spectacle, ui-telephone, emulateur, agents  → aucun serveur, aucun navigateur
+//   rapides (npm test)        : modele, protocole, conducteur-rapide, serveur-logique, figurants, outils-medias, outils-banc-media, serveur-spectacle, ui-telephone, emulateur, agents, outils-repetition  → aucun serveur, aucun navigateur
+//                               (emulateur/reel.test.ts ouvre un vrai serveur de spectacle sur un port éphémère, en local, une dizaine de secondes)
 //   lents (npm run test:lent) : conducteur-lent (wrangler dev + Edge sans tête), serveur-integration (wrangler dev)
-//   tout  (npm run test:tout) : les treize projets
+//   tout  (npm run test:tout) : les quatorze projets
 // Chaque projet garde les réglages de son vitest.config / vite.config (timeouts du serveur, environnement…) : on les
 // étend ici, on ne les recopie pas. Attention : à l'extension, vite CONCATÈNE les listes (include, exclude) au lieu de
 // les remplacer ; d'où le découpage par `exclude` pour le serveur, dont la config déclare déjà `include`.
@@ -50,6 +51,9 @@ export default defineConfig({
       },
       {
         test: { name: 'outils-banc-media', root: './outils/banc-media', include: ['**/*.test.mjs'], environment: 'node', passWithNoTests: true },
+      },
+      {
+        test: { name: 'outils-repetition', root: './outils/repetition', include: ['**/*.test.ts'], environment: 'node' },
       },
       {
         test: { name: 'serveur-spectacle', root: './apps/serveur-spectacle', include: ['src/**/*.test.ts'], environment: 'node' },

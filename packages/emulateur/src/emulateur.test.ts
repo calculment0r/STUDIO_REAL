@@ -191,7 +191,7 @@ describe('Écho converti, 120 spectateurs « soirée »', () => {
     expect(b.arrives).toBe(120);
     expect(emu.signaux().pres).toBe(b.connectes);
     expect(b.connectes).toBeGreaterThanOrEqual(110);
-  }, 15_000);   // 3 s seul ; le poste de régie fait tourner plusieurs agents de code en parallèle (29/10 : 5,9 s mesurés)
+  }, 60_000);   // 3 s seul ; le poste de régie fait tourner plusieurs agents de code et la suite en parallèle
 
   it('GO par GO jusqu’à Q1 : 95 % affichent le vote en moins de 1 s ; faireVoter → quorum de 90 % avant 30 s ; le passage part au top', async () => {
     const emu2 = await soiree({ auto: false });
@@ -368,8 +368,13 @@ describe('Écho converti, 120 spectateurs « soirée »', () => {
     expect(ministre.etat().ecran?.type).toBe('vote-compteur');
   }, 60_000);
 
-  it('transport vers un vrai serveur : pas encore fait, refusé clairement', () => {
-    expect(() => creerEmulateur({ projet: echo(), graine: 1, population: [], transport: { url: 'wss://x' } })).toThrow(/pas encore fait/);
+  it('transport vers un vrai serveur : le jeton « acteur » est obligatoire, et sans jeton de régie conduite/go le disent', async () => {
+    expect(() => creerEmulateur({ projet: echo(), graine: 1, population: [], transport: { url: 'ws://127.0.0.1:1/ws' } })).toThrow(/jeton/);
+    const emu = creerEmulateur({ projet: echo(), graine: 1, population: [], transport: { url: 'ws://127.0.0.1:1/ws', jeton: 'x'.repeat(20) } });
+    expect(() => emu.conduite({ op: 'top' })).toThrow(/jeton de la régie/);
+    expect(() => (emu as unknown as { salle: unknown }).salle).toThrow(/pas de salle en mémoire/);
+    expect(() => emu.rejouer('')).toThrow(/transport mémoire/);
+    await emu.arreter();
   });
 });
 
