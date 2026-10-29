@@ -39,7 +39,7 @@ import {
   type MsgEtat, type MsgEtatActeur, type MsgFx, type MsgHello, type MsgIn, type MsgSalle, type StatutAck, type VueDiffusee,
 } from '@studio-real/protocole';
 import { acteursCibles, acteursFoule, agentPour, preparerProjet, type ProjetPrepare } from './projet';
-import { COULEUR_DEFAUT, RE_JETON_COULEUR, RE_PSEUDO, couleurPseudo, filtrerPseudo, hache, verifierTexte } from './moderation';
+import { COULEUR_DEFAUT, RE_JETON_COULEUR, couleurPseudo, filtrerPseudo, hache, verifierTexte } from './moderation';
 import { cloner, empreinteDe, idRepresentation, jsonStable, lettre } from './outils';
 import type {
   BanquesRepresentation, CommandeAgent, Destination, EntreeLecteur, EtatRepresentation, EvenementJournal, InfoSession,
@@ -455,12 +455,14 @@ export class Representation {
 
   /**
    * Pseudo d'une personne : celui du hello s'il passe le filtre (règle du prototype), sinon `spectateur_NNN` (NNN tiré
-   * de la clé de la personne : stable, sans consommer l'aléa) ; un acteur nommé (cardinalité 1) prend à défaut son id.
+   * de la clé de la personne : stable, sans consommer l'aléa) ; un acteur nommé (cardinalité 1) prend à défaut son NOM
+   * (`Acteur.nom`, réglé dans la fenêtre Acteurs, filtré de la même façon), et seulement à défaut son identifiant.
    * Unique parmi les personnes de l'acteur, sans tenir compte de la casse : suffixe `_2`, `_3`…
    */
   private attribuerPseudo(acteur: string, cle: string, propose: unknown): string {
     const a = this.acteurs.get(acteur);
-    const defaut = a?.cardinalite === 1 && RE_PSEUDO.test(acteur.slice(0, 20)) ? acteur.slice(0, 20) : `spectateur_${100 + (hache(`${acteur}/${cle}`) % 900)}`;
+    const nomme = a?.cardinalite === 1 ? filtrerPseudo(a.nom, this.banques.interdits) ?? filtrerPseudo(acteur, this.banques.interdits) : null;
+    const defaut = nomme ?? `spectateur_${100 + (hache(`${acteur}/${cle}`) % 900)}`;
     const base = filtrerPseudo(propose, this.banques.interdits) ?? defaut;
     const pris = new Set(Object.entries(this.e.salle[acteur] ?? {}).filter(([k, p]) => k !== cle && p.pseudo).map(([, p]) => p.pseudo!.toLowerCase()));
     let p = base;

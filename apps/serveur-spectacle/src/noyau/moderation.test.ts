@@ -122,4 +122,15 @@ describe('la liste du dépôt (prototypes/figurants/banques/interdits.txt)', () 
     expect(verifierTexte('appelle moi au 06 12 34 56 78 ce soir après le spectacle', liste).verdict).not.toBe('ok');
     expect(verifierTexte('mon mail est jean.dupont@exemple.fr pour la suite des choses', liste).verdict).not.toBe('ok');
   });
+
+  it('liste générale + liste d’Écho (concaténées, dédoublonnées, comme hote/index.ts) : une entrée propre à Écho est masquée', () => {
+    const echo = lireInterdits(readFileSync(chemin('echo/interdits.txt'), 'utf8'));
+    const fusion = [...new Set([...liste, ...echo])];
+    expect(fusion.length).toBeLessThan(liste.length + echo.length);   // les entrées communes ne sont gardées qu'une fois
+    expect(liste).not.toContain('retourne a la cuisine');
+    expect(echo).toContain('retourne a la cuisine');
+    const phrase = 'allez, retourne à la cuisine, on t’a assez entendu ce soir';
+    expect(verifierTexte(phrase, liste).verdict).toBe('ok');
+    expect(verifierTexte(phrase, fusion)).toEqual({ verdict: 'masque', texte: 'allez, ***, on t’a assez entendu ce soir' });
+  });
 });
