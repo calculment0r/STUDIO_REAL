@@ -508,9 +508,11 @@ export function sceneDeVue(v: VueSortie, c: ConfigSortie): ResultatVue {
   switch (ecran) {
     case 'noir': scene = { type: 'noir' }; break;
     case 'accueil-qr': case 'qr': {
-      const adresse = typeof p.adresse === 'string' && /^https?:\/\//.test(p.adresse) ? p.adresse : c.adresse;
+      const explicite = typeof p.adresse === 'string' && /^https?:\/\//.test(p.adresse);
+      const adresse = explicite ? (p.adresse as string) : c.adresse;
       const code = txt(p.code, 40) ?? c.code;
-      const adr = adresseEntree({ adresse, ...(code ? { code } : {}) });
+      // sortie reliée au serveur de spectacle : son lien du public (avec le jeton public) tient lieu d'adresse, sauf adresse imposée par la vue
+      const adr = adresseEntree({ adresse, ...(!explicite && c.lienPublic ? { lienPublic: c.lienPublic } : {}), ...(code ? { code } : {}) });
       scene = { type: 'accueil-qr', adresse: adr, titre: txt(p.titre) ?? c.titre, consigne: txt(p.consigne) ?? c.consigne, ...(code ? { code } : {}) };
       break;
     }

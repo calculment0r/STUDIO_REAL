@@ -118,6 +118,13 @@ export interface OptionsClientSpectacle {
   ouvrir: (hello: FabriqueHello) => TransportSpectacle;
   /** configuration de la sortie (QR d'accueil des vues `accueil-qr`) */
   config: () => ConfigSortie;
+  /**
+   * origine HTTP du serveur de spectacle (https://…) : le client y lit `/config.json` et en retient `lienPublic` (lien du
+   * public avec le jeton public), qu'il pose dans la configuration des QR (`ConfigSortie.lienPublic`). Absent : rien n'est lu.
+   */
+  urlHttp?: string;
+  /** `fetch` (tests) */
+  fetch?: (url: string) => Promise<{ ok: boolean; json: () => Promise<unknown> }>;
   session: string;
   personne?: string;
   /** acteur incarné (défaut 'scene') */
@@ -147,10 +154,14 @@ export class ClientSortieSpectacle {
   private accuses = new Set<number>();
   private etat: EtatClientSpectacle = { ligne: 'connexion', vseq: 0 };
   private arrete = false;
+  /** `lienPublic` du /config.json du serveur (null : pas encore lu, ou serveur sans) */
+  private lienPublic: string | null = null;
+  private lecturePublic = false;
 
   constructor(o: OptionsClientSpectacle) {
     this.o = o;
     this.maintenant = o.maintenant ?? (() => Date.now());
+    void this.lireLienPublic();
     this.transport = o.ouvrir(() => this.hello());
     this.desabonner.push(this.transport.surMessage((m) => this.recevoir(m)));
     this.desabonner.push(this.transport.surEtat((e) => {
@@ -174,6 +185,29 @@ export class ClientSortieSpectacle {
 
   get etatCourant(): EtatClientSpectacle { return this.etat; }
   get vueCourante(): VueDiffusee | null { return this.derniere; }
+
+  /** Configuration des QR : celle de la sortie, avec le lien du public du serveur quand on l'a. */
+  private configQr(): ConfigSortie {
+    const c = this.o.config();
+    return this.lienPublic ? { ...c, lienPublic: this.lienPublic } : c;
+  }
+
+  /** Lit `lienPublic` dans /config.json du serveur (une fois ; sans réponse, un nouvel essai à la prochaine bienvenue). */
+  private async lireLienPublic(): Promise<void> {
+    if (this.lienPublic || this.lecturePublic || !this.o.urlHttp) return;
+    this.lecturePublic = true;
+    try {
+      const f = this.o.fetch ?? ((u: string) => globalThis.fetch(u, { cache: 'no-store' }));
+      const r = await f(this.o.urlHttp.replace(/\/+$/, '') + '/config.json');
+      if (!r.ok) return;
+      const j = await r.json() as { lienPublic?: unknown };
+      if (this.arrete || typeof j.lienPublic !== 'string' || j.lienPublic.length > 1000 || !/^https?:\/\//.test(j.lienPublic)) return;
+      this.lienPublic = j.lienPublic;
+      // la vue déjà à l'écran (QR d'accueil, mur) est retraduite avec le bon lien
+      const v = this.derniere;
+      if (v && (v.ecran === 'accueil-qr' || v.ecran === 'qr' || v.ecran === 'mur')) this.appliquer(v, true, true);
+    } catch { /* serveur muet : le QR garde l'adresse de la configuration */ } finally { this.lecturePublic = false; }
+  }
 
   surVue(fn: Abonne<VueRecue>): () => void { this.abonnesVue.add(fn); return () => { this.abonnesVue.delete(fn); }; }
   surFx(fn: Abonne<MsgFx>): () => void { this.abonnesFx.add(fn); return () => { this.abonnesFx.delete(fn); }; }
@@ -211,6 +245,7 @@ export class ClientSortieSpectacle {
       case 'bienvenue':
         // le serveur dit le dernier cseq reçu de cette session : on repart après (un renvoi serait un doublon)
         this.cseq = Math.max(this.cseq, m.cseq);
+        if (!this.lienPublic) void this.lireLienPublic();
         if (this.etat.refus && !this.etat.refus.fatal) this.majEtat({ refus: undefined });
         if (m.vue) this.appliquer(m.vue, true);
         break;
@@ -244,14 +279,14 @@ export class ClientSortieSpectacle {
     }
   }
 
-  private appliquer(v: VueDiffusee, instantane: boolean) {
+  private appliquer(v: VueDiffusee, instantane: boolean, forcer = false) {
     // instantané d'un serveur redémarré : la numérotation peut repartir de plus bas, la vue reçue fait foi
     const memeVue = this.derniere !== null && this.derniere.vseq === v.vseq && this.derniere.cle === v.cle && this.derniere.ecran === v.ecran;
     this.vseq = v.vseq;
     this.derniere = v;
     this.majEtat({ vseq: v.vseq });
-    if (memeVue && this.accuses.has(v.vseq)) return;   // reconnexion sans changement : déjà à l'écran et accusée
-    const resultat = sceneDeVue({ ecran: v.ecran, params: v.params, at: v.at }, this.o.config());
+    if (!forcer && memeVue && this.accuses.has(v.vseq)) return;   // reconnexion sans changement : déjà à l'écran et accusée
+    const resultat = sceneDeVue({ ecran: v.ecran, params: v.params, at: v.at }, this.configQr());
     const recue: VueRecue = { vseq: v.vseq, at: v.at, ecran: v.ecran, params: v.params, resultat, instantane, ...(v.cle !== undefined ? { cle: v.cle } : {}) };
     for (const f of [...this.abonnesVue]) f(recue);
   }

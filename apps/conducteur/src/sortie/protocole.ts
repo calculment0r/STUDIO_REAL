@@ -201,6 +201,13 @@ export interface ConfigSortie {
   consigne: string;
   /** code de la représentation, ajouté en ?r= à l'adresse */
   code?: string;
+  /**
+   * lien d'entrée du public donné par le serveur de spectacle (`lienPublic` de son /config.json :
+   * `<adresse publique>/t/#jeton=<jeton public>`). Posé par le client de la sortie reliée au serveur ; il remplace
+   * `adresse` dans le QR (sans lui, le téléphone se présente sans jeton et le serveur le refuse). Le jeton public n'est
+   * pas un secret : il est imprimé sur chaque QR.
+   */
+  lienPublic?: string;
   /** vidéo de secours (asset) jouée si le flux du streamer tombe */
   secours?: string;
   /** salle d'où recevoir le flux WebRTC du streamer (src/flux) ; posée par la régie connectée à une salle */
@@ -313,8 +320,8 @@ export function configParDefaut(titre?: string): ConfigSortie {
 }
 
 /** Adresse complète encodée dans le QR : l'adresse + ?r=<code> (code de la représentation) s'il y en a un. */
-export function adresseEntree(c: Pick<ConfigSortie, 'adresse' | 'code'>): string {
-  const base = c.adresse.trim();
+export function adresseEntree(c: Pick<ConfigSortie, 'adresse' | 'code'> & { lienPublic?: string }): string {
+  const base = (c.lienPublic?.trim() || c.adresse).trim();
   const code = c.code?.trim();
   if (!code) return base;
   try {
@@ -326,8 +333,8 @@ export function adresseEntree(c: Pick<ConfigSortie, 'adresse' | 'code'>): string
   }
 }
 
-/** Adresse lisible sous le QR (sans « https:// » ni « / » final). */
-export const adresseLisible = (a: string): string => a.replace(/^https?:\/\//, '').replace(/\/$/, '');
+/** Adresse lisible sous le QR (sans https://, sans le jeton du fragment, sans / final). */
+export const adresseLisible = (a: string): string => a.replace(/#.*$/, '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 
 // ── constructeurs ────────────────────────────────────────────────────────────────────────────────────────────────
 

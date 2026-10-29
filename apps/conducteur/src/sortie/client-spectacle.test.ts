@@ -1,6 +1,6 @@
 // La sortie écran scène, acteur `scene` du serveur de spectacle : client-spectacle.ts sur une paire de canaux en
 // mémoire (transportMemoire du paquet protocole). Le côté « serveur » est joué par le test.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { transportMemoire, VERSION_PROTOCOLE, type CoteServeurMemoire, type MessageClient, type MsgHello, type VueDiffusee } from '@studio-real/protocole';
 import {
   CAPACITES_SORTIE, ClientSortieSpectacle, CLE_SOURCE_SPECTACLE, lireSourceSpectacle, mediasBattement, type VueRecue,
@@ -39,6 +39,33 @@ describe('client de la sortie, acteur scene du serveur de spectacle', () => {
     expect(h.capacites).toEqual([...CAPACITES_SORTIE]);
     expect(h.vseq).toBeUndefined();
     expect(t.client.etatCourant.ligne).toBe('ouvert');
+  });
+
+  it('/config.json du serveur : lienPublic (jeton public) tient lieu d’adresse du QR, même s’il arrive après la vue', async () => {
+    const lienPublic = 'https://echo.test/t/#jeton=sr_public_abc';
+    const demandes: string[] = [];
+    let repondre!: () => void;
+    const reponse = new Promise<void>((ok) => { repondre = ok; });
+    let serveur!: CoteServeurMemoire;
+    const client = new ClientSortieSpectacle({
+      ouvrir: (hello) => { const p = transportMemoire({ hello, jeton: 'sr_scene_essai' }); serveur = p.serveur; return p.client; },
+      config: () => CONFIG, session: 's_sortie_essai', personne: 'sortie_abcdef', urlHttp: 'https://echo.test',
+      fetch: async (u) => { demandes.push(u); await reponse; return { ok: true, json: async () => ({ spectacle: 'echo', lienPublic, lienLocal: 'http://localhost:8790/t/#jeton=sr_public_abc' }) }; },
+    });
+    const vues: VueRecue[] = [];
+    client.surVue((v) => vues.push(v));
+    serveur.ouvrir();
+    serveur.envoyer(bienvenue({ acteur: 'scene', vseq: 2, at: 1, ecran: 'accueil-qr', params: {} }));
+    expect(demandes).toEqual(['https://echo.test/config.json']);
+    expect(vues).toHaveLength(1);
+    expect(vues[0].resultat).toMatchObject({ scene: { type: 'accueil-qr', adresse: 'https://echo.test/?r=K7' } });   // en attendant la réponse
+    repondre();
+    await vi.waitFor(() => expect(vues).toHaveLength(2));
+    expect(vues[1]).toMatchObject({ vseq: 2, resultat: { scene: { type: 'accueil-qr', adresse: 'https://echo.test/t/?r=K7#jeton=sr_public_abc' } } });
+    // une vue suivante utilise tout de suite le lien du serveur
+    serveur.envoyer({ t: 'vue', ...vueMur(3, { qr: true }) });
+    expect(vues[2].resultat).toMatchObject({ scene: { type: 'mur', qr: 'https://echo.test/t/?r=K7#jeton=sr_public_abc' } });
+    client.fermer();
   });
 
   it('bienvenue → scène (Vue → Scene), puis accusé SEULEMENT quand la scène est à l’écran', () => {

@@ -231,9 +231,24 @@ export function versionGit(racine = RACINE): string | null {
   }
 }
 
-/** Partie publique de la configuration (`GET /config.json`) : aucune donnée secrète, aucun chemin de fichier. */
-export function configPublique(config: ConfigSpectacle, extra: { version: string | null; run: string | null; turn?: boolean }) {
+/**
+ * Lien d'entrée du public sur une adresse : `<adresse>/t/#jeton=<jeton public>` (jeton dans le FRAGMENT). Le jeton
+ * `public` n'est pas un secret (il est imprimé sur chaque QR) et ne donne accès qu'à la foule.
+ */
+export function lienPublicSur(adresse: string, jetonPublic: string): string {
+  const base = adresse.trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+  return `${base.endsWith('/t') ? base : base + '/t'}/#jeton=${encodeURIComponent(jetonPublic)}`;
+}
+
+/**
+ * Partie publique de la configuration (`GET /config.json`) : aucune donnée secrète, aucun chemin de fichier. Le seul
+ * jeton qui y figure est le jeton PUBLIC, dans `lienPublic` / `lienLocal` (jamais ceux de la régie, des agents ni des acteurs nommés).
+ */
+export function configPublique(config: ConfigSpectacle, extra: { version: string | null; run: string | null; turn?: boolean; jetonPublic?: string }) {
   return {
+    ...(extra.jetonPublic
+      ? { lienPublic: lienPublicSur(config.adresses.publique, extra.jetonPublic), lienLocal: lienPublicSur(config.adresses.locale, extra.jetonPublic) }
+      : {}),
     spectacle: config.spectacle,
     representation: config.representation ?? null,
     adresses: config.adresses,

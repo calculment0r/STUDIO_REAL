@@ -310,7 +310,7 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
     }
     if (p === '/sante') { json(res, 200, sante()); return; }
     if (PAGES_FIXES[p]) { servirFichier(req, res, PAGES_FIXES[p]!); return; }
-    if (p === '/config.json') { json(res, 200, configPublique(config, { version, run: rep.run?.id ?? null, turn: ice.configure })); return; }
+    if (p === '/config.json') { json(res, 200, configPublique(config, { version, run: rep.run?.id ?? null, turn: ice.configure, jetonPublic: o.jetons.public })); return; }
     if (p === '/ice') {
       // serveurs ICE de la visio : jeton de n'importe quel rôle ou acteur (Authorization: Bearer), jamais d'erreur bloquante
       const jeton = jetonRegieDe(req);

@@ -103,7 +103,15 @@ describe('HTTP', () => {
     expect(c.headers.get('cache-control')).toBe('no-store');
     const config = await c.json();
     expect(config).toMatchObject({ spectacle: 'banc', ws: '/ws', protocole: 2, adresses: { publique: 'https://spectacle.exemple' } });
-    expect(JSON.stringify(config)).not.toMatch(/jeton|exploitation|medias/);
+    expect(JSON.stringify(config)).not.toMatch(/exploitation|medias/);
+  });
+
+  it('/config.json : lienPublic et lienLocal portent le jeton PUBLIC et aucun autre jeton', async () => {
+    const config = await (await fetch(`http://127.0.0.1:${srv!.port}/config.json`)).json() as Record<string, unknown>;
+    expect(config.lienPublic).toBe(`https://spectacle.exemple/t/#jeton=${JETONS.public}`);
+    expect(config.lienLocal).toBe(`http://localhost:8790/t/#jeton=${JETONS.public}`);
+    const brut = JSON.stringify(config);
+    for (const autre of [JETONS.regie, JETONS.agent, ...Object.values(JETONS.acteurs)]) expect(brut).not.toContain(autre);
   });
 
   it('/ice : 401 sans jeton ou avec un faux ; 200 avec le jeton de n’importe quel rôle (STUN seul sans clé TURN)', async () => {
