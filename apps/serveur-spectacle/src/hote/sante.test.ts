@@ -11,7 +11,10 @@ import { normaliserConfig, type ConfigSpectacle } from './config';
 import { SondeTunnel, adressePubliqueReelle, type Sonde } from './sante';
 import { demarrerServeur, type ServeurSpectacle } from './serveur';
 
-const JETONS = { regie: 'jeton-regie-de-test-0123456789', acteur: 'jeton-acteur-de-test-0123456789', agent: 'jeton-agent-de-test-0123456789' };
+const JETONS = {
+  regie: 'jeton-regie-de-test-0123456789', agent: 'jeton-agent-de-test-0123456789', public: 'jeton-public-de-test-0123456789',
+  acteurs: { scene: 'jeton-scene-de-test-0123456789', ministre: 'jeton-ministre-de-test-0123456789' } as Record<string, string>,
+};
 const PSEUDO = 'Pseudo_Secret_42';
 
 let dossier: string;
@@ -93,9 +96,9 @@ describe('GET /sante', () => {
 
   it('connectés par rôle et par acteur, dernier top : sans pseudo ni jeton', async () => {
     const regie = await connecter('regie', JETONS.regie, undefined, 's_regie');
-    await connecter('acteur', JETONS.acteur, 'scene', 's_scene');
-    await connecter('acteur', JETONS.acteur, 'public', 's_pub1', { personne: 'tel_001', pseudo: PSEUDO });
-    await connecter('acteur', JETONS.acteur, 'public', 's_pub2', { personne: 'tel_002', pseudo: 'Autre_Pseudo_77' });
+    await connecter('acteur', JETONS.acteurs.scene!, 'scene', 's_scene');
+    await connecter('acteur', JETONS.public, 'public', 's_pub1', { personne: 'tel_001', pseudo: PSEUDO });
+    await connecter('acteur', JETONS.public, 'public', 's_pub2', { personne: 'tel_002', pseudo: 'Autre_Pseudo_77' });
     regie.send(JSON.stringify({ t: 'conduite', cseq: 1, op: 'top' }));
     await new Promise(r => setTimeout(r, 150));
     const s = await sante();
@@ -107,7 +110,7 @@ describe('GET /sante', () => {
     expect(s.representation.dernierTop).toBe(s.topRecu.ts);
 
     const brut = JSON.stringify(s);
-    for (const interdit of [PSEUDO, 'Autre_Pseudo_77', 'tel_001', 's_pub1', ...Object.values(JETONS)]) expect(brut, interdit).not.toContain(interdit);
+    for (const interdit of [PSEUDO, 'Autre_Pseudo_77', 'tel_001', 's_pub1', JETONS.regie, JETONS.agent, JETONS.public, ...Object.values(JETONS.acteurs)]) expect(brut, interdit).not.toContain(interdit);
     // aucune CLÉ jeton / pseudo / secret n'existe dans le JSON, à aucun niveau
     const cles: string[] = [];
     const parcourir = (x: unknown) => { if (x && typeof x === 'object') for (const [k, v] of Object.entries(x)) { cles.push(k); parcourir(v); } };
@@ -162,7 +165,8 @@ describe('POST /arret', () => {
   it('refuse sans jeton, avec un mauvais jeton, et à travers un relais ; accepte le jeton de la régie', async () => {
     expect((await poster('/arret', {})).statut).toBe(401);
     expect((await poster('/arret', { authorization: 'Bearer pas-le-bon' })).statut).toBe(401);
-    expect((await poster('/arret', { authorization: `Bearer ${JETONS.acteur}` })).statut).toBe(401);
+    expect((await poster('/arret', { authorization: `Bearer ${JETONS.public}` })).statut).toBe(401);
+    expect((await poster('/arret', { authorization: `Bearer ${JETONS.acteurs.scene}` })).statut).toBe(401);
     expect((await poster('/arret', { authorization: `Bearer ${JETONS.regie}`, 'cf-connecting-ip': '203.0.113.9' })).statut).toBe(403);
     expect((await poster('/arret', { authorization: `Bearer ${JETONS.regie}`, 'x-forwarded-for': '203.0.113.9' })).statut).toBe(403);
     expect(demandesArret).toBe(0);

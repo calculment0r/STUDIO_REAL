@@ -6,7 +6,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { banqueFigurants, type BanquesRepresentation, type QuestionVote, type Representation } from '../noyau';
 import { lireInterdits } from '../noyau/moderation';
-import { RACINE, chemin, lireConfig, lireOuCreerSecrets, versionGit } from './config';
+import { chargerFichier } from '@studio-real/modele';
+import { RACINE, acteursNommes, chemin, lireConfig, lireOuCreerSecrets, versionGit } from './config';
 import { ErreurPortPris, demarrerServeur, type ServeurSpectacle } from './serveur';
 
 const env = process.env;
@@ -60,12 +61,17 @@ async function principal() {
   const { config, source } = lireConfig(RACINE, env);
   console.log(`Configuration : ${source}`);
   const fichierSecrets = join(chemin(RACINE, config.exploitation), 'spectacle.secrets.json');
-  const { secrets, cree } = lireOuCreerSecrets(fichierSecrets);
+  // Le projet est lu ici pour savoir quels acteurs nommés reçoivent un jeton à eux (créé à la demande).
+  const projet = chargerFichier(readFileSync(chemin(RACINE, config.projet), 'utf8')).project;
+  const nommes = acteursNommes(projet);
+  const { secrets, cree, migre, ajoutes } = lireOuCreerSecrets(fichierSecrets, nommes);
   // Jamais la valeur d'un jeton dans la console ni dans le journal : seulement où les trouver.
-  console.log(`Jetons par rôle (régie, acteur, agent) ${cree ? 'créés' : 'lus'} dans ${fichierSecrets} (fichier ignoré par git).`);
+  console.log(`Jetons (régie, agent, public, un par acteur nommé : ${nommes.join(', ') || 'aucun'}) ${cree ? 'créés ou complétés' : 'lus'} dans ${fichierSecrets} (fichier ignoré par git).`);
+  if (migre) console.log('Migration des secrets : l’ancien jeton « acteur » devient le jeton « public » (les QR déjà diffusés à la foule restent valables) ; chaque acteur nommé a reçu son propre jeton : refaire ses liens et QR depuis la page LIENS de la régie.');
+  else if (ajoutes.length) console.log(`Jetons créés pour les acteurs nommés : ${ajoutes.join(', ')} (leurs liens sont à refaire depuis la page LIENS de la régie).`);
   try {
     serveur = await demarrerServeur({
-      config, racine: RACINE, jetons: secrets.jetons, sansReprise: ['1', 'oui', 'true'].includes(String(env.SANS_REPRISE ?? '').toLowerCase()),
+      config, racine: RACINE, jetons: secrets.jetons, projet, sansReprise: ['1', 'oui', 'true'].includes(String(env.SANS_REPRISE ?? '').toLowerCase()),
       version: versionGit(RACINE),
       // Windows n'a pas de signal d'arrêt propre pour Node : arreter-spectacle.ps1 passe par POST /arret (jeton régie).
       surDemandeArret: () => arreter('POST /arret'),

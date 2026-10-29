@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { useMagasin } from '../etat/magasin';
 import { magasinActeurs, pastilleDiagnostic } from '../etat/acteurs';
 import {
-  SURVEILLANCE_MS, adressePubliqueSpectacle, jetonActeurSpectacle, lienActeur, lienPublic, sortieLocale, useSpectacle,
+  SURVEILLANCE_MS, adressePubliqueSpectacle, jetonDeLActeur, jetonPublicSpectacle, lienActeur, lienPublic, sortieLocale, useSpectacle,
   vignettesSorties, type VignetteActeur,
 } from '../etat/spectacle';
 import { useSortie } from '../sortie';
@@ -62,12 +62,12 @@ export function usePastillesActeurs(): Record<string, { texte: string; couleur: 
   return sortie;
 }
 
-/** Lien de l'acteur (public : l'application sans jeton ; acteur nommé : avec le jeton des acteurs). */
+/** Lien de l'acteur (public : avec le jeton `public` ; acteur nommé : avec SON jeton) ; null tant que le jeton n'est pas connu. */
 export function lienDeLActeur(v: Pick<VignetteActeur, 'id' | 'cardinalite' | 'type'>): string | null {
   const publique = adressePubliqueSpectacle();
   if (v.type === 'agent' || v.type === 'ecran') return null;
-  if (v.cardinalite === 'n') return lienPublic(publique);
-  const jeton = jetonActeurSpectacle();
+  if (v.cardinalite === 'n') { const jeton = jetonPublicSpectacle(); return jeton ? lienPublic(publique, jeton) : null; }
+  const jeton = jetonDeLActeur(v.id);
   return jeton ? lienActeur(publique, v.id, jeton) : null;
 }
 

@@ -35,7 +35,13 @@ ElevenLabs, Whisper, pont OSC) exécutent les commandes numérotées du lecteur 
 | `acteur` (+ `acteur:<id>`) | sortie scène, téléphone du public, téléphone nommé, prompteur | `vue`, `fx`, `ack` | `in`, `etat` |
 | `agent` (+ `acteur:<id>`) | service figurants, enveloppe ElevenLabs, Whisper, pont OSC | `agent.cmd` | `agent.ack`, `agent.in` |
 
-Un jeton par rôle (et par acteur nommé). Le jeton n'est jamais conservé dans l'adresse une fois la connexion faite.
+**Jetons** (`exploitation/spectacle.secrets.json`, `jetons`) : un jeton `regie` pour la régie, un jeton `agent` pour les agents,
+un jeton `public` pour la foule (tout acteur de cardinalité n) et **un jeton par acteur nommé** (`jetons.acteurs.<id>` : scène,
+téléphones nommés). Le serveur choisit le jeton attendu d'après le `hello` : `role:'acteur'` + acteur de la foule → `public` ;
+`role:'acteur'` + acteur nommé `X` → `acteurs[X]` ; `regie` → `regie` ; `agent` → `agent`. Un jeton d'acteur nommé ne vaut que
+pour cet acteur, et le jeton public ne vaut que pour la foule : sinon `refus{code:'jeton', fatal:true}` et fermeture 4003.
+Le jeton n'est jamais conservé dans l'adresse une fois la connexion faite (lien d'un acteur nommé :
+`/t/#acteur=<id>&jeton=<son jeton>` ; lien du public : `/t/#jeton=<jeton public>`).
 
 ## Numérotation, reprise, idempotence
 

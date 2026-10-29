@@ -11,7 +11,7 @@ import { WebSocketServer, WebSocket, type RawData } from 'ws';
 import { chargerFichier, type Projet } from '@studio-real/modele';
 import { LIMITES, lireMessageClient, type MessageServeur, type MsgRefus } from '@studio-real/protocole';
 import { Representation, correspond, empreinteDe, type EvenementJournal, type InfoSession, type Sortie } from '../noyau';
-import { ROLES_JETON, chemin, configPublique, lireJetonTurn, reglagesTurn, type ConfigSpectacle, type RoleJeton } from './config';
+import { chemin, configPublique, lireJetonTurn, reglagesTurn, type ConfigSpectacle, type JetonsSpectacle } from './config';
 import { FournisseurIce, STUN_PAR_DEFAUT } from './ice';
 import { Persistance, type FichierInstantane } from './persistance';
 import { SondeTunnel, construireSante, type Sonde } from './sante';
@@ -35,8 +35,11 @@ export interface OptionsServeur {
   config: ConfigSpectacle;
   /** racine du dépôt (les chemins de la configuration y sont relatifs) */
   racine: string;
-  /** jetons EN CLAIR par rôle (lus dans les secrets) ; seules leurs empreintes sont gardées */
-  jetons: Record<RoleJeton, string>;
+  /**
+   * jetons EN CLAIR (lus dans les secrets) ; seules leurs empreintes sont gardées : `regie`, `agent`, `public` (la foule,
+   * acteurs de cardinalité n) et `acteurs[<id>]` (un par acteur nommé, valable pour cet acteur seulement)
+   */
+  jetons: JetonsSpectacle;
   /** projet déjà chargé (tests) ; sinon lu depuis config.projet */
   projet?: Projet;
   /** ne pas reprendre le dernier instantané (SANS_REPRISE=1) */
@@ -96,17 +99,36 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
   const version = o.version ?? null;
   const demarre = Date.now();
 
-  // ── Jetons : empreintes seulement, comparaison à temps constant ──────────────────────────────────────────────────
-  const empreintes = new Map<RoleJeton, Buffer>();
-  for (const r of ROLES_JETON) empreintes.set(r, empreinteJeton(o.jetons[r]));
-  const jetonValide = (role: string, jeton: string): boolean => {
-    const attendu = empreintes.get(role as RoleJeton);
-    return !!attendu && timingSafeEqual(attendu, empreinteJeton(jeton));
-  };
-
   // ── Noyau, persistance, reprise ─────────────────────────────────────────────────────────────────────────────────
   const projet = o.projet ?? chargerFichier(readFileSync(chemin(o.racine, config.projet), 'utf8')).project;
   const rep = new Representation({ projet, horloge: () => Date.now(), alea: Math.random });
+
+  // ── Jetons : empreintes seulement, comparaison à temps constant ──────────────────────────────────────────────────
+  // Un jeton par rôle (régie, agent), un pour la foule (acteurs de cardinalité n) et un par acteur nommé : le jeton
+  // d'un acteur nommé ne vaut que pour cet acteur, le jeton public ne vaut que pour la foule.
+  const empreintes = {
+    regie: empreinteJeton(o.jetons.regie),
+    agent: empreinteJeton(o.jetons.agent),
+    public: empreinteJeton(o.jetons.public),
+    acteurs: new Map(Object.entries(o.jetons.acteurs ?? {}).map(([id, j]) => [id, empreinteJeton(j)] as const)),
+  };
+  const egal = (attendu: Buffer | undefined, jeton: string): boolean => !!attendu && timingSafeEqual(attendu, empreinteJeton(jeton));
+  /** Acteurs de la foule (cardinalité n) du projet joué : ils partagent le jeton public. */
+  const estFoule = (acteur: string): boolean => (rep.projet.acteurs ?? []).some(a => a.id === acteur && a.cardinalite === 'n');
+  /** `acteur` est celui du hello : indispensable pour le rôle `acteur` (jeton de la foule ou de cet acteur nommé). */
+  const jetonValide = (role: string, jeton: string, acteur?: string): boolean => {
+    if (role === 'regie') return egal(empreintes.regie, jeton);
+    if (role === 'agent') return egal(empreintes.agent, jeton);
+    if (role !== 'acteur' || acteur === undefined) return false;
+    return egal(estFoule(acteur) ? empreintes.public : empreintes.acteurs.get(acteur), jeton);
+  };
+  /** Jeton de n'importe quel rôle ou acteur (route `GET /ice` : les téléphones, la régie et les agents). */
+  const jetonConnu = (jeton: string): boolean => {
+    const vus = [empreintes.regie, empreintes.agent, empreintes.public, ...empreintes.acteurs.values()];
+    let ok = false;
+    for (const e of vus) ok = egal(e, jeton) || ok;   // pas de sortie anticipée
+    return ok;
+  };
   const persistance = new Persistance(chemin(o.racine, config.exploitation));
   let redemarrages = 0;
   let annonce: string;
@@ -168,7 +190,7 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
     const m = lu.message;
     if (m.t === 'hello') {
       if (c.info) { refuser(c, 'deja-connecte', 'hello déjà accepté sur cette connexion.'); return; }
-      if (!jetonValide(m.role, m.jeton)) {
+      if (!jetonValide(m.role, m.jeton, m.acteur)) {
         refuser(c, 'jeton', 'Jeton refusé.', true);
         ecrireJournal([{ ts: Date.now(), run: rep.run?.id ?? null, src: 'serveur', type: 'refus', code: 'jeton', role: m.role, acteur: m.acteur ?? null }]);
         c.ignoree = true;
@@ -290,9 +312,9 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
     if (PAGES_FIXES[p]) { servirFichier(req, res, PAGES_FIXES[p]!); return; }
     if (p === '/config.json') { json(res, 200, configPublique(config, { version, run: rep.run?.id ?? null, turn: ice.configure })); return; }
     if (p === '/ice') {
-      // serveurs ICE de la visio : jeton de n'importe quel rôle (Authorization: Bearer), jamais d'erreur bloquante
+      // serveurs ICE de la visio : jeton de n'importe quel rôle ou acteur (Authorization: Bearer), jamais d'erreur bloquante
       const jeton = jetonRegieDe(req);
-      if (!jeton || !ROLES_JETON.some(r => jetonValide(r, jeton))) { json(res, 401, { ok: false, erreur: 'jeton refusé' }); return; }
+      if (!jeton || !jetonConnu(jeton)) { json(res, 401, { ok: false, erreur: 'jeton refusé' }); return; }
       void ice.obtenir().then(r => json(res, 200, r), () => json(res, 200, { iceServers: STUN_PAR_DEFAUT, turn: 'absent' }));
       return;
     }
