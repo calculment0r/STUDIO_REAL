@@ -14,7 +14,7 @@ npm run repetition -- --scenario outils/repetition/scenario-echo.json --cible ws
 ```
 
 Les jetons sont dans `exploitation/spectacle.secrets.json` (créé au premier lancement, ignoré par git, jamais affiché) :
-`--secrets` lit `jetons.acteur` (téléphones) et `jetons.regie` (GO). Sinon `--jeton` / `--jeton-regie`, ou les variables
+`--secrets` lit `jetons.public` (téléphones) et `jetons.regie` (GO). Sinon `--jeton` / `--jeton-regie`, ou les variables
 `REPETITION_JETON` / `REPETITION_JETON_REGIE`. Autres options : `--telephones`, `--melange`, `--duree`, `--sortie`, `--projet`, `--aide`.
 Codes : 0 seuils tenus, 1 seuil dépassé, 2 arguments invalides, 3 répétition impossible.
 

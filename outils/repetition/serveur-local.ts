@@ -16,7 +16,7 @@ const jeton = (role: string) => `rep_${role}_${randomBytes(24).toString('hex')}`
 
 const dossier = mkdtempSync(join(tmpdir(), 'repetition-serveur-'));
 for (const d of ['tel', 'cond', 'medias']) mkdirSync(join(dossier, d));
-const jetons = { regie: jeton('regie'), acteur: jeton('acteur'), agent: jeton('agent') };
+const jetons = { regie: jeton('regie'), public: jeton('public'), agent: jeton('agent'), acteurs: {} as Record<string, string> };
 const config = normaliserConfig({
   spectacle: 'repetition', port: 0, hote: '127.0.0.1', projet: process.env.REPETITION_PROJET || 'projets/echo/echo.conducteur.json',
   exploitation: join(dossier, 'exploitation'), medias: { dossier: join(dossier, 'medias') },

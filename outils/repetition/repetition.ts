@@ -28,7 +28,7 @@ const USAGE = `Usage : node --import tsx outils/repetition/repetition.ts --scena
   --scenario <fichier>   OBLIGATOIRE. Le scénario (voir outils/repetition/scenario-echo.json).
   --cible <ws://…/ws>    Serveur de spectacle à éprouver. Sans --cible, le script démarre son propre serveur (processus
                          enfant, port libre, jetons jetables, projet Écho) et l'arrête à la fin.
-  --jeton <jeton>        Avec --cible : jeton du rôle « acteur » (les téléphones). Ou REPETITION_JETON.
+  --jeton <jeton>        Avec --cible : jeton « public » (les téléphones). Ou REPETITION_JETON.
   --jeton-regie <jeton>  Avec --cible : jeton du rôle « regie » (les GO). Ou REPETITION_JETON_REGIE.
   --secrets <fichier>    Avec --cible : lit les deux jetons dans exploitation/spectacle.secrets.json (jamais affichés).
   --telephones <n>       Nombre de téléphones (défaut : celui du scénario, 150 pour Écho).
@@ -104,10 +104,10 @@ function lireArguments(argv: string[], env: NodeJS.ProcessEnv = process.env): Op
       let brut: { jetons?: Record<string, unknown> };
       try { brut = JSON.parse(readFileSync(resolve(o.secrets), 'utf8')); } catch (e) { throw new ErreurArguments(`--secrets illisible (${o.secrets}) : ${(e as Error).message}`); }
       const lire = (r: string) => (typeof brut.jetons?.[r] === 'string' ? (brut.jetons[r] as string) : null);
-      o.jeton = o.jeton ?? lire('acteur');
+      o.jeton = o.jeton ?? lire('public') ?? lire('acteur');   // `public` depuis le lot « jeton par acteur » ; `acteur` = ancien fichier
       o.jetonRegie = o.jetonRegie ?? lire('regie');
     }
-    if (!o.jeton) throw new ErreurArguments('avec --cible, le jeton « acteur » est obligatoire (--jeton, --secrets ou REPETITION_JETON)');
+    if (!o.jeton) throw new ErreurArguments('avec --cible, le jeton « public » (les téléphones) est obligatoire (--jeton, --secrets ou REPETITION_JETON)');
   } else if (o.jeton || o.jetonRegie || o.secrets) {
     throw new ErreurArguments('--jeton, --jeton-regie et --secrets n’ont de sens qu’avec --cible (sans cible, le serveur local a ses propres jetons jetables)');
   }
@@ -136,7 +136,7 @@ function resumeProcessus(e: Echantillon[]) {
 
 interface ServeurLocal {
   url: string;
-  jetons: { regie: string; acteur: string; agent: string };
+  jetons: { regie: string; public: string; agent: string };
   echantillons: Echantillon[];
   arreter(): Promise<void>;
 }
@@ -295,7 +295,7 @@ async function repetition(o: Options): Promise<{ rapport: Rapport; verdict: Verd
     else {
       console.error(`Démarrage du serveur de spectacle local (projet ${o.projet})…`);
       local = await demarrerServeurLocal(o.projet);
-      url = local.url; jeton = local.jetons.acteur; jetonRegie = local.jetons.regie;
+      url = local.url; jeton = local.jetons.public; jetonRegie = local.jetons.regie;
     }
     emu = creerEmulateur({
       projet, graine: sc.graine, population: { nombre: sc.telephones, melange: sc.melange }, arrivees: { surS: sc.arrivees.surS }, auto: sc.auto,

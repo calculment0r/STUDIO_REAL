@@ -12,7 +12,7 @@ import { creerEmulateur, type EmulateurReel } from './emulateur';
 interface ServeurSpectacle { port: number; sante(): Record<string, unknown>; arreter(): Promise<void> }
 const HOTE = '../../../apps/serveur-spectacle/src/hote/';
 
-const JETONS = { regie: 'jeton-regie-de-test-0123456789', acteur: 'jeton-acteur-de-test-0123456789', agent: 'jeton-agent-de-test-0123456789' };
+const JETONS = { regie: 'jeton-regie-de-test-0123456789', public: 'jeton-public-de-test-0123456789', agent: 'jeton-agent-de-test-0123456789', acteurs: {} as Record<string, string> };
 
 let dossier = '';
 let srv: ServeurSpectacle | null = null;
@@ -55,7 +55,7 @@ describe('émulateur sur un vrai serveur (WebSocket)', () => {
     if (indisponible) ctx.skip(`serveur de test impossible à démarrer (${indisponible})`);
     const emu: EmulateurReel = creerEmulateur({
       projet: projetBanc(), graine: 7, population: { nombre: 40, melange: 'rapides' }, arrivees: { surS: 2 }, auto: false,
-      transport: { url: `ws://127.0.0.1:${srv!.port}/ws`, jeton: JETONS.acteur, jetonRegie: JETONS.regie },
+      transport: { url: `ws://127.0.0.1:${srv!.port}/ws`, jeton: JETONS.public, jetonRegie: JETONS.regie },
     });
     try {
       await emu.demarrer();
@@ -99,7 +99,7 @@ describe('émulateur sur un vrai serveur (WebSocket)', () => {
     if (indisponible) ctx.skip(`serveur de test impossible à démarrer (${indisponible})`);
     const emu = creerEmulateur({
       projet: projetBanc(), graine: 1, population: { nombre: 2, melange: 'rapides' }, arrivees: 'toutes', auto: false,
-      transport: { url: `ws://127.0.0.1:${srv!.port}/ws`, jeton: JETONS.acteur },
+      transport: { url: `ws://127.0.0.1:${srv!.port}/ws`, jeton: JETONS.public },
     });
     const avis: string[] = [];
     const avertir = console.warn;

@@ -15,6 +15,7 @@ import {
   VERSION_PROTOCOLE, transportWebSocket,
   type EtatLigne, type EtatTransport, type FabriqueHello, type MessageClient, type MessageServeur, type MsgAck, type MsgSalle,
   type OpConduite, type TransportSpectacle, type VueDiffusee, type WebSocketMinimal,
+  fusionnerDelta,
 } from '@studio-real/protocole';
 import type { EvenementSalle, OptionsTransportReel } from './types';
 
@@ -428,7 +429,10 @@ export class SalleReelle {
         this.noterRefus(l, m.code, m.message, m.fatal === true);
         return;
       case 'lecture':
-        if (l.regie) this.poserLecture(m.etat);
+        // complet (avec l'état entier) ou delta (seuls les champs changés, à fusionner sur le dernier complet) : lot « lecture allégée »
+        if (!l.regie) return;
+        if (m.mode === 'delta') { if (this.lectureCourante) this.poserLecture(fusionnerDelta(this.lectureCourante, m.d)); }
+        else this.poserLecture(m.etat);
         return;
       case 'salle':
         if (l.regie) this.salleCourante = m;
