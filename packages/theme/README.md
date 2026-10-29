@@ -13,9 +13,9 @@ relatifs) comme dans une app Vite. Une valeur se corrige ici, une seule fois : i
 | `noyau.css` | Le noyau : polices, jetons, jetons dérivés, base, composants. Le Conducteur l'importe. |
 | `polices.css` + `polices/` | Chakra Petch 300 → 700 et Azeret Mono (variable), libres, **licences OFL** à côté des fichiers. |
 | `jetons-portail.css` | Jetons du portail (fonds, encres, `--f-ui`, `--f-mono`, `--f-disp`, espacements `--s1…--s6`). |
-| `jetons.css` | La couche Studio Real, **sombre** (`:root`, `[data-theme="dark"]`) et **clair** (`[data-theme="light"]`) : couleurs, familles de blocs `--fam-*`, ombres et voiles. |
+| `jetons.css` | La couche Studio Real, **sombre** (`:root`, `[data-theme="dark"]`) et **clair** (`[data-theme="light"]`) : couleurs, familles de blocs `--fam-*`, ombres et voiles ; puis les **rayons** `--rayon`, `--rayon-petit`, `--rayon-rond` (voir « Rayons »). |
 | `jetons-apercus.css` | Les couleurs des aperçus de blocs du Conducteur (`--apercu-*`, sombre et clair), lues par `apps/conducteur/src/theme/jetons.ts` ; hors `noyau.css` et `theme.css`. |
-| `jetons-derives.css` | Noms composés, aucune couleur nouvelle : filets `--filet-12…`, fonds `--ort-14`, `--rec-22`…, rayons NL-16 `--nl-7`, `--nl-10`, `--nl-16`. |
+| `jetons-derives.css` | Noms composés, aucune couleur nouvelle : filets `--filet-12…`, fonds `--ort-14`, `--rec-22`…, anciens rayons NL-16 `--nl-7`, `--nl-10`, `--nl-16` (plus utilisés : voir « Rayons »). |
 | `base.css` | Base commune (police, couleurs, barres de défilement, focus, `.f-disp`, `.f-micro`, `.chiffres`, animation `srp`). |
 | `composants.css` | Le curseur (`input[type=range]`) et la tête de lecture du Conducteur ; puis des composants simples `sr-*`. |
 | `pages.css` | Remises à zéro d'une page (contrôles nus, `[hidden]`, sélection, mouvement réduit). |
@@ -25,7 +25,7 @@ relatifs) comme dans une app Vite. Une valeur se corrige ici, une seule fois : i
 
 Les règles du design (à ne pas casser) : fond `--bg` `#0a0d0b`, rampe corail `--rampe-1 → --rampe-5`, verts profonds
 `--gdeep` / `--gt`, accent `--ort` `#e0674a`, encre tech `--cy` `#b9cfd8`, filets en `box-shadow: inset` (jamais de
-bordure), rayons NL-16 (6 → 16 px). Venus Rising pour les titres et **tous les chiffres** (`--f-disp`, `--f-chiffre`),
+bordure), angles carrés (jetons de rayon, voir « Rayons »). Venus Rising pour les titres et **tous les chiffres** (`--f-disp`, `--f-chiffre`),
 Chakra Petch pour le texte, Azeret Mono 7 → 9 px capitales pour les micro-étiquettes. Un chiffre qui change a une
 largeur fixe et des chiffres tabulaires ; un temps s'écrit `MM:SS`, sans décimale. **Aucune couleur en dur** hors des
 fichiers `jetons*.css` : il manque une couleur, on ajoute un jeton.
@@ -42,11 +42,28 @@ fichiers `jetons*.css` : il manque une couleur, on ajoute un jeton.
 ```
 
 Puis, dans `ma-page.css`, rien que des jetons : `background: var(--tile); box-shadow: inset 0 0 0 1px var(--filet-14);
-border-radius: var(--nl-10); color: var(--cy);`. Les temps : `import { mmss } from '../../packages/theme/format.js'`.
+border-radius: var(--rayon); color: var(--cy);`. Les temps : `import { mmss } from '../../packages/theme/format.js'`.
 
 La page doit être servie par HTTP (les polices ne se chargent pas en `file://` dans tous les navigateurs). Le serveur
 des figurants (`node prototypes/figurants/serveur/index.mjs`) et GitHub Pages servent la racine du dépôt : les
 chemins relatifs y sont valides.
+
+### Rayons (angles carrés)
+
+L'interface globale n'a **aucun arrondi** : cartes, panneaux, fenêtres, menus, champs, boutons, puces, vignettes et bandeaux
+sont à angles carrés. Trois jetons (dans `jetons.css`, un seul bloc, valables pour les deux thèmes) règlent tout :
+
+| Jeton | Valeur | Sert à |
+|---|---|---|
+| `--rayon` | `0` | cartes, panneaux, fenêtres, menus, champs, boutons, puces, vignettes, bandeaux, barres |
+| `--rayon-petit` | `0` | petits boutons, étiquettes, repères, curseurs |
+| `--rayon-rond` | `50%` | pastilles d'état et boutons ronds : un cercle reste un cercle (mettre `0` pour des carrés) |
+
+Règle : on n'écrit jamais `border-radius: 6px` mais `border-radius: var(--rayon)` (ou `-petit`, `-rond`) ; un coin voulu
+droit dans un groupe s'écrit `0` (`border-radius: var(--rayon) var(--rayon) 0 0`). Un test
+(`apps/conducteur/src/theme/rayons.test.ts`) lit les feuilles de style et refuse toute valeur en dur. Pour arrondir de
+nouveau l'interface : changer ces trois valeurs, rien d'autre. La **planche** (`apps/conducteur/src/planche/`) et le
+calque PixiJS de la sortie ont leurs rayons propres et n'utilisent pas ces jetons.
 
 ### Composants `sr-*`
 
