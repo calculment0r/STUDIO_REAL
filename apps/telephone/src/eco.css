@@ -27,7 +27,7 @@ body { font-family: var(--f-ui); line-height: 1.45; }
 .eco-parle { color: var(--cy); }
 
 .eco-journal { list-style: none; margin: var(--s3, 12px) 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.eco-ligne { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--nl-10); background: var(--tile); box-shadow: inset 0 0 0 1px var(--filet-14); }
+.eco-ligne { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--rayon); background: var(--tile); box-shadow: inset 0 0 0 1px var(--filet-14); }
 .eco-ligne.eco .sr-micro { color: var(--cy); }
 .eco-ligne.personne .sr-micro { color: var(--ink3); }
 .eco-texte { font-size: 17px; }
