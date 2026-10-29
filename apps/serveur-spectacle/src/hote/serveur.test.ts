@@ -103,6 +103,20 @@ describe('HTTP', () => {
     expect(JSON.stringify(config)).not.toMatch(/jeton|exploitation|medias/);
   });
 
+  it('/ice : 401 sans jeton ou avec un faux ; 200 avec le jeton de n’importe quel rôle (STUN seul sans clé TURN)', async () => {
+    const base = `http://127.0.0.1:${srv!.port}`;
+    expect((await fetch(`${base}/ice`)).status).toBe(401);
+    expect((await fetch(`${base}/ice`, { headers: { authorization: 'Bearer jeton-faux-0123456789' } })).status).toBe(401);
+    for (const jeton of Object.values(JETONS)) {
+      const r = await fetch(`${base}/ice`, { headers: { authorization: `Bearer ${jeton}` } });
+      expect(r.status).toBe(200);
+      expect(r.headers.get('cache-control')).toBe('no-store');
+      expect(await r.json()).toEqual({ iceServers: [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }], turn: 'absent' });
+    }
+    expect(await (await fetch(`${base}/config.json`)).json()).toMatchObject({ turn: false });
+    expect(await (await fetch(`${base}/sante`)).json()).toMatchObject({ turn: { etat: 'non-configure' } });
+  });
+
   it('statique : Range, ETag, 304, cache immuable des noms versionnés, no-cache sinon', async () => {
     const base = `http://127.0.0.1:${srv!.port}`;
     const r = await fetch(`${base}/medias/clip.0123abcd.mp4`, { headers: { range: 'bytes=2-5' } });

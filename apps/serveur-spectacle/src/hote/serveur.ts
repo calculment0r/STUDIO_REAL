@@ -11,7 +11,8 @@ import { WebSocketServer, WebSocket, type RawData } from 'ws';
 import { chargerFichier, type Projet } from '@studio-real/modele';
 import { LIMITES, lireMessageClient, type MessageServeur, type MsgRefus } from '@studio-real/protocole';
 import { Representation, correspond, empreinteDe, type EvenementJournal, type InfoSession, type Sortie } from '../noyau';
-import { ROLES_JETON, chemin, configPublique, type ConfigSpectacle, type RoleJeton } from './config';
+import { ROLES_JETON, chemin, configPublique, lireJetonTurn, reglagesTurn, type ConfigSpectacle, type RoleJeton } from './config';
+import { FournisseurIce, STUN_PAR_DEFAUT } from './ice';
 import { Persistance, type FichierInstantane } from './persistance';
 import { SondeTunnel, construireSante, type Sonde } from './sante';
 import { servirFichier, servirStatique, type Montage } from './statique';
@@ -54,6 +55,11 @@ export interface OptionsServeur {
    * demande un arrêt PROPRE à un processus Node, c'est la voie du script `arreter-spectacle.ps1`.
    */
   surDemandeArret?: () => void;
+  /**
+   * Serveurs ICE de la visio (`GET /ice`) ; défaut : TURN si la clé est complète (turn.cleId de la configuration +
+   * turn.jeton de <exploitation>/spectacle.secrets.json, ou CF_TURN_CLE_ID / CF_TURN_CLE_JETON), sinon STUN seul.
+   */
+  ice?: FournisseurIce;
 }
 
 export interface ServeurSpectacle {
@@ -231,14 +237,24 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
     res.end(JSON.stringify(x));
   };
 
+  // ── Serveurs ICE de la visio : le jeton TURN est relu dans les secrets (jamais gardé ailleurs que dans ce fournisseur)
+  const ice = o.ice ?? new FournisseurIce({
+    turn: reglagesTurn(config, lireJetonTurn(join(chemin(o.racine, config.exploitation), 'spectacle.secrets.json'))),
+    dire,
+  });
+
   const tunnel = new SondeTunnel({ config, demarre, ...(o.sondeTunnel ? { sonde: o.sondeTunnel } : {}), ...(o.intervalleSondeMs ? { intervalleMs: o.intervalleSondeMs } : {}) });
   const sante = () => {
     const parRole: Record<string, number> = { regie: 0, acteur: 0, agent: 0 };
     for (const c of clients) if (c.info) parRole[c.info.role] = (parRole[c.info.role] ?? 0) + 1;
-    return construireSante({
-      version, demarre, redemarrages, parRole, total: clients.size, resume: rep.resume(), persistance: persistance.etat(),
-      tunnel: tunnel.etat(), maintenant: Date.now(),
-    });
+    return {
+      ...construireSante({
+        version, demarre, redemarrages, parRole, total: clients.size, resume: rep.resume(), persistance: persistance.etat(),
+        tunnel: tunnel.etat(), maintenant: Date.now(),
+      }),
+      // relais TURN de la visio : non-configure | inconnu | actif | echec (jamais la clé)
+      turn: ice.etat(),
+    };
   };
 
   /** Une requête passée par un tunnel ou un relais n'est JAMAIS « de cette machine » (cloudflared arrive en loopback). */
@@ -272,7 +288,14 @@ export async function demarrerServeur(o: OptionsServeur): Promise<ServeurSpectac
     }
     if (p === '/sante') { json(res, 200, sante()); return; }
     if (PAGES_FIXES[p]) { servirFichier(req, res, PAGES_FIXES[p]!); return; }
-    if (p === '/config.json') { json(res, 200, configPublique(config, { version, run: rep.run?.id ?? null })); return; }
+    if (p === '/config.json') { json(res, 200, configPublique(config, { version, run: rep.run?.id ?? null, turn: ice.configure })); return; }
+    if (p === '/ice') {
+      // serveurs ICE de la visio : jeton de n'importe quel rôle (Authorization: Bearer), jamais d'erreur bloquante
+      const jeton = jetonRegieDe(req);
+      if (!jeton || !ROLES_JETON.some(r => jetonValide(r, jeton))) { json(res, 401, { ok: false, erreur: 'jeton refusé' }); return; }
+      void ice.obtenir().then(r => json(res, 200, r), () => json(res, 200, { iceServers: STUN_PAR_DEFAUT, turn: 'absent' }));
+      return;
+    }
     if (servirStatique(req, res, p, montages)) return;
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' });
     res.end('introuvable');

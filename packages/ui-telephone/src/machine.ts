@@ -409,8 +409,12 @@ export function reduire(etat: EtatTelephone, ev: Evenement, heure = 0): Resultat
       }
       case 'resync':
         return { etat: { ...etat, connecte: false }, sorties: [{ e: 'hello' }] };
+      case 'rtc':
+        // signalisation WebRTC de la visio : lue par visio/appel.ts directement sur le transport (elle ne change rien
+        // à l'état du téléphone : les liaisons vivent dans la machine pure visio/etat.ts)
+        return rien(etat);
       default:
-        // pong (le transport mesure l'horloge), salle, lecture, agent.cmd : pas pour un téléphone ; rtc : lot visio
+        // pong (le transport mesure l'horloge), salle, lecture, agent.cmd : pas pour un téléphone
         return rien(etat);
     }
   }

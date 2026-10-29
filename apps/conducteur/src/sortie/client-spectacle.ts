@@ -9,7 +9,9 @@
 //   - accuse l'affichage quand la scène est À L'ÉCRAN : in{k:'accuse', data{vseq, affiche}} (ou avec `refus` :
 //     'capacite' si elle ne sait pas montrer l'écran, 'invalide' si ses réglages ne donnent rien de montrable) ;
 //   - bat 1 fois par seconde : etat{heure, ecran (ce qui est AFFICHÉ), visible, rttMs, decalageMs, media[]} ;
-//   - signale la fin d'une vidéo jouée une fois : in{k:'fin-video', data{asset, vseq}} (→ signal `scene.fin-video`).
+//   - signale la fin d'une vidéo jouée une fois : in{k:'fin-video', data{asset, vseq}} (→ signal `scene.fin-video`) ;
+//   - relaie la signalisation WebRTC de la visio : rtc{de, vers, signal, ts} reçus (surRtc) et rtc{vers, signal} envoyés
+//     (envoyerRtc) ; les liaisons elles-mêmes sont dans visio-rtc.ts.
 // Un refus FATAL du serveur (version du protocole, jeton, acteur inconnu) arrête le client : il ne se reconnecte pas en
 // boucle, la page affiche le refus.
 // Le transport est le client commun du paquet protocole (transportWebSocket, ou transportMemoire pour les tests).
@@ -21,7 +23,7 @@
 import {
   VERSION_PROTOCOLE,
   type EcranAffiche, type EntreeActeur, type EtatTransport, type FabriqueHello, type MediaActeur, type MessageClient, type MessageServeur, type MsgFx,
-  type MsgHello, type RefusAffichage, type TransportSpectacle, type VueDiffusee,
+  type MsgHello, type MsgRtcServeur, type RefusAffichage, type TransportSpectacle, type VueDiffusee,
 } from '@studio-real/protocole';
 import { BUILD_SORTIE, sourceSpectacleValide, VERSION_SORTIE, type ConfigSortie, type EtatPrecharge, type SourceSpectacle } from './protocole';
 import { ECRANS_SORTIE, sceneDeVue, type ResultatVue } from './traduction';
@@ -135,6 +137,7 @@ export class ClientSortieSpectacle {
   private readonly abonnesVue = new Set<Abonne<VueRecue>>();
   private readonly abonnesFx = new Set<Abonne<MsgFx>>();
   private readonly abonnesEtat = new Set<Abonne<EtatClientSpectacle>>();
+  private readonly abonnesRtc = new Set<Abonne<MsgRtcServeur>>();
   private readonly desabonner: (() => void)[] = [];
   private vseq = 0;
   private cseq = 0;
@@ -175,6 +178,18 @@ export class ClientSortieSpectacle {
   surVue(fn: Abonne<VueRecue>): () => void { this.abonnesVue.add(fn); return () => { this.abonnesVue.delete(fn); }; }
   surFx(fn: Abonne<MsgFx>): () => void { this.abonnesFx.add(fn); return () => { this.abonnesFx.delete(fn); }; }
   surEtat(fn: Abonne<EtatClientSpectacle>): () => void { this.abonnesEtat.add(fn); fn(this.etat); return () => { this.abonnesEtat.delete(fn); }; }
+  /** Signalisation WebRTC reçue (visio) : rtc{de: <session de l'émetteur>, vers, signal, ts}. */
+  surRtc(fn: Abonne<MsgRtcServeur>): () => void { this.abonnesRtc.add(fn); return () => { this.abonnesRtc.delete(fn); }; }
+
+  /**
+   * Envoie un signal WebRTC à un acteur ou à une session (relayé par le serveur). Ligne fermée : rien ne part (un
+   * signal périmé rejoué à la reconnexion ferait plus de mal que de bien) ; renvoie vrai si le signal est parti.
+   */
+  envoyerRtc(vers: string, signal: Record<string, unknown>): boolean {
+    if (this.arrete || this.etat.ligne !== 'ouvert') return false;
+    this.transport.envoyer({ t: 'rtc', vers, signal });
+    return true;
+  }
 
   /** Heure du serveur (ms), estimée par le transport (ping → pong) ; l'heure locale sans estimation. */
   heureServeur(): number { return this.maintenant() + (this.etat.decalageMs ?? 0); }
@@ -210,7 +225,12 @@ export class ClientSortieSpectacle {
       case 'fx':
         for (const f of [...this.abonnesFx]) f(m);
         break;
+      case 'rtc':
+        for (const f of [...this.abonnesRtc]) f(m);
+        break;
       case 'refus': {
+        // destinataire d'un signal WebRTC absent (téléphone pas encore là) : pas une erreur de la sortie
+        if (m.code === 'rtc-absent') break;
         const fatal = !!m.fatal || REFUS_FATALS.includes(m.code);
         this.majEtat({ refus: { code: m.code, message: m.message, fatal } });
         if (fatal) this.arreter('refuse');
@@ -280,6 +300,6 @@ export class ClientSortieSpectacle {
   fermer(): void {
     this.arreter('ferme');
     for (const f of this.desabonner) f();
-    this.abonnesVue.clear(); this.abonnesFx.clear(); this.abonnesEtat.clear();
+    this.abonnesVue.clear(); this.abonnesFx.clear(); this.abonnesEtat.clear(); this.abonnesRtc.clear();
   }
 }

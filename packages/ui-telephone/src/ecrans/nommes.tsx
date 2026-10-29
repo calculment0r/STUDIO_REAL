@@ -3,6 +3,8 @@
 // prototypes/figurants/pages/eco (prompteur de Franck) et pages/ministre (veille et compteurs).
 import { useEffect, useRef } from 'react';
 import { Etiquette, LETTRES, mmss, nombre, nombres, texte, textes, useMaintenant, type ProprietesEcran } from './communs';
+import { useVisio } from '../visio/registre';
+import type { EtatVisio } from '../visio/etat';
 
 // ── prompteur : les questions, celle de la régie mise en avant ────────────────────────────────────────────────────
 
@@ -108,9 +110,66 @@ export function EcranVeille({ vue }: ProprietesEcran) {
   );
 }
 
-// ── visio-appel : l'écran d'appel (la visio réelle, WebRTC, est un autre lot) ─────────────────────────────────────
+// ── visio-appel : l'écran d'appel, et la visio réelle (WebRTC, visio/appel.ts) une fois Répondre touché ──────────────
 
-/** `nom` (qui appelle), `vers` (postes de l'appel), `sonnerie`. État : sonne → en cours (place du flux) → fini. */
+/** Une vidéo d'un flux (reçu ou aperçu local) ; muette si `muet` (son refusé sans geste : jouée muette plutôt que pas). */
+function VideoFlux({ flux, muet, miroir, etiquette }: { flux: MediaStream; muet: boolean; miroir?: boolean; etiquette?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    if (v.srcObject !== flux) v.srcObject = flux;
+    v.muted = muet;
+    void v.play().catch(() => { v.muted = true; void v.play().catch(() => undefined); });
+  }, [flux, muet]);
+  return (
+    <div className="tl-visio-cadre" style={{ position: 'relative', minHeight: 0, overflow: 'hidden' }}>
+      <video
+        ref={ref} playsInline autoPlay muted={muet}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', ...(miroir ? { transform: 'scaleX(-1)' } : {}) }}
+      />
+      {etiquette && <span className="tl-et" style={{ position: 'absolute', left: 8, bottom: 6 }}>{etiquette}</span>}
+    </div>
+  );
+}
+
+/** Ce que dit l'écran pendant l'appel : caméra, puis l'état de chaque liaison. */
+export function statutVisio(e: EtatVisio): string {
+  if (e.camera === 'demande') return 'ouverture de la caméra…';
+  if (e.camera === 'refusee') return `caméra refusée (${e.erreurCamera ?? 'refus'}) : autoriser la caméra puis rappeler`;
+  if (!e.enLigne) return 'serveur injoignable · reconnexion…';
+  const morceaux = e.vers.map(a => {
+    const p = e.pairs[`vers:${a}`];
+    const phase = !p ? 'en attente' : p.phase === 'connecte' ? 'connecté' : p.phase === 'coupe' ? 'coupé, reprise…' : 'connexion…';
+    return `${a} : ${phase}`;
+  });
+  return morceaux.join(' · ') || 'en attente';
+}
+
+/** Les flux de l'appel : reçus (son selon `params.son`, {<acteur>: bool}, vrai par défaut) et l'aperçu local en vignette. */
+function FluxAppel({ son }: { son: unknown }) {
+  const visio = useVisio();
+  if (!visio) return <span className="tl-et">flux vidéo indisponible ici (téléphone émulé)</span>;
+  const etat = visio.etat();
+  const local = visio.local();
+  const recus = [...visio.distants()].filter(([a]) => a !== etat.moi);
+  const sons = son && typeof son === 'object' && !Array.isArray(son) ? (son as Record<string, unknown>) : {};
+  return (
+    <div style={{ position: 'relative', alignSelf: 'stretch', justifySelf: 'stretch', display: 'grid', gridAutoRows: '1fr', gap: 4 }}>
+      {recus.map(([acteur, flux]) => <VideoFlux key={acteur} flux={flux} muet={sons[acteur] === false} etiquette={acteur} />)}
+      {recus.length === 0 && <span className="tl-et" style={{ alignSelf: 'center', textAlign: 'center' }}>{statutVisio(etat)}</span>}
+      {local && (
+        <div style={{ position: 'absolute', right: 8, bottom: 8, width: '30%', aspectRatio: '9 / 16', borderRadius: 'var(--nl-12)', overflow: 'hidden' }}>
+          <VideoFlux flux={local} muet miroir />
+        </div>
+      )}
+      {recus.length > 0 && <span className="tl-et" style={{ position: 'absolute', left: 8, top: 6 }}>{statutVisio(etat)}</span>}
+    </div>
+  );
+}
+
+/** `nom` (qui appelle), `vers` (ids des acteurs à qui envoyer l'image, défaut ['scene']), `son` ({<acteur>: bool}),
+ *  `sonnerie`. État : sonne → en cours (flux de la visio) → fini. */
 export function EcranVisioAppel({ vue, agir }: ProprietesEcran) {
   const nom = texte(vue.params, 'nom', texte(vue.params, 'de', 'Appel vidéo'));
   const vers = textes(vue.params.vers, 6);
@@ -134,7 +193,7 @@ export function EcranVisioAppel({ vue, agir }: ProprietesEcran) {
         {vers.length > 0 && <span className="tl-et">avec {vers.join(' · ')}</span>}
       </div>
       <div className="tl-visio-flux" aria-label="flux vidéo de l’appel">
-        <span className="tl-et">{enCours ? 'flux vidéo (lot visio)' : ''}</span>
+        {enCours ? <FluxAppel son={vue.params.son} /> : <span className="tl-et" />}
       </div>
       <div className="tl-visio-boutons">
         {!enCours && (

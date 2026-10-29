@@ -4,14 +4,17 @@
 //   repli sur l'origine de la page. Transport WebSocket.
 // - Téléphone émulé (`?emule=1&id=t042[&acteur=franck][&pseudo=lea]`) : transport MÉMOIRE, exposé sur
 //   `window.studioRealTelephone` pour l'émulateur du Conducteur (même origine, en iframe), aucun stockage partagé.
+// - Visio (écran `visio-appel`, téléphones nommés) : WebRTC branché sur le même transport (messages `rtc`), serveurs
+//   ICE demandés à `GET /ice` du serveur avec le jeton de l'acteur (TURN si une clé est collée, sinon STUN public).
+//   `?relais=1` force le passage par le TURN (essai du relais). Pas de visio sur un téléphone émulé.
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '@studio-real/theme/noyau.css';
 import '@studio-real/ui-telephone/telephone.css';
 import urlVenus from '@studio-real/theme/polices/venus-rising.otf?url';
 import {
-  App, demarrerTelephone, detecterCapacites, garderCseq, garderPseudo, jetonAppareil, lireAcces, lireCseq, lirePseudo,
-  sessionOnglet, stockagesNavigateur, transportMemoire, transportWebSocket,
+  App, demarrerTelephone, demarrerVisioTelephone, detecterCapacites, fournisseurIce, garderCseq, garderPseudo, installerVisio, jetonAppareil,
+  lireAcces, lireCseq, lirePseudo, origineHttp, sessionOnglet, stockagesNavigateur, transportMemoire, transportWebSocket,
   type CoteServeurMemoire, type Magasin, type Telephone,
 } from '@studio-real/ui-telephone';
 
@@ -111,13 +114,22 @@ async function demarrer() {
     if (effacer) history.replaceState(null, '', location.pathname + location.search);
     const config = await lireConfig();
     titre = config.titre;
+    const adresseWs = adresseWebSocket(config, location.origin);
+    // public sans jeton dans le QR : 'public' (le serveur décide s'il l'accepte)
+    const jeton = acces.jeton ?? 'public';
     telephone = demarrerTelephone({
       etat: { acteur: acces.acteur, personne: jetonAppareil(local, cookies), session: sessionOnglet(session), pseudo: lirePseudo(local), cseq: lireCseq(session) },
-      // public sans jeton dans le QR : 'public' (le serveur décide s'il l'accepte)
-      creerTransport: hello => transportWebSocket(adresseWebSocket(config, location.origin), acces.jeton ?? 'public', { hello }),
+      creerTransport: hello => transportWebSocket(adresseWs, jeton, { hello }),
       app, capacites,
       persister: { pseudo: p => garderPseudo(local, p), cseq: n => garderCseq(session, n) },
     });
+    // visio : seulement là où WebRTC existe (l'écran visio-appel montre sinon la place du flux)
+    if (capacites.webrtc) {
+      installerVisio(demarrerVisioTelephone({
+        transport: telephone.transport, magasin: telephone.magasin,
+        configuration: fournisseurIce({ urlHttp: origineHttp(adresseWs) || location.origin, jeton, relais: q.get('relais') === '1' }),
+      }));
+    }
   }
 
   createRoot(document.getElementById('racine')!).render(
