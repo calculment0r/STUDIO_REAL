@@ -1,5 +1,8 @@
 // L'émulateur : une salle émulée (noyau du serveur en mémoire) et sa population de téléphones émulés, sur une horloge
 // émulée. Sous Node (vitest) on avance le temps à la main (`avancer`) ; dans le Conducteur, `tempsReel(vitesse)`.
+// Avec `transport: { url, jeton, jetonRegie? }`, la salle n'est plus en mémoire : c'est un vrai serveur de spectacle, les
+// téléphones s'y connectent par WebSocket (transport-reel.ts), l'horloge suit le temps réel (×1) et `avancer` n'a pas
+// d'effet. `creerEmulateur` renvoie alors un `EmulateurReel` (sans `salle` ni `changerProjet`, avec `reel` et ses mesures).
 import type { Projet, SalleSimulee, Signaux } from '@studio-real/modele';
 import type { MsgAck, OpConduite, VueDiffusee } from '@studio-real/protocole';
 import { vueEcran } from '@studio-real/ui-telephone';
@@ -9,7 +12,8 @@ import { Ordonnanceur } from './horloge';
 import { instantArrivee, population, profil, pseudoEmule } from './profils';
 import { rejouerJournal } from './rejouer';
 import { SalleEmulee } from './salle';
-import type { BilanSalle, Cible, Emulateur, EvenementSalle, OptionsEmulateur, ProfilSpectateur, RapportRejeu } from './types';
+import { SalleReelle, percentile, type MesuresReelles } from './transport-reel';
+import type { BilanSalle, Cible, Emulateur, EvenementSalle, OptionsEmulateur, OptionsTransportReel, ProfilSpectateur, RapportRejeu } from './types';
 
 /** Ce que l'émulateur offre en plus de l'interface du rapport (Conducteur, rejeu, vitrine). */
 export interface EmulateurSalle extends Emulateur {
@@ -27,24 +31,33 @@ export interface EmulateurSalle extends Emulateur {
   readonly vitesse: number;
 }
 
-/** Percentile (0 → 1) d'une liste de nombres. */
-function percentile(l: readonly number[], p: number): number {
-  if (!l.length) return 0;
-  const t = [...l].sort((a, b) => a - b);
-  return Math.round(t[Math.min(t.length - 1, Math.max(0, Math.ceil(p * t.length) - 1))]!);
+/** L'émulateur branché sur un vrai serveur : pas de salle en mémoire, pas de changement de projet (le serveur le tient) ;
+ *  `reel` donne les mesures prises sur le fil. */
+export interface EmulateurReel extends Omit<EmulateurSalle, 'salle' | 'changerProjet'> {
+  readonly reel: SalleReelle;
+  /** les mesures du fil (accusés, ack, refus, octets, reconnexions…), à l'instant */
+  mesures(): MesuresReelles;
+  /** comme `conduite`, mais attend le vrai accusé du serveur */
+  conduiteReelle(op: Parameters<Emulateur['conduite']>[0]): ReturnType<SalleReelle['conduiteReelle']>;
+  /** comme `go`, mais rend la main quand le serveur a répondu aux `top` */
+  goReel(): Promise<void>;
 }
+
+const estReel = (t: OptionsEmulateur['transport']): t is OptionsTransportReel => !!t && t !== 'memoire';
 
 const numero = (i: number) => String(i).padStart(3, '0');
 
-export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
-  if (o.transport && o.transport !== 'memoire') {
-    throw new Error('Émulateur : le branchement sur un vrai serveur (essai de charge) n’est pas encore fait ; transport « memoire » seulement.');
-  }
+export function creerEmulateur(o: OptionsEmulateur & { transport: OptionsTransportReel }): EmulateurReel;
+export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle;
+export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle | EmulateurReel {
   const graine = o.graine >>> 0;
-  const debut = o.horloge?.debut ?? Date.now();
+  const reel = estReel(o.transport) ? new SalleReelle({ reseau: o.transport, projet: o.projet }) : null;
+  // en réel l'horloge émulée suit l'heure réelle (les accusés des téléphones portent cette heure)
+  const debut = reel ? Date.now() : o.horloge?.debut ?? Date.now();
   const horloge = new Ordonnanceur(debut);
-  const salle = new SalleEmulee({ projet: o.projet, horloge, graine, ...(o.mode ? { mode: o.mode } : {}) });
-  let sens: SalleSimulee = o.sens ?? salle.rep.projet.sens;
+  const salle = reel ? null : new SalleEmulee({ projet: o.projet, horloge, graine, ...(o.mode ? { mode: o.mode } : {}) });
+  let sens: SalleSimulee = o.sens ?? o.projet.sens;
+  if (salle) sens = o.sens ?? salle.rep.projet.sens;
   let auto = o.auto ?? true;
   let actif = false;
   let demarre = false;
@@ -54,7 +67,7 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
   const rndActions = mulberry32(sousGraine(graine, 'actions'));
 
   const ctx: ContexteTelephone = {
-    horloge, salle, graine, sens: () => sens, auto: () => auto, actif: () => actif, urlTelephone,
+    horloge, salle, reel, graine, sens: () => sens, auto: () => auto, actif: () => actif, urlTelephone,
   };
 
   /** Les téléphones, dans l'ordre de création. */
@@ -99,8 +112,20 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
   /** Tâche de la salle (s'éteint quand l'émulateur s'arrête). */
   const planifier = (ms: number, fn: () => void) => horloge.planifier(ms, () => { if (actif) fn(); });
 
+  /** La salle en mémoire ; en réel il n'y en a pas, et le dire vaut mieux qu'un undefined. */
+  const memoire = (): SalleEmulee => {
+    if (!salle) throw new Error('Émulateur réel : pas de salle en mémoire (le noyau tourne sur le serveur) ; voir .reel.');
+    return salle;
+  };
+  const exigerMemoire = (quoi: string): SalleEmulee => {
+    if (!salle) throw new Error(`Émulateur réel : ${quoi} n'existe qu'avec le transport mémoire.`);
+    return salle;
+  };
+  let avertiAvancer = false;
+
   const emu: EmulateurSalle = {
-    salle, horloge,
+    get salle() { return memoire(); },
+    horloge,
     get actif() { return actif; },
     get vitesse() { return vitesse; },
 
@@ -109,7 +134,11 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
       actif = true;
       if (!demarre) {
         demarre = true;
-        salle.lancer(o.mode ?? 'repetition', graine);
+        if (reel) {
+          // le serveur a déjà sa représentation : on ouvre la régie (si on a son jeton), le temps devient le temps réel
+          try { await reel.demarrer(); } catch (e) { actif = false; demarre = false; throw e; }
+          emu.tempsReel(1);
+        } else salle!.lancer(o.mode ?? 'repetition', graine);
         const mode = o.arrivees ?? 'salle';
         for (const t of tels) {
           const rnd = mulberry32(sousGraine(graine, 'arrivee', t.id));
@@ -121,7 +150,7 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
     async arreter() {
       emu.tempsReel(0);
       for (const t of tels) t.retirer();
-      salle.arreter();
+      (reel ?? salle)!.arreter();
       actif = false;
       horloge.vider();
     },
@@ -203,9 +232,16 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
       return l.map(t => t.id);
     },
 
-    conduite: (op: OpConduite): MsgAck => salle.conduite(op),
-    go: () => salle.go(),
-    vueDe: (acteur: string, personne?: string): VueDiffusee | null => salle.vueDe(acteur, personne),
+    conduite: (op: OpConduite): MsgAck => (reel ?? salle)!.conduite(op),
+    go: (): void => {
+      if (reel) {
+        // les `top` partent après la réponse du premier : on ne bloque pas l'appelant ; une erreur (régie absente) est dite tout de suite
+        reel.go().catch(e => console.error('[emulateur] go :', e instanceof Error ? e.message : e));
+        return;
+      }
+      salle!.go();
+    },
+    vueDe: (acteur: string, personne?: string): VueDiffusee | null => (reel ?? salle)!.vueDe(acteur, personne),
 
     bilan(): BilanSalle {
       const parEcran: Record<string, number> = {};
@@ -221,9 +257,9 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
         if (e.enLigne) connectes++;
         else horsLigne++;
       }
-      const { question, votes, textes } = salle.votes();
-      const lat = salle.latences;
-      const L = salle.lecture();
+      const { question, votes, textes } = (reel ?? salle)!.votes();
+      const lat = reel ? reel.latencesRecentes : salle!.latences;
+      const L = (reel ?? salle)!.lecture();
       return {
         population, arrives, connectes, horsLigne, parEcran, votes, question, textes,
         latenceAck: {
@@ -236,14 +272,15 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
       };
     },
 
-    signaux: (): Signaux => salle.signaux(),
-    surEvenement: (fn: (e: EvenementSalle) => void) => salle.surEvenement(fn),
+    signaux: (): Signaux => (reel ?? salle)!.signaux(),
+    surEvenement: (fn: (e: EvenementSalle) => void) => (reel ?? salle)!.surEvenement(fn),
 
     rejouer(journal, opts = {}): Promise<RapportRejeu> {
+      const laSalle = exigerMemoire('rejouer');
       // la vitesse du rejeu est celle de l'horloge émulée (le noyau compte ses étapes sur la même horloge)
       if (opts.vitesse && opts.vitesse > 0 && minuteur !== null) emu.tempsReel(opts.vitesse);
       return rejouerJournal({
-        horloge, salle, demarrer: () => emu.demarrer(),
+        horloge, salle: laSalle, demarrer: () => emu.demarrer(),
         telephone: (personne, session, acteur) => {
           const deja = tels.find(t => t.personne === personne && !t.retire);
           if (deja) return deja;
@@ -253,6 +290,12 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
     },
 
     async avancer(ms) {
+      if (reel) {
+        // temps réel : on ne saute pas dans le temps d'un vrai serveur
+        if (!avertiAvancer) { avertiAvancer = true; console.warn(`[emulateur] avancer(${ms}) sans effet avec le transport réel : le temps est le temps réel.`); }
+        await Promise.resolve();
+        return;
+      }
       horloge.avancer(ms);
       await Promise.resolve();
     },
@@ -260,6 +303,10 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
     tempsReel(v) {
       if (minuteur !== null) { clearInterval(minuteur); minuteur = null; }
       vitesse = Math.max(0, Math.min(20, v));
+      if (reel && vitesse !== 0 && vitesse !== 1) {
+        console.warn(`[emulateur] tempsReel(${v}) : le serveur réel ne s'accélère pas, vitesse ramenée à ×1.`);
+        vitesse = 1;
+      }
       if (!vitesse || typeof setInterval === 'undefined') return;
       const maintenantReel = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
       let dernier = maintenantReel();
@@ -271,16 +318,25 @@ export function creerEmulateur(o: OptionsEmulateur): EmulateurSalle {
       }, 50);
     },
 
-    journal: () => salle.journal(),
+    journal: () => (reel ?? salle)!.journal(),
     maintenant: () => horloge.maintenant(),
 
     changerProjet(projet) {
-      salle.changerProjet(projet);
-      if (!o.sens) sens = salle.rep.projet.sens;
+      const laSalle = exigerMemoire('changerProjet (le serveur tient son projet)');
+      laSalle.changerProjet(projet);
+      if (!o.sens) sens = laSalle.rep.projet.sens;
       for (const t of tels) if (t.arrive && !t.retire) t.renouerLigne();
     },
     reglerSens(s) { sens = { ...s }; },
     reglerAuto(a) { auto = a; },
   };
+  if (reel) {
+    Object.assign(emu, {
+      reel,
+      mesures: () => reel.mesures(),
+      conduiteReelle: (op: Parameters<Emulateur['conduite']>[0]) => reel.conduiteReelle(op),
+      goReel: () => reel.go(),
+    });
+  }
   return emu;
 }

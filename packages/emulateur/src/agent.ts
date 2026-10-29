@@ -5,16 +5,19 @@
 //   l'accuse comme l'application (App.tsx : `affiche` après chaque rendu) ;
 // - VITRINE : la vraie application (`apps/telephone`, `?emule=1&id=…`) dans une iframe ; son côté serveur mémoire
 //   (`window.studioRealTelephone`) est branché sur la salle à la place de l'agent (même personne, même session).
+// - transport RÉEL (transport-reel.ts) : le même agent, mais sa ligne est un WebSocket vers un vrai serveur de spectacle ;
+//   la latence est vraie, le temps est le temps réel (l'horloge de l'émulateur le suit), les coupures ferment la socket.
 // Toutes les heures sont celles de l'horloge émulée ; tout hasard vient du flux du téléphone (graine de la salle).
 import type { SalleSimulee } from '@studio-real/modele';
 import {
   creerMagasin, ecranAMontrer, etatInitial, messageHello, nombreReponses, nomsCapacites, questionDe, transportMemoire, vueEcran,
-  type Action, type CoteServeurMemoire, type Effet, type Magasin, type PaireMemoire, type Sortie,
+  type Action, type CoteServeurMemoire, type Effet, type FabriqueHello, type Magasin, type Sortie, type TransportTelephone,
 } from '@studio-real/ui-telephone';
 import { entre, exponentielle, logNormale, mulberry32, sousGraine, tirerPondere } from './alea';
 import type { Ordonnanceur } from './horloge';
 import { BANQUE_TEXTES, facteurReaction, participation, poidsPenchant } from './profils';
 import type { SalleEmulee } from './salle';
+import type { SalleReelle } from './transport-reel';
 import type { EtatTelephoneEmule, ProfilSpectateur, TelephoneEmule } from './types';
 
 /** Version annoncée dans `hello.app` par les téléphones émulés. */
@@ -25,7 +28,10 @@ export const BATTEMENT_MS = 5000;
 /** Ce que le téléphone partage avec l'émulateur. */
 export interface ContexteTelephone {
   horloge: Ordonnanceur;
-  salle: SalleEmulee;
+  /** la salle en mémoire (transport mémoire) ; null en transport réel */
+  salle: SalleEmulee | null;
+  /** le serveur réel (transport réel) ; null en transport mémoire */
+  reel: SalleReelle | null;
   graine: number;
   sens: () => SalleSimulee;
   /** comportement automatique en vigueur */
@@ -62,6 +68,17 @@ export function indexReponse(option: string | number): number {
 export const personneEmulee = (id: string) => `emule-${id}`.padEnd(6, '0');
 export const sessionEmulee = (id: string) => `emule-${id}-s`.padEnd(6, '0');
 
+/** La ligne d'un téléphone, quel que soit le transport : mémoire (salle émulée) ou réel (WebSocket). */
+interface LigneTel {
+  readonly transport: TransportTelephone;
+  readonly ouverte: boolean;
+  ouvrir(): void;
+  couper(): void;
+  /** la ligne tombe et se rouvre aussitôt (le serveur a redémarré) */
+  renouer(): void;
+  fermer(): void;
+}
+
 export class TelephoneSalle implements TelephoneEmule {
   readonly id: string;
   readonly profil: ProfilSpectateur;
@@ -73,7 +90,7 @@ export class TelephoneSalle implements TelephoneEmule {
   private readonly rnd: () => number;
   private readonly autoPropre: boolean;
   magasin: Magasin | null = null;
-  private paire: PaireMemoire | null = null;
+  private ligne: LigneTel | null = null;
   private debrancher: (() => void) | null = null;
   /** livraisons dans l'ordre (TCP) : prochaine heure de livraison au plus tôt */
   private derniereLivraison = 0;
@@ -132,39 +149,66 @@ export class TelephoneSalle implements TelephoneEmule {
       demanderPseudo: this.acteur === 'public',
     });
     let m!: Magasin;
-    const paire = transportMemoire({
-      hello: () => messageHello(m.lire(), { app: { ...APP_EMULEE }, capacites: nomsCapacites(this.profil.capacites) }),
-      jeton: 'emule',
-      differer: fn => this.differer(fn),
-    });
-    m = creerMagasin(etat, sorties => this.executer(sorties, paire), () => this.ctx.horloge.maintenant());
-    paire.telephone.surMessage(msg => { if (this.paire === paire) m.envoyer(msg); });
-    paire.telephone.surEtat(t => {
-      if (this.paire !== paire) return;
-      m.envoyer({ a: 'reseau', enLigne: t.etat === 'ouvert', ...(t.etat === 'ouvert' ? { rttMs: this.profil.reseau.rttMs } : {}) });
+    const hello: FabriqueHello = () => messageHello(m.lire(), { app: { ...APP_EMULEE }, capacites: nomsCapacites(this.profil.capacites) });
+    const reel = this.ctx.reel;
+    const ligne = reel ? this.ligneReelle(reel, hello) : this.ligneMemoire(hello);
+    m = creerMagasin(etat, sorties => this.executer(sorties, ligne), () => this.ctx.horloge.maintenant());
+    ligne.transport.surMessage(msg => { if (this.ligne === ligne) m.envoyer(msg); });
+    ligne.transport.surEtat(t => {
+      if (this.ligne !== ligne) return;
+      const rtt = reel ? t.rttMs : this.profil.reseau.rttMs;
+      m.envoyer({ a: 'reseau', enLigne: t.etat === 'ouvert', ...(t.etat === 'ouvert' && rtt !== undefined ? { rttMs: rtt } : {}) });
     });
     m.abonner(() => { if (this.magasin === m) this.apresChangement(); });
     this.magasin = m;
-    this.paire = paire;
+    this.ligne = ligne;
     this.cleRendu = '';
     this.vseqVu = 0;
-    this.debrancher = this.ctx.salle.brancher(this.id, paire.serveur);
     if (!this.visible) m.envoyer({ a: 'visible', visible: false });
+  }
+
+  /** Ligne mémoire : la paire de canaux, branchée sur la salle émulée (latence et perte simulées par `differer`). */
+  private ligneMemoire(hello: FabriqueHello): LigneTel {
+    const salle = this.ctx.salle!;
+    const paire = transportMemoire({ hello, jeton: 'emule', differer: fn => this.differer(fn) });
+    this.debrancher = salle.brancher(this.id, paire.serveur);
+    return {
+      transport: paire.telephone,
+      get ouverte() { return paire.serveur.ouverte; },
+      ouvrir: () => paire.serveur.ouvrir(),
+      couper: () => paire.serveur.couper(),
+      renouer: () => { paire.serveur.couper(); paire.serveur.ouvrir(); },
+      fermer: () => paire.telephone.fermer(),
+    };
+  }
+
+  /** Ligne réelle : un WebSocket vers le vrai serveur (ouvert dès la création, sauf coupure en cours). */
+  private ligneReelle(reel: SalleReelle, hello: FabriqueHello): LigneTel {
+    const l = reel.creerLigne({ id: this.id, acteur: this.acteur, personne: this.personne, hello, bloquee: this.coupe });
+    return {
+      transport: l.transport,
+      get ouverte() { return l.ouverte; },
+      ouvrir: () => { if (l.bloquee) l.retablir(); },
+      couper: () => l.couper(),
+      // la ligne réelle se rouvre toute seule : seul un blocage de coupure demande un geste
+      renouer: () => l.transport.renouer(),
+      fermer: () => l.fermer(),
+    };
   }
 
   private arreterMachine() {
     for (const annuler of this.prevus.values()) annuler();
     this.prevus.clear();
-    const paire = this.paire;
-    this.paire = null;
+    const ligne = this.ligne;
+    this.ligne = null;
     this.magasin = null;
-    paire?.telephone.fermer();
+    ligne?.fermer();
     this.debrancher?.();
     this.debrancher = null;
   }
 
   private ouvrirLigne() {
-    if (this.paire && !this.paire.serveur.ouverte && !this.coupe) this.paire.serveur.ouvrir();
+    if (this.ligne && !this.ligne.ouverte && !this.coupe) this.ligne.ouvrir();
   }
 
   /** Latence d'un message (aller simple) : RTT/2 ± 20 %, une perte coûte une retransmission (2 RTT) ; l'ordre est
@@ -180,18 +224,18 @@ export class TelephoneSalle implements TelephoneEmule {
   }
 
   /** Les sorties de la machine (comme telephone.ts) : messages → transport, effets → témoins. */
-  private executer(sorties: Sortie[], paire: PaireMemoire) {
+  private executer(sorties: Sortie[], ligne: LigneTel) {
     for (const s of sorties) {
-      if (!('e' in s)) { paire.telephone.envoyer(s); continue; }
+      if (!('e' in s)) { ligne.transport.envoyer(s); continue; }
       const e: Effet = s;
       switch (e.e) {
         case 'vibrer': if (this.profil.capacites.vibration) this.vibrations++; break;
-        case 'hello': paire.telephone.renouer(); break;
-        case 'arreter': paire.telephone.fermer(); break;
+        case 'hello': ligne.transport.renouer(); break;
+        case 'arreter': ligne.transport.fermer(); break;
         case 'precharger': {
           for (const media of e.medias) {
             const ms = (this.profil.videoPreteS ?? 2) * 1000 * entre(this.rnd, 0.8, 1.2);
-            this.planifier(ms, () => { if (this.paire === paire) this.magasin?.envoyer({ a: 'media', asset: media.asset, pret: 1 }); });
+            this.planifier(ms, () => { if (this.ligne === ligne) this.magasin?.envoyer({ a: 'media', asset: media.asset, pret: 1 }); });
           }
           break;
         }
@@ -327,7 +371,7 @@ export class TelephoneSalle implements TelephoneEmule {
     const c = this.profil.coupures;
     if (c.parMinute > 0) {
       const prochaine = () => this.planifier(exponentielle(this.rnd, 60_000 / c.parMinute), () => {
-        if (!this.vitrine && this.paire?.serveur.ouverte) this.couper(entre(this.rnd, c.dureeS[0], c.dureeS[1]));
+        if (!this.vitrine && this.ligne?.ouverte) this.couper(entre(this.rnd, c.dureeS[0], c.dureeS[1]));
         prochaine();
       });
       prochaine();
@@ -389,12 +433,14 @@ export class TelephoneSalle implements TelephoneEmule {
   ecrire(texte: string): void { this.ecrireTexte(texte); }
 
   /** Toucher : 'son', 'pret', 'abonne' / 'desabonne', 'repondre' / 'raccrocher', 'reaction:<emoji>', sinon un
-   *  bouton de l'écran ('bouton' de la notification, 'question:2' du prompteur…). */
+   *  'fin-video' (la vidéo affichée est finie : la machine enchaîne sur l'écran « puis »), sinon un bouton de l'écran
+   *  ('bouton' de la notification, 'question:2' du prompteur…). */
   toucher(selecteur: string): void {
     const s = selecteur.trim();
     if (s === 'son') this.agir({ a: 'son', actif: true });
     else if (s === 'pret') this.agir({ a: 'pret' });
     else if (s === 'abonne' || s === 'desabonne') this.agir({ a: 'choisir', choix: s });
+    else if (s === 'fin-video') this.agir({ a: 'fin-video', asset: '' });
     else if (s === 'repondre' || s === 'raccrocher') this.agir({ a: 'appel', geste: s });
     else if (s.startsWith('reaction:')) this.agir({ a: 'reagir', emoji: s.slice(9) });
     else this.agir({ a: 'toucher', cible: s });
@@ -407,8 +453,8 @@ export class TelephoneSalle implements TelephoneEmule {
     this.finCoupure?.();
     this.finCoupure = null;
     if (this.vitrine) this.vitrine.serveur.couper();
-    else this.paire?.serveur.couper();
-    this.ctx.salle.ligneCoupee(this.session);
+    else this.ligne?.couper();
+    this.ctx.salle?.ligneCoupee(this.session);
     if (dureeS !== undefined && dureeS > 0) {
       this.coupe = false;
       this.finCoupure = this.planifier(dureeS * 1000, () => { this.finCoupure = null; this.retablir(); });
@@ -426,16 +472,20 @@ export class TelephoneSalle implements TelephoneEmule {
 
   /** Le serveur a redémarré (nouveau projet) : la ligne tombe et se rouvre aussitôt (hello, bienvenue). */
   renouerLigne(): void {
-    const s = this.vitrine?.serveur ?? this.paire?.serveur;
-    if (!s || this.coupe || !s.ouverte) return;
-    s.couper();
-    s.ouvrir();
+    if (this.coupe) return;
+    if (this.vitrine) {
+      const s = this.vitrine.serveur;
+      if (s.ouverte) { s.couper(); s.ouvrir(); }
+      return;
+    }
+    if (this.ligne?.ouverte) this.ligne.renouer();
   }
 
   /** Rechargement de la page : la machine repart de zéro (pseudo et cseq gardés, comme le stockage du navigateur),
    *  nouvelle ligne au bout de 1,5 à 4 s. */
   recharger(): void {
     if (!this.arrive || this.vitrine) return;
+    this.ctx.reel?.perte(this.id);
     this.arreterMachine();
     this.planifier(entre(this.rnd, 1500, 4000), () => {
       if (this.magasin || this.vitrine) return;
@@ -453,6 +503,7 @@ export class TelephoneSalle implements TelephoneEmule {
   /** La personne quitte la salle. */
   retirer(): void {
     this.arreterMachine();
+    this.ctx.reel?.oublier(this.id);
     this.fermerVitrine();
     this.retire = true;
   }
@@ -474,6 +525,7 @@ export class TelephoneSalle implements TelephoneEmule {
    *  l'application dit qu'elle est prête (`studio-real:telephone-pret`). */
   promouvoir(hote: HTMLElement): HTMLIFrameElement {
     if (typeof document === 'undefined') throw new Error('Vitrine : il faut un navigateur (DOM).');
+    if (this.ctx.reel) throw new Error('Vitrine : pas disponible avec le transport réel (l’iframe parle à la salle en mémoire).');
     if (this.iframe) { hote.appendChild(this.iframe); return this.iframe; }
     const f = document.createElement('iframe');
     f.title = `Téléphone émulé ${this.id}`;
@@ -496,6 +548,7 @@ export class TelephoneSalle implements TelephoneEmule {
 
   /** Branche l'application d'une iframe (son côté serveur mémoire) à la place de l'agent. */
   attacherVitrine(expose: { serveur: CoteServeurMemoire; magasin: Magasin }): void {
+    if (!this.ctx.salle) throw new Error('Vitrine : pas disponible avec le transport réel.');
     this.arreterMachine();
     this.vitrine = expose;
     this.magasin = expose.magasin;
