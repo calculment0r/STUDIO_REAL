@@ -34,8 +34,8 @@ import {
   type Acteur, type ContexteFoule, type EnvoiPasse, type EtatLecture, type Lecteur, type Projet, type Signaux,
 } from '@studio-real/modele';
 import {
-  LIMITES, VERSION_PROTOCOLE,
-  type MessageClient, type MessageServeur, type MsgAck, type MsgAgentAck, type MsgAgentCmd, type MsgAgentIn, type MsgBienvenue, type MsgConduite,
+  INTERVALLE_LECTURE_COMPLETE_MS, LIMITES, VERSION_PROTOCOLE, calculerDelta, suivreLecture,
+  type LectureComplete, type MessageClient, type MessageServeur, type MsgAck, type MsgAgentAck, type MsgAgentCmd, type MsgAgentIn, type MsgBienvenue, type MsgConduite,
   type MsgEtat, type MsgEtatActeur, type MsgFx, type MsgHello, type MsgIn, type MsgSalle, type StatutAck, type VueDiffusee,
 } from '@studio-real/protocole';
 import { acteursCibles, acteursFoule, agentPour, preparerProjet, type ProjetPrepare } from './projet';
@@ -132,6 +132,8 @@ export class Representation {
   private sorties: Sortie[] = [];
   /** le lecteur a reçu une entrée pendant l'appel en cours */
   private touche = false;
+  /** l'appel en cours a relancé ou déplacé le lecteur (lancer, allerA, reprendre) : toutes les régies reçoivent un complet */
+  private lectureACompleter = false;
 
   constructor(o: OptionsRepresentation) {
     const p = preparerProjet(o.projet);
@@ -333,7 +335,7 @@ export class Representation {
     const m: MsgBienvenue = { t: 'bienvenue', v: VERSION_PROTOCOLE, role: s.role, session, ts: this.horloge(), vue: null, cseq: s.cseq };
     if (s.acteur !== undefined) m.acteur = s.acteur;
     if ((s.role === 'acteur' || s.role === 'agent') && s.acteur) m.vue = cloner(this.assurerFlux(s.acteur, s.personne ?? session).vue);
-    if (s.role === 'regie') m.lecture = this.etatL ? { etat: cloner(this.etatL), par: 'serveur', ts: this.horloge() } : null;
+    if (s.role === 'regie') m.lecture = this.etatL ? this.lectureComplete(session) : null;
     const pseudo = s.role === 'acteur' && s.acteur ? this.e.salle[s.acteur]?.[s.personne ?? session]?.pseudo : undefined;
     if (pseudo !== undefined) m.pseudo = pseudo;
     return m;
@@ -370,6 +372,7 @@ export class Representation {
     if (x.k === 'avancer' && der?.k === 'avancer' && der.dt === x.dt && jsonStable(der.s) === jsonStable(x.s)) der.x = (der.x ?? 1) + 1;
     else this.e.entrees.push(cloner(x));
     jouer(this.lecteur, x);
+    if (x.k === 'allerA' || x.k === 'reprendre') this.lectureACompleter = true;
     if (x.k === 'avancer') this.e.signaux = cloner(x.s);
     this.etatL = this.lecteur.etat();
     this.touche = true;
@@ -403,6 +406,7 @@ export class Representation {
     this.lecteur = creerLecteur(this.projet, { mode, graine: g });
     this.etatL = this.lecteur.etat();
     this.touche = true;
+    this.lectureACompleter = true;
     this.journaliser('lancer', { mode, graine: g, projet: this.empreinteProjet, titre: this.projet.titre ?? null });
   }
 
@@ -472,6 +476,7 @@ export class Representation {
 
   private detacher(session: string, s: SessionEtat, journal = true) {
     s.connectee = false;
+    delete s.lecture;
     if (s.role === 'acteur' && s.acteur) {
       const p = this.e.salle[s.acteur]?.[s.personne ?? session];
       if (p) { p.sessions = p.sessions.filter(x => x !== session); p.vu = this.horloge(); }
@@ -482,7 +487,41 @@ export class Representation {
   private resync(session: string, s: SessionEtat) {
     if ((s.role === 'acteur' || s.role === 'agent') && s.acteur) {
       this.envoyer({ session }, { t: 'vue', ...cloner(this.assurerFlux(s.acteur, s.personne ?? session).vue) });
-    } else this.envoyer({ session }, this.bienvenue(session));
+    } else if (s.role === 'regie' && this.etatL) this.envoyer({ session }, { t: 'lecture', ...this.lectureComplete(session) });
+    else this.envoyer({ session }, this.bienvenue(session));
+  }
+
+  /** `lecture` complet pour une session de la régie : l'état entier, le numéro suivant, et la trace de ce qui part. */
+  private lectureComplete(session: string): LectureComplete {
+    const L = this.etatL!;
+    const maintenant = this.horloge();
+    const s = this.e.sessions[session]!;
+    const seq = (s.lecture?.seq ?? 0) + 1;
+    s.lecture = { seq, suivi: suivreLecture(L), completLe: maintenant };
+    return { mode: 'complet', etat: cloner(L), par: 'serveur', ts: maintenant, seq };
+  }
+
+  /**
+   * Ce que la lecture a changé, envoyé à chaque session de la régie : un delta (champs modifiés, entrées ajoutées),
+   * ou un complet quand le lecteur a été relancé ou déplacé, qu'un delta ne peut pas le dire, que la session n'a rien
+   * reçu encore ou que son dernier complet date d'une minute. Rien n'est envoyé quand rien n'a changé.
+   */
+  private diffuserLecture(L: EtatLecture) {
+    const maintenant = this.horloge();
+    for (const [session, s] of Object.entries(this.e.sessions)) {
+      if (s.role !== 'regie' || !s.connectee) continue;
+      const envoi = s.lecture;
+      if (envoi && !this.lectureACompleter && maintenant - envoi.completLe < INTERVALLE_LECTURE_COMPLETE_MS) {
+        const delta = calculerDelta(envoi.suivi, L);
+        if (delta) {
+          if (!delta.change) continue;
+          envoi.seq += 1;
+          this.envoyer({ session }, { t: 'lecture', mode: 'delta', seq: envoi.seq, ts: maintenant, par: 'serveur', d: delta.d });
+          continue;
+        }
+      }
+      this.envoyer({ session }, { t: 'lecture', ...this.lectureComplete(session) });
+    }
   }
 
   private battement(session: string, s: SessionEtat, m: MsgEtat) {
@@ -1044,8 +1083,9 @@ export class Representation {
         this.e.position = position;
         this.journaliser('lecture', { moment: L.moment, etape: L.etape, phase: L.phase ?? null, t: L.t, attenteGo: L.attenteGo, termine: L.termine });
       }
-      if (this.touche) this.envoyer({ role: 'regie' }, { t: 'lecture', etat: cloner(L), par: 'serveur', ts: this.horloge() });
+      if (this.touche) this.diffuserLecture(L);
     }
+    this.lectureACompleter = false;
     const salle = this.messageSalle();
     const { ts: _ts, ...sansHeure } = salle;
     const emp = empreinteDe(sansHeure);

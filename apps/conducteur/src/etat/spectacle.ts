@@ -12,13 +12,18 @@
 //   localement, saut → `allerA`, mémoire → `poser`, signal → `signal`, reprise → `reprendre`, lecture / pause →
 //   `pause`, RETENIR → `retenir`, +30 s → `prolonger`, PANIQUE → `panique`. Forcer une vue : fonction ci-dessous (rail). Un ordre n'est JAMAIS mis
 //   en file pendant une coupure : il serait rejoué en retard ; la régie est prévenue qu'il n'est pas parti.
-// - Lecture MIROIR : chaque `lecture{etat}` reçu recale le lecteur local (`resynchroniser` du magasin) ; entre deux, le
-//   lecteur local anime la conduite à 60 i/s.
+// - Lecture MIROIR : chaque `lecture` reçu recale le lecteur local (`resynchroniser` du magasin) ; entre deux, le
+//   lecteur local anime la conduite à 60 i/s. Le serveur n'envoie l'état entier (`complet`) qu'à la connexion, après un
+//   saut et une fois par minute ; entre deux, des `delta` (ce qui a changé) que la régie fusionne dans l'état reçu. Un
+//   trou dans `seq` (message perdu) ou un delta sans état de base → `resync`, et le serveur renvoie un complet.
 // - Retours : `salle` → résumé par acteur (etat/acteurs.ts) ; `etat` d'un acteur nommé → etat/acteurs.ts ; `refus` →
 //   voyant et message. Alertes (bandeau) : acteur perdu, sortie périmée, chute des connectés, écart > 5 s, serveur muet.
 import { create } from 'zustand';
 import { acteursEcho, type Acteur, type EtatLecture, type Projet } from '@studio-real/modele';
-import { VERSION_PROTOCOLE, type MessageServeur, type MsgConduite, type MsgHello, type OpConduite } from '@studio-real/protocole';
+import {
+  VERSION_PROTOCOLE, fusionnerDelta,
+  type MessageServeur, type MsgConduite, type MsgHello, type MsgLecture, type OpConduite,
+} from '@studio-real/protocole';
 import { transportWebSocket, type EtatTransport, type FabriqueHello, type TransportTelephone } from '@studio-real/ui-telephone';
 import { useMagasin, surConduiteLocale, type GesteConduite } from './magasin';
 import {
@@ -376,6 +381,12 @@ let transport: TransportTelephone | null = null;
 let desabonner: (() => void)[] = [];
 let optionsCourantes: OptionsLiaison = {};
 let avaitEteRelie = false;
+/** État de lecture reconstitué (dernier complet + deltas) et `seq` du dernier `lecture` reçu ; null : pas encore de base. */
+let lectureBase: EtatLecture | null = null;
+let seqLecture = 0;
+/** heure locale du dernier `resync` demandé pour la lecture (un seul toutes les 2 s tant que le complet n'arrive pas) */
+let resyncLectureLe = -Infinity;
+const ATTENTE_RESYNC_LECTURE_MS = 2000;
 /** début de chaque condition d'alerte (clé stable pour « bien reçu ») */
 const debutsAlertes = new Map<string, number>();
 
@@ -413,6 +424,7 @@ export function relierSpectacle(o: OptionsLiaison = {}): boolean {
   }
   cseq = Math.max(cseq, lireCseq());
   avaitEteRelie = false;
+  lectureBase = null; seqLecture = 0; resyncLectureLe = -Infinity;
   useSpectacle.setState({ ligne: 'connexion', refus: null, enAttente: [], dernierContact: 0, config: null });
   const fabrique = o.creerTransport ?? ((u, j, hello) => transportWebSocket(u, j, { hello, pingMs: PING_MS }));
   const t = fabrique(url, jeton, helloRegie);
@@ -492,11 +504,12 @@ function recevoir(m: MessageServeur) {
       if (perdus.length) signaler(`⚠ ${perdus.length} ordre(s) non reçu(s) par le serveur (${perdus.map(o => o.op).join(', ')}) : à refaire`);
       avaitEteRelie = true;
       useSpectacle.setState({ ligne: 'ouverte', ouvertLe: maintenant, enAttente: [], refus: null });
-      if (m.lecture) recevoirLecture(m.lecture.etat, maintenant);
+      if (m.lecture) recevoirLecture({ t: 'lecture', ...m.lecture }, maintenant);
+      else lectureBase = null;
       if (optionsCourantes.config !== false) void chargerConfig();
       return;
     }
-    case 'lecture': recevoirLecture(m.etat, maintenant); return;
+    case 'lecture': recevoirLecture(m, maintenant); return;
     case 'salle': poserResumeSalle(m, maintenant); return;
     case 'etat': {
       const { t: _t, acteur, ...reste } = m;
@@ -544,10 +557,29 @@ function arreterTransport() {
   if (t) { try { t.fermer(); } catch { /* rien */ } }
 }
 
-function recevoirLecture(etat: EtatLecture, maintenant: number) {
+/** Applique un `lecture` : un complet remplace l'état de base, un delta s'y fusionne ; un trou de `seq` demande un complet. */
+function recevoirLecture(m: MsgLecture, maintenant: number) {
+  let etat: EtatLecture;
+  if (m.mode === 'delta') {
+    if (!lectureBase || m.seq !== seqLecture + 1) {
+      // message perdu (ou aucun complet reçu) : cet état n'est plus fiable, on attend le complet
+      if (maintenant - resyncLectureLe >= ATTENTE_RESYNC_LECTURE_MS) {
+        resyncLectureLe = maintenant;
+        try { transport?.envoyer({ t: 'resync' }); } catch { /* ligne coupée : le complet viendra à la reconnexion */ }
+      }
+      return;
+    }
+    etat = fusionnerDelta(lectureBase, m.d);
+    seqLecture = m.seq;
+  } else {
+    etat = m.etat;
+    seqLecture = m.seq ?? 0;
+    resyncLectureLe = -Infinity;
+  }
+  lectureBase = etat;
   useSpectacle.setState({ lectureRecue: maintenant });
-  const m = useMagasin.getState();
-  if (m.mode === 'spectacle') m.resynchroniser(etat);
+  const mag = useMagasin.getState();
+  if (mag.mode === 'spectacle') mag.resynchroniser(etat);
 }
 
 /** Envoie un ordre de conduite (SPECTACLE ou non : l'appelant décide). null : pas relié, l'ordre n'est pas parti. */
@@ -674,6 +706,7 @@ export function reinitialiserSpectacle(): void {
   memoire.local.clear(); memoire.session.clear();
   cseq = 0;
   avaitEteRelie = false;
+  lectureBase = null; seqLecture = 0; resyncLectureLe = -Infinity;
   ecartLocalDepuis = 0;
   optionsCourantes = {};
   useSpectacle.setState({ reglages: lireReglages(), ligne: 'eteinte', dernierContact: 0, ouvertLe: 0, enAttente: [], dernierAccuse: null, refus: null, config: null, lectureRecue: 0, voyant: voyantEteint, alertes: [] });

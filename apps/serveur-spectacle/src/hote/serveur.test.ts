@@ -5,7 +5,8 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { WebSocket } from 'ws';
-import type { MessageServeur } from '@studio-real/protocole';
+import { fusionnerDelta, type MessageServeur } from '@studio-real/protocole';
+import type { EtatLecture } from '@studio-real/modele';
 import { projetBanc } from '../noyau/banc-test';
 import { empreinteDe } from '../noyau';
 import { normaliserConfig, type ConfigSpectacle } from './config';
@@ -17,12 +18,18 @@ const JETONS = { regie: 'jeton-regie-de-test-0123456789', acteur: 'jeton-acteur-
 /** Client WebSocket de test : garde tout ce qu'il reçoit, attend un message donné. */
 class Client {
   recus: MessageServeur[] = [];
+  /** état de lecture reconstitué comme le fait la régie : complets et deltas, trous de `seq` comptés */
+  lecture: EtatLecture | null = null;
+  trousSeq = 0;
+  private seq = 0;
   private lu = 0;
   private attentes: (() => void)[] = [];
   fermeture: Promise<number>;
   private constructor(readonly ws: WebSocket) {
     ws.on('message', d => {
-      this.recus.push(JSON.parse(String(d)) as MessageServeur);
+      const m = JSON.parse(String(d)) as MessageServeur;
+      this.recus.push(m);
+      this.suivreLecture(m);
       for (const f of this.attentes) f();
     });
     this.fermeture = new Promise(ok => ws.on('close', code => ok(code)));
@@ -30,6 +37,14 @@ class Client {
   static ouvrir(port: number): Promise<Client> {
     const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
     return new Promise((ok, ko) => { ws.once('open', () => ok(new Client(ws))); ws.once('error', ko); });
+  }
+  private suivreLecture(m: MessageServeur) {
+    const complet = m.t === 'bienvenue' ? m.lecture : m.t === 'lecture' && m.mode !== 'delta' ? m : null;
+    if (complet) { this.lecture = complet.etat; this.seq = complet.seq ?? 0; return; }
+    if (m.t !== 'lecture' || m.mode !== 'delta') return;
+    if (!this.lecture || m.seq !== this.seq + 1) { this.trousSeq++; return; }
+    this.lecture = fusionnerDelta(this.lecture, m.d);
+    this.seq = m.seq;
   }
   envoyer(m: Record<string, unknown>) { this.ws.send(JSON.stringify(m)); }
   /** Prochain message (après le dernier attendu) qui vérifie `pred`. */
@@ -169,7 +184,8 @@ describe('WebSocket : une soirée du banc', () => {
   it('top de la régie → nouvelles vues sur les téléphones et la scène, ack et lecture à la régie', async () => {
     regie.envoyer({ t: 'conduite', cseq: 1, op: 'top' });
     expect(await regie.attendre('ack', a => a.cseq === 1)).toMatchObject({ statut: 'ok' });
-    await regie.attendre('lecture', l => l.etat.etape === 'vote');
+    await regie.attendre('lecture', () => regie.lecture?.etape === 'vote');
+    expect(regie.trousSeq).toBe(0);
     expect(await pub1.attendre('vue', v => v.ecran === 'vote')).toMatchObject({ params: { numero: 1, question: 'Faut-il continuer ?' } });
     await pub2.attendre('vue', v => v.ecran === 'vote');
     await scene.attendre('vue', v => v.ecran === 'vote');
@@ -208,7 +224,7 @@ describe('WebSocket : une soirée du banc', () => {
     expect(cmd).toMatchObject({ n: 1, type: 'figurants.cmd', etape: 'fig', donnees: { segment: 'junon' } });
     for (let i = 0; i < 10; i++) srv!.tick(1);
     agent.envoyer({ t: 'agent.ack', n: 1, statut: 'fait' });
-    await regie.attendre('lecture', l => l.etat.etape === 'lumiere');
+    await regie.attendre('lecture', () => regie.lecture?.etape === 'lumiere');
   });
 
   it('jeton faux → refus fatal et fermeture 4003', async () => {

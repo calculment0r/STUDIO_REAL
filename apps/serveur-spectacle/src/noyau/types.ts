@@ -2,7 +2,7 @@
 // Tout est fait de données JSON : l'instantané est l'état lui-même (copie) ; la restauration le recopie et rejoue les
 // entrées du lecteur (le lecteur du modèle est déterministe : même projet + mêmes entrées + même graine = même état).
 import type { Projet, Signaux } from '@studio-real/modele';
-import type { AppClient, EcranAffiche, MessageServeur, MsgFx, Role, VueDiffusee } from '@studio-real/protocole';
+import type { AppClient, EcranAffiche, MessageServeur, MsgFx, Role, SuiviLecture, VueDiffusee } from '@studio-real/protocole';
 import type { Verdict } from './moderation';
 
 /** À qui envoyer un message : une session, un acteur (toutes ses sessions, ou une personne de la foule), un rôle, tous. */
@@ -77,6 +77,9 @@ export interface SessionEtat {
   /** derniers cseq reçus (fenêtre de 64) : un renvoi dans le désordre est reconnu comme doublon */
   cseqs: number[];
   connectee: boolean;
+  /** régie : ce qui a été envoyé de la lecture à cette session (numéro du dernier `lecture`, trace de son contenu, heure du
+   *  dernier complet) ; dans l'instantané, pour que la reprise continue les mêmes deltas ; effacé à la déconnexion */
+  lecture?: { seq: number; suivi: SuiviLecture; completLe: number };
   /** heure serveur de la dernière connexion */
   depuis: number;
   app?: AppClient;

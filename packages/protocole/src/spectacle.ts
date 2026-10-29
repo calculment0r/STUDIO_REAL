@@ -8,7 +8,7 @@
 // Numérotation : `cseq` par session (client → serveur, `ack` doublon) ; `vseq` par acteur (serveur → client, trou →
 // `resync`) ; `n` = numéro de commande du lecteur, unique par représentation (idempotence chez l'agent).
 // Heures : `at`, `ts` en ms, horloge du SERVEUR ; `tc`, `heure` en ms, horloge du client.
-import type { EtatLecture } from '@studio-real/modele';
+import type { AlerteLecture, CommandeLecture, EtatLecture, EvenementLecture, PointReprise, PositionSequence } from '@studio-real/modele';
 
 export const VERSION_PROTOCOLE = 2;
 
@@ -185,8 +185,8 @@ export interface MsgBienvenue {
   vue: VueDiffusee | null;
   /** dernier cseq reçu de cette session (le client renvoie ce qui suit) */
   cseq: number;
-  /** pour la régie : état de lecture courant */
-  lecture?: { etat: EtatLecture; par: string; ts: number } | null;
+  /** pour la régie : état de lecture courant (toujours sous la forme `complet`) */
+  lecture?: LectureComplete | null;
   /** pour un acteur : pseudo retenu par le serveur (filtré, unique ; gardé à la reconnexion) */
   pseudo?: string;
 }
@@ -196,8 +196,59 @@ export interface MsgVue extends VueDiffusee { t: 'vue' }
 /** Effet éphémère : pas rejoué si `at + ttl` est passé (reprise). */
 export interface MsgFx { t: 'fx'; acteur: string; id: string; at: number; kind: string; p: Record<string, unknown>; ttl: number }
 
-/** État de lecture (régie), émis par le serveur en scène. */
-export interface MsgLecture { t: 'lecture'; etat: EtatLecture; par: string; ts: number }
+/** État de lecture COMPLET (régie). `mode` et `seq` sont facultatifs : un ancien `lecture` sans `mode` est lu comme `complet`. */
+export interface LectureComplete { mode?: 'complet'; etat: EtatLecture; par: string; ts: number; seq?: number }
+
+/**
+ * Ce qui a changé dans l'état de lecture depuis le dernier `lecture` envoyé à CETTE session (forme `delta`). Seuls les
+ * champs modifiés sont présents (sauf `t` et `tEtape`, toujours là) :
+ * - valeurs simples : la nouvelle valeur ;
+ * - tableaux (`parcours`, `journal`, `commandes`, `alertes`) : les entrées AJOUTÉES, à la suite de celles déjà reçues ;
+ * - dictionnaires (`memoires`, `receptions`, `tours`, `attentes`, `votes`) : les clés changées ou nouvelles ;
+ * - `reprises` : la liste entière (elle est courte et ses points se remplacent) ;
+ * - `retires` : ce qui a disparu, `'issue'` (champ facultatif) ou `'receptions.nom'` (clé d'un dictionnaire).
+ */
+export interface DeltaLecture {
+  t: number;
+  tEtape: number;
+  retard?: number;
+  moment?: string | null;
+  etape?: string | null;
+  attenteGo?: boolean;
+  bloque?: boolean;
+  termine?: boolean;
+  phase?: NonNullable<EtatLecture['phase']>;
+  retenu?: boolean;
+  prolonge?: number;
+  issue?: string;
+  sequence?: PositionSequence;
+  memoires?: EtatLecture['memoires'];
+  receptions?: Record<string, number>;
+  tours?: Record<string, number>;
+  attentes?: Record<string, number>;
+  votes?: Record<string, number>;
+  parcours?: EtatLecture['parcours'];
+  journal?: EvenementLecture[];
+  alertes?: AlerteLecture[];
+  commandes?: CommandeLecture[];
+  reprises?: PointReprise[];
+  retires?: string[];
+}
+
+/** Variation de l'état de lecture (forme `delta`) : `seq` suit celui du dernier message `lecture` de cette session + 1. */
+export interface LectureDelta { mode: 'delta'; seq: number; ts: number; par: string; d: DeltaLecture }
+
+/**
+ * État de lecture (régie), émis par le serveur en scène, par session. `complet` (dans `bienvenue`, à la demande `resync`,
+ * après lancer/allerA/reprendre/reinitialiser, et au plus une minute après le précédent) puis `delta`. `seq` croît de 1
+ * à chaque envoi à une session : un trou de `seq` côté régie → elle envoie `resync` et reçoit un `complet`.
+ */
+export interface MsgLectureComplet extends LectureComplete { t: 'lecture' }
+export interface MsgLectureDelta extends LectureDelta { t: 'lecture' }
+export type MsgLecture = MsgLectureComplet | MsgLectureDelta;
+
+/** Au plus une minute entre deux `lecture` complets (ms). */
+export const INTERVALLE_LECTURE_COMPLETE_MS = 60_000;
 
 /** Vue DEMANDÉE à un acteur (la vue commune diffusée) : la régie la compare à l'écran AFFICHÉ (écart demandé / affiché). */
 export interface VueDemandee {

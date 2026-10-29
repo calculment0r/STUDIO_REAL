@@ -42,6 +42,7 @@ Un jeton par rôle (et par acteur nommé). Le jeton n'est jamais conservé dans 
 | Numéro | Portée | Règle |
 |---|---|---|
 | `cseq` | par session, client → serveur | croissant (1, 2, 3…) sur tout message qui change quelque chose (`conduite`, `in`, `agent.in`). Un `cseq` déjà vu n'est pas réappliqué : `ack{statut:'doublon'}`. Le client renvoie sans risque ce qui n'a pas été acquitté. |
+| `seq` (lecture) | par session de la régie, serveur → régie | croît de 1 à chaque message `lecture` envoyé à CETTE session. Un trou → la régie envoie `resync` et reçoit un `lecture` complet (voir « La lecture de la régie »). |
 | `vseq` | par acteur (et par personne pour une vue ciblée), serveur → client | croissant sur chaque `vue`. Un trou → le client envoie `resync` et reçoit la vue courante. |
 | `n` | par représentation | numéro de commande du lecteur ; `agent.cmd` est **idempotent** chez l'agent (rejouer `n = 57` ne relance pas Junon). |
 
@@ -60,7 +61,7 @@ Un jeton par rôle (et par acteur nommé). Le jeton n'est jamais conservé dans 
 | `agent.ack` | agent | `n`, `statut` (`recu` \| `fait` \| `echec` \| `refus`), `detail?` | — (`fait` → signal `accuse:<étape>` du lecteur) |
 | `agent.in` | agent | `cseq`, `k` (nom : `say` `{persona, texte, couleur?}` = réplique d'un figurant montrée au mur, `stat`, `transcript`, `fin-appel`…), `data` | `ack` (`refus filtre` : réplique refusée par la modération) |
 | `ping` | tous | `tc` | `pong` |
-| `resync` | tous | — | `vue` courante (acteur) ou `bienvenue` |
+| `resync` | tous | — | `vue` courante (acteur), `lecture` complet (régie qui a déjà une lecture) ou `bienvenue` |
 | `rtc` | acteur | `vers` (acteur ou session), `signal` (objet opaque, ≤ 64 Ko) | `rtc` relayé |
 
 `etat` est envoyé 1 fois par seconde par un écran, 1 fois toutes les 5 s par un téléphone. Il dit ce qui est **affiché**
@@ -115,10 +116,10 @@ Une seule famille pour tout ce qu'un acteur renvoie (ex `entree` et `ack{n, affi
 
 | `t` | Destinataires | Champs |
 |---|---|---|
-| `bienvenue` | l'émetteur du `hello` | `v`, `role`, `acteur?`, `session`, `ts`, `vue` (vue courante ou `null`), `cseq` (dernier reçu de la session), `lecture?` (régie), `pseudo?` (acteur : pseudo retenu par le serveur, filtré et unique, gardé à la reconnexion) |
+| `bienvenue` | l'émetteur du `hello` | `v`, `role`, `acteur?`, `session`, `ts`, `vue` (vue courante ou `null`), `cseq` (dernier reçu de la session), `lecture?` (régie : un `lecture` complet sans le `t`, voir ci-dessous), `pseudo?` (acteur : pseudo retenu par le serveur, filtré et unique, gardé à la reconnexion) |
 | `vue` | un acteur (ou une personne de la foule) | `acteur`, `vseq`, `at`, `ecran` (ou `null` : aucun écran encore), `params`, `cle?` |
 | `fx` | un acteur | `acteur`, `id`, `at`, `kind` (`vibrer`, `son`, `flash`, `pop`…), `p`, `ttl` (ms, ≤ 10 min) |
-| `lecture` | régie | `etat` (`EtatLecture` du modèle), `par`, `ts` — émis par le serveur en scène |
+| `lecture` | une session de la régie | deux formes (voir « La lecture de la régie ») : `{mode:'complet', etat, par, ts, seq}` ou `{mode:'delta', seq, ts, par, d}` — émis par le serveur en scène |
 | `salle` | régie | `ts`, `acteurs{<id>: {presents, prets?, enLigne?, demande?{vseq, ecran, at, cle?}, parEcran?{<écran>: n}, rttMs?}}`, `vote?{q, recus, parts[], force?}` (`force` : résultat imposé par la banque des votes) — ≤ 4 par seconde |
 | `etat` | régie | battement d'un acteur NOMMÉ (cardinalité 1) relayé : `acteur`, `personne?`, `ts` (serveur), `heure` (client), `ecran` (`{vseq, ecran, cle?, depuis}` ou `null`), `visible`, `enLigne?`, `rttMs?`, `media?[]`, `batterie?`, `erreurs?[]`, `app?` |
 | `agent.cmd` | un agent | `n`, `type` (`figurants.cmd`, `appel`, `machine`…), `moment?`, `etape`, `donnees`, `at?` |
@@ -127,6 +128,33 @@ Une seule famille pour tout ce qu'un acteur renvoie (ex `entree` et `ack{n, affi
 | `pong` | l'émetteur | `tc`, `ts` |
 | `resync` | un client | `raison` : renvoyer `hello` (redémarrage, nouvelle représentation) |
 | `rtc` | l'acteur visé | `de`, `vers`, `signal`, `ts` |
+
+### La lecture de la régie (`lecture`, deux formes)
+
+L'état de lecture (`EtatLecture` du modèle) grandit pendant la soirée (parcours, journal, commandes, alertes, reprises…) : il
+n'est plus renvoyé en entier chaque seconde. Le serveur garde, **par session de la régie**, ce qu'il lui a déjà envoyé, et
+numérote chaque message `lecture` de cette session (`seq`, +1 à chaque envoi).
+
+- **`complet`** — `{"t":"lecture","mode":"complet","etat":{…},"par":"serveur","ts":…,"seq":n}` : l'état entier. Envoyé dans
+  `bienvenue.lecture` (même forme, sans `t`), à la demande (`resync`), après `lancer`, `allerA` et `reprendre`
+  (ou si un tableau a rétréci), et au plus une minute après le complet précédent.
+- **`delta`** — `{"t":"lecture","mode":"delta","seq":n,"ts":…,"par":"serveur","d":{…}}` : seul ce qui a changé depuis le
+  dernier `lecture` envoyé à cette session. `d.t` et `d.tEtape` sont toujours là ; les autres champs n'apparaissent que
+  s'ils ont changé :
+  valeurs simples (`retard`, `moment`, `etape`, `attenteGo`, `bloque`, `termine`, `phase`, `retenu`, `prolonge`, `issue`,
+  `sequence`) = la nouvelle valeur ;
+  `parcours`, `journal`, `commandes`, `alertes` = **les entrées ajoutées** (à concaténer à celles déjà reçues) ;
+  `memoires`, `receptions`, `tours`, `attentes`, `votes` = **les clés changées** (à fusionner) ;
+  `reprises` = la liste entière (elle est courte et ses points se remplacent) ;
+  `retires` = ce qui a disparu : un champ facultatif (`"issue"`) ou une clé d'un dictionnaire (`"receptions.sig"`).
+  Rien n'est envoyé quand rien n'a changé. En lecture normale : une centaine d'octets par seconde.
+- **Règle du `seq`** : la régie garde le `seq` du dernier message appliqué. Un `complet` pose l'état et le `seq` ; un
+  `delta` n'est appliqué que si son `seq` vaut le dernier + 1 (et qu'un état de base existe). Sinon il est ignoré, la régie
+  envoie `{"t":"resync"}` (une demande à la fois) et le serveur répond par un `complet`. À chaque nouvelle liaison, la
+  régie repart du `complet` de `bienvenue`.
+- **Compatibilité** : la version du protocole reste 2 (champs facultatifs ajoutés). Un `lecture` sans `mode` est un `complet`
+  (ancien format : `seq` absent, jamais suivi de `delta`). Les fonctions `calculerDelta` et `fusionnerDelta`
+  (`src/lecture-delta.ts`) font le calcul côté serveur et la fusion côté régie.
 
 ### La vue d'un acteur
 
@@ -187,7 +215,7 @@ révélation `comptes[]` (voix réelles, ou `scores` de la banque : résultat fo
 // →              {"t":"in","cseq":2,"k":"vote","q":"1","data":{"index":2}}
 // ←              {"t":"ack","cseq":2,"statut":"ok"}
 // → (régie)      {"t":"conduite","cseq":9,"op":"top"}
-// ← (régie)      {"t":"ack","cseq":9,"statut":"ok"}   puis   {"t":"lecture","etat":{…},"par":"serveur","ts":…}
+// ← (régie)      {"t":"ack","cseq":9,"statut":"ok"}   puis   {"t":"lecture","mode":"delta","seq":42,"ts":…,"par":"serveur","d":{"t":812,"tEtape":0,"etape":"vote","parcours":[["b5_q1","b5_q1_s",812]]}}
 // ← (figurants)  {"t":"agent.cmd","n":57,"type":"figurants.cmd","etape":"b5_q1_s","donnees":{"densite":"calme"}}
 // → (figurants)  {"t":"agent.ack","n":57,"statut":"fait"}
 ```

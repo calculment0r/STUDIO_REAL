@@ -216,6 +216,9 @@ let minuteurMessage: ReturnType<typeof setTimeout> | undefined;
 let vus = { c: 0, j: 0, a: 0 };
 /** Idem dans l'état officiel du serveur (lecture miroir : le journal suit le serveur, pas le lecteur local). */
 let vusServeur = { c: 0, j: 0, a: 0 };
+/** Lecteur local et position du serveur (moment, étape, attente du GO, fin) au dernier calage : tant qu'elle ne change pas,
+ *  `resynchroniser` ne replace pas le lecteur (les `lecture` allégés ne portent que le temps qui passe). */
+let calage: { lecteur: Lecteur; position: string } | null = null;
 let numeroRegie = 0;
 /** Fait avancer la lecture de dt secondes de spectacle (posé par le magasin, appelé par la boucle). */
 let avancerLecture: (dt: number) => void = () => {};
@@ -685,8 +688,12 @@ export const useMagasin = create<Magasin>((set, get) => {
       let e = l.etat();
       const p = projetLu();
       const connu = !!etat.moment && p.ev.some(x => x.id === etat.moment);
-      // replacer le lecteur local s'il n'est plus au même endroit (même projet, même graine : mêmes étapes ensuite)
-      if (!etat.termine && connu && (e.termine || e.moment !== etat.moment || e.etape !== etat.etape)) {
+      const position = `${etat.moment ?? ''}/${etat.etape ?? ''}/${etat.attenteGo ? 'go' : ''}/${etat.termine ? 'fin' : ''}`;
+      const dejaCale = get().miroir && calage?.lecteur === l && calage.position === position;
+      calage = { lecteur: l, position };
+      // replacer le lecteur local s'il n'est plus au même endroit (même projet, même graine : mêmes étapes ensuite) ;
+      // jamais quand le serveur n'a pas changé de moment, d'étape ni d'attente depuis le dernier calage
+      if (!dejaCale && !etat.termine && connu && (e.termine || e.moment !== etat.moment || e.etape !== etat.etape)) {
         const m = p.ev.find(x => x.id === etat.moment)!;
         const etape = etat.etape && m.st.some(x => x.id === etat.etape) ? etat.etape : undefined;
         e = l.allerA(m.id, etape);

@@ -50,6 +50,8 @@ export class SalleEmulee {
   private regieDe: Representation | null = null;
   private journalEv: EvenementJournal[] = [];
   private position = '';
+  /** position de la lecture d'après les `lecture` reçus par la régie interne (complets, ou deltas qui ne portent que les changements) */
+  private lectureRegie: { moment: string | null; etape: string | null; termine: boolean } = { moment: null, etape: null, termine: false };
   private arretTick: (() => void) | null = null;
   /** votes, question ouverte et textes, tenus d'après le journal du noyau */
   private compte: { question: string | null; votes: Record<string, Record<string, number>>; textes: number } = { question: null, votes: {}, textes: 0 };
@@ -154,6 +156,7 @@ export class SalleEmulee {
     const sessions = [...this.branches.values()].filter(b => b.info).map(b => b.info!.session);
     this.rep = this.creer(projet);
     this.position = '';
+    this.lectureRegie = { moment: null, etape: null, termine: false };
     this.compte = { question: null, votes: {}, textes: 0 };
     if (run) {
       this.lancer(mode, run.graine);
@@ -247,10 +250,21 @@ export class SalleEmulee {
 
   /** Remise des messages sortants (rôle de l'hôte) ; puis le journal et la position du lecteur. */
   private distribuer(sorties: Sortie[]) {
-    let lecture: EtatLecture | null = null;
+    let lectureVue = false;
     for (const s of sorties) {
-      // la régie émulée reçoit l'état de lecture à chaque changement (copie déjà faite par le noyau)
-      if (s.m.t === 'lecture' && 'role' in s.a && s.a.role === 'regie') lecture = s.m.etat;
+      // la régie émulée reçoit l'état de lecture à chaque changement : complet, ou delta (seuls les champs changés)
+      if (s.m.t === 'lecture' && (('session' in s.a && s.a.session === SESSION_REGIE) || ('role' in s.a && s.a.role === 'regie'))) {
+        lectureVue = true;
+        const l = this.lectureRegie;
+        if (s.m.mode === 'delta') {
+          if (s.m.d.moment !== undefined) l.moment = s.m.d.moment;
+          if (s.m.d.etape !== undefined) l.etape = s.m.d.etape;
+          if (s.m.d.termine !== undefined) l.termine = s.m.d.termine;
+        } else { l.moment = s.m.etat.moment; l.etape = s.m.etat.etape; l.termine = s.m.etat.termine; }
+      }
+      if (s.m.t === 'bienvenue' && s.m.lecture && 'session' in s.a && s.a.session === SESSION_REGIE) {
+        this.lectureRegie = { moment: s.m.lecture.etat.moment, etape: s.m.lecture.etat.etape, termine: s.m.lecture.etat.termine };
+      }
       for (const b of this.branches.values()) {
         if (!b.info || !b.cote || !correspond(s.a, b.info)) continue;
         const m: MessageServeur = s.m;
@@ -266,7 +280,8 @@ export class SalleEmulee {
       this.journalEv.push(...j);
       if (this.journalEv.length > MAX_JOURNAL) this.journalEv.splice(0, this.journalEv.length - MAX_JOURNAL);
     }
-    if (!lecture) return;
+    if (!lectureVue) return;
+    const lecture = this.lectureRegie;
     const pos = `${lecture.moment}/${lecture.etape}/${lecture.termine}`;
     if (pos !== this.position) {
       this.position = pos;

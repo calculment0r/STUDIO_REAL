@@ -2,3 +2,4 @@
 export * from './spectacle';
 export * from './lire';
 export * from './client';
+export * from './lecture-delta';

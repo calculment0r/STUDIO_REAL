@@ -216,6 +216,124 @@ describe('lecture miroir', () => {
   });
 });
 
+describe('lecture allégée : deltas et trou de seq', () => {
+  const sig = { pres: 0, quorum: 0, prets: 0, bruit: 32, assis: 100 };
+  const base = () => {
+    const L = creerLecteur(projet, { mode: 'scene' });
+    L.allerA(ids[3]!);
+    L.avancer(2, sig);
+    return L.etat();
+  };
+  const complet = (etat: ReturnType<typeof base>, seq: number) => serveur.envoyer({ t: 'lecture', mode: 'complet', etat, par: 'serveur', ts: Date.now(), seq });
+  const delta = (seq: number, d: Record<string, unknown>) =>
+    serveur.envoyer({ t: 'lecture', mode: 'delta', seq, par: 'serveur', ts: Date.now(), d } as never);
+  const resyncs = () => recus.filter(m => m.t === 'resync');
+
+  it('un delta se fusionne dans l’état reçu : temps, mémoires fusionnées, journal concaténé', () => {
+    relier();
+    const etat = base();
+    complet(etat, 1);
+    expect(s().lecture).toMatchObject({ moment: ids[3], t: etat.t });
+    delta(2, { t: etat.t + 1, tEtape: etat.tEtape + 1 });
+    expect(s().lecture).toMatchObject({ moment: ids[3], etape: etat.etape, t: etat.t + 1, tEtape: etat.tEtape + 1 });
+    delta(3, { t: etat.t + 2, tEtape: etat.tEtape + 2, memoires: { missions: 3 }, journal: [{ t: etat.t + 2, type: 'memoire', nom: 'missions', valeur: 3, moment: ids[3] }] });
+    expect(s().lecture!.memoires).toMatchObject({ ...etat.memoires, missions: 3 });
+    expect(s().lecture!.journal).toHaveLength((etat.journal?.length ?? 0) + 1);
+    delta(4, { t: etat.t + 3, tEtape: etat.tEtape + 3, memoires: { missions: 4 } });
+    expect(s().lecture!.memoires).toMatchObject({ missions: 4 });
+    expect(s().lecture!.journal).toHaveLength((etat.journal?.length ?? 0) + 1);
+    expect(resyncs()).toHaveLength(0);
+    expect(sp().lectureRecue).toBeGreaterThan(0);
+  });
+
+  it('trou de seq : le delta est ignoré, la régie demande un resync (un seul), et reprend au complet suivant', () => {
+    relier();
+    const etat = base();
+    complet(etat, 1);
+    delta(2, { t: etat.t + 1, tEtape: etat.tEtape + 1 });
+    delta(4, { t: etat.t + 3, tEtape: etat.tEtape + 3 });          // le 3 s'est perdu
+    expect(resyncs()).toHaveLength(1);
+    expect(s().lecture!.t).toBe(etat.t + 1);                         // l’état n’a pas bougé
+    delta(5, { t: etat.t + 4, tEtape: etat.tEtape + 4 });
+    expect(resyncs()).toHaveLength(1);                               // pas de rafale tant que le complet n’est pas là
+    complet({ ...etat, t: etat.t + 5, tEtape: etat.tEtape + 5 }, 6);
+    expect(s().lecture!.t).toBe(etat.t + 5);
+    delta(7, { t: etat.t + 6, tEtape: etat.tEtape + 6 });
+    expect(s().lecture!.t).toBe(etat.t + 6);
+    expect(resyncs()).toHaveLength(1);
+    // un nouveau trou, plus tard : nouvelle demande
+    vi.advanceTimersByTime(3000);
+    delta(10, { t: etat.t + 9, tEtape: etat.tEtape + 9 });
+    expect(resyncs()).toHaveLength(2);
+  });
+
+  it('un delta sans état de base (rien reçu encore) demande aussi un resync', () => {
+    relier();
+    delta(1, { t: 5, tEtape: 5 });
+    expect(resyncs()).toHaveLength(1);
+    expect(s().miroir).toBe(false);
+  });
+
+  it('une nouvelle liaison oublie l’état de base : un delta d’avant la coupure est refusé', () => {
+    relier();
+    const etat = base();
+    complet(etat, 1);
+    relierSpectacle({ config: false, creerTransport: (_u, j, hello) => { const p = transportMemoire({ hello, jeton: j }); serveur = p.serveur; recus = []; serveur.surMessage(m => recus.push(m)); return p.telephone; } });
+    serveur.ouvrir();
+    delta(2, { t: etat.t + 1, tEtape: etat.tEtape + 1 });
+    expect(resyncs()).toHaveLength(1);
+  });
+
+  it('miroir : un delta rafraîchit la lecture sans replacer le lecteur local tant que moment, étape et attente ne changent pas', () => {
+    relier();
+    const etat = base();
+    complet(etat, 1);
+    expect(s().miroir).toBe(true);
+    s().lancer();
+    avancerDe(1);
+    const apres = s().lecture!;
+    delta(2, { t: etat.t + 1, tEtape: etat.tEtape + 1 });
+    expect(s().miroir).toBe(true);
+    expect(s().lecture).toMatchObject({ moment: ids[3], etape: etat.etape, t: etat.t + 1 });
+    avancerDe(0.5);
+    // le lecteur local a continué sa route (horloge recalée sur le serveur, jamais d'allerA)
+    expect(s().lecture!.t).toBeCloseTo(etat.t + 1.5, 5);
+    expect(s().lecture!.moment).toBe(apres.moment);
+  });
+
+  it('miroir : la position du serveur n’a pas changé → le lecteur local, même en avance, n’est pas replacé', () => {
+    relier();
+    const etat = base();
+    complet(etat, 1);
+    s().lancer();
+    avancerDe(60);                                   // le lecteur local file bien au-delà de l’étape du serveur
+    const enAvance = s().lecture!;
+    expect(enAvance.moment !== etat.moment || enAvance.etape !== etat.etape).toBe(true);
+    delta(2, { t: etat.t + 1, tEtape: etat.tEtape + 1 });
+    avancerDe(0.01);
+    expect(s().lecture).toMatchObject({ moment: enAvance.moment, etape: enAvance.etape });
+    // un complet à la même position (rafraîchissement de la minute) ne replace pas non plus
+    complet({ ...etat, t: etat.t + 2, tEtape: etat.tEtape + 2 }, 3);
+    avancerDe(0.01);
+    expect(s().lecture).toMatchObject({ moment: enAvance.moment, etape: enAvance.etape });
+    // dès que le serveur change d’étape, le lecteur local le suit
+    delta(4, { t: etat.t + 3, tEtape: 0, moment: ids[5], etape: null, phase: 'passage' });
+    avancerDe(0.01);
+    expect(s().lecture!.moment).toBe(ids[5]);
+  });
+
+  it('miroir : un delta qui change d’étape ou de moment replace le lecteur local', () => {
+    relier();
+    const etat = base();
+    complet(etat, 1);
+    s().lancer();
+    delta(2, { t: etat.t + 1, tEtape: 0, moment: ids[5], etape: null, phase: 'passage' });
+    expect(s().lecture).toMatchObject({ moment: ids[5] });
+    avancerDe(0.1);
+    expect(s().lecture!.moment).toBe(ids[5]);
+  });
+});
+
 describe('retours des acteurs', () => {
   it('etat d’un acteur → etat/acteurs.ts ; salle → résumé', () => {
     relier();
