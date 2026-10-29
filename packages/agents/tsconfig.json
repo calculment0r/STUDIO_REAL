@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/agents.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
+    "noEmit": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "../modele" }, { "path": "../protocole" }]
+}
