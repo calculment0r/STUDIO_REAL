@@ -3,10 +3,11 @@
 // apps/conducteur/src/sortie/protocole.ts), borné (textes ≤ 2000 caractères, tableaux ≤ 200), puis reconstruit : les
 // champs inconnus sont ignorés. PUR : aucune entrée-sortie.
 import { RE_ID_ACTEUR, cibleDansFoule, type EtatLecture, type Vue } from '@studio-real/modele';
+import { DICTIONNAIRES_LECTURE, TABLEAUX_LECTURE } from './lecture-delta';
 import {
   GENRES_ENTREE, LIMITES, OPS_CONDUITE, ROLES, VERSION_PROTOCOLE,
   type EcranAffiche, type EntreeActeur, type GenreEntree, type MediaActeur, type MessageClient, type MessageServeur,
-  type MsgAgentAck, type MsgBienvenue, type MsgEtat, type MsgEtatActeur, type MsgHello, type MsgSalle, type NomOpConduite,
+  type DeltaLecture, type LectureComplete, type MsgAgentAck, type MsgBienvenue, type MsgLecture, type MsgEtat, type MsgEtatActeur, type MsgHello, type MsgSalle, type NomOpConduite,
   type OpConduite, type RefusAffichage, type ResumeActeurSalle, type Role, type StatutAck, type VueDemandee, type VueDiffusee,
 } from './spectacle';
 
@@ -311,14 +312,54 @@ function lireVue(m: Brut, champ: string): VueDiffusee {
 }
 
 /** État de lecture : contrôle de forme seulement (il vient du serveur et son journal peut dépasser 200 entrées). */
-function lireEtatLecture(x: unknown, champ: string): { etat: EtatLecture; par: string; ts: number } {
+function lireEtatLecture(x: unknown, champ: string): LectureComplete & { mode: 'complet' } {
   const l = objet(x, champ);
   const e = objet(l.etat, `${champ}.etat`);
   nombre(e.t, `${champ}.etat.t`);
   if (e.moment !== null && typeof e.moment !== 'string') throw new Refus('champ-invalide', `${champ}.etat.moment : texte ou null`);
   if (e.etape !== null && typeof e.etape !== 'string') throw new Refus('champ-invalide', `${champ}.etat.etape : texte ou null`);
   if (!Array.isArray(e.parcours)) throw new Refus('champ-invalide', `${champ}.etat.parcours : tableau attendu`);
-  return { etat: e as unknown as EtatLecture, par: texte(l.par, `${champ}.par`, 64), ts: nombre(l.ts, `${champ}.ts`) };
+  const lu: LectureComplete & { mode: 'complet' } = { mode: 'complet', etat: e as unknown as EtatLecture, par: texte(l.par, `${champ}.par`, 64), ts: nombre(l.ts, `${champ}.ts`) };
+  if (l.seq !== undefined) lu.seq = entier(l.seq, `${champ}.seq`);
+  return lu;
+}
+
+/** Plus de lignes qu'un tableau ordinaire : un delta qui suit une longue coupure peut porter beaucoup d'entrées. */
+const MAX_ENTREES_DELTA = 5000;
+const CHAMPS_RETIRES = new Set<string>(['issue', 'phase', 'retenu', 'prolonge', 'sequence', ...DICTIONNAIRES_LECTURE]);
+
+/** Variation de l'état de lecture : contrôle de forme seulement (le serveur est la source). */
+function lireDeltaLecture(x: unknown, champ: string): DeltaLecture {
+  const d = objet(x, champ);
+  nombre(d.t, `${champ}.t`);
+  nombre(d.tEtape, `${champ}.tEtape`);
+  if (d.retard !== undefined) nombre(d.retard, `${champ}.retard`);
+  if (d.prolonge !== undefined) nombre(d.prolonge, `${champ}.prolonge`);
+  for (const c of ['moment', 'etape'] as const)
+    if (d[c] !== undefined && d[c] !== null && typeof d[c] !== 'string') throw new Refus('champ-invalide', `${champ}.${c} : texte ou null`);
+  for (const c of ['attenteGo', 'bloque', 'termine', 'retenu'] as const) if (d[c] !== undefined) booleen(d[c], `${champ}.${c}`);
+  if (d.phase !== undefined) parmi(d.phase, ['etape', 'passage', 'fin'] as const, `${champ}.phase`);
+  if (d.issue !== undefined) texte(d.issue, `${champ}.issue`, LIMITES.texte, true);
+  if (d.sequence !== undefined) objet(d.sequence, `${champ}.sequence`);
+  for (const c of DICTIONNAIRES_LECTURE) if (d[c] !== undefined) objet(d[c], `${champ}.${c}`);
+  for (const c of [...TABLEAUX_LECTURE, 'reprises'] as const) if (d[c] !== undefined) tableau(d[c], `${champ}.${c}`, MAX_ENTREES_DELTA);
+  if (d.retires !== undefined) {
+    for (const r of tableau(d.retires, `${champ}.retires`, MAX_ENTREES_DELTA)) {
+      const nom = texte(r, `${champ}.retires`, 300);
+      if (!CHAMPS_RETIRES.has(nom.split('.')[0]!)) throw new Refus('champ-invalide', `${champ}.retires : champ inconnu (${nom})`);
+    }
+  }
+  return d as unknown as DeltaLecture;
+}
+
+/** Message `lecture` : `complet` (par défaut : un ancien message sans `mode` est un complet) ou `delta`. */
+function lireMsgLecture(m: Brut): MsgLecture {
+  const mode = m.mode === undefined ? 'complet' : parmi(m.mode, ['complet', 'delta'] as const, 'mode');
+  if (mode === 'complet') return { t: 'lecture', ...lireEtatLecture(m, 'lecture') };
+  return {
+    t: 'lecture', mode: 'delta', seq: entier(m.seq, 'seq', 0), ts: nombre(m.ts, 'ts'), par: texte(m.par, 'par', 64),
+    d: lireDeltaLecture(m.d, 'd'),
+  };
 }
 
 function lireSalle(m: Brut): MsgSalle {
@@ -389,7 +430,7 @@ export function lireMessageServeur(x: unknown): Lu<MessageServeur> {
           t: 'fx', acteur: acteurId(m.acteur), id: texte(m.id, 'id', 80), at: nombre(m.at, 'at'), kind: motif(m.kind, 'kind', RE_NOM, 'nom en minuscules'),
           p: objetLibre(m.p ?? {}, 'p'), ttl: entier(m.ttl, 'ttl', 0, LIMITES.ttl),
         };
-      case 'lecture': return { t: 'lecture', ...lireEtatLecture(m, 'lecture') };
+      case 'lecture': return lireMsgLecture(m);
       case 'salle': return lireSalle(m);
       case 'etat':
         return avec<MsgEtatActeur>({

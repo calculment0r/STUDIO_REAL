@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { lireMessageServeur } from '@studio-real/protocole';
+import { fusionnerDelta, lireMessageServeur, type MessageServeur, type MsgLecture } from '@studio-real/protocole';
+import type { EtatLecture } from '@studio-real/modele';
 import { Representation, correspond } from './representation';
 import { T0, aleaFixe, banc, de, messages, projetBanc } from './banc-test';
 import type { BanquesRepresentation, Sortie } from './types';
@@ -90,7 +91,149 @@ describe('lancement et vues de chaque acteur', () => {
     expect(messages(out, 'salle')).toHaveLength(1);
     const apres = b.top();
     expect(apres[0]!.m).toMatchObject({ t: 'ack', cseq: 1, statut: 'ok' });
-    expect(de(apres, 'lecture')[0]).toMatchObject({ a: { role: 'regie' }, m: { par: 'serveur' } });
+    expect(de(apres, 'lecture')[0]).toMatchObject({ a: { session: 'regie_1' }, m: { par: 'serveur', mode: 'delta' } });
+  });
+});
+
+/** Ce qu'une régie reconstitue des `lecture` d'une session (bienvenue, complets, deltas) ; compte les trous de seq. */
+function suivreRegie(rep?: Representation, session = 'regie_1') {
+  const r: { etat: EtatLecture | null; seq: number; trous: number; complets: number; deltas: MsgLecture[] } = { etat: null, seq: 0, trous: 0, complets: 0, deltas: [] };
+  // la régie a déjà reçu son complet (bienvenue) : on repart de ce que la représentation lui a envoyé
+  if (rep) { r.etat = rep.etatLecture(); r.seq = rep.instantane().sessions[session]?.lecture?.seq ?? 0; }
+  const lire = (sorties: Sortie[]) => {
+    for (const x of sorties) {
+      if (!('session' in x.a) || x.a.session !== session) continue;
+      const m: MessageServeur = x.m;
+      const complet = m.t === 'bienvenue' ? m.lecture : m.t === 'lecture' && m.mode !== 'delta' ? m : null;
+      if (complet) { r.etat = complet.etat; r.seq = complet.seq ?? 0; r.complets++; continue; }
+      if (m.t !== 'lecture' || m.mode !== 'delta') continue;
+      r.deltas.push(m);
+      if (!r.etat || m.seq !== r.seq + 1) { r.trous++; continue; }
+      r.etat = fusionnerDelta(r.etat, m.d);
+      r.seq = m.seq;
+    }
+  };
+  return { r, lire };
+}
+
+describe('lecture allégée (complet / delta)', () => {
+  it('bienvenue porte un complet numéroté ; le top donne un delta qui suit seq + 1', () => {
+    const b = banc();
+    b.lancer();
+    const out = b.hello('regie_1', 'regie');
+    const bienvenue = out[0]!.m;
+    if (bienvenue.t !== 'bienvenue') throw new Error();
+    expect(bienvenue.lecture).toMatchObject({ mode: 'complet', seq: 1, par: 'serveur' });
+    const apres = b.top();
+    const l = messages(apres, 'lecture')[0]!;
+    expect(l).toMatchObject({ mode: 'delta', seq: 2 });
+    expect(lireMessageServeur(JSON.stringify(l)).message).not.toBeNull();
+  });
+
+  it('60 ticks sans événement (étape tenue) : la somme des deltas pèse moins de 2 ko', () => {
+    const b = pret();
+    b.envoyer('regie_1', { t: 'conduite', op: 'retenir', actif: true });
+    const { r, lire } = suivreRegie(b.rep);
+    let octets = 0, entier = 0;
+    const sorties = b.secondes(60);
+    for (const x of sorties) if (x.m.t === 'lecture' && x.m.mode === 'delta') { octets += JSON.stringify(x.m.d).length; entier += JSON.stringify(x.m).length; }
+    lire(sorties);
+    // 59 deltas et le complet de la minute (le 60e envoi, une minute après le complet de la connexion)
+    expect(r.deltas).toHaveLength(59);
+    expect(r.complets).toBe(1);
+    expect(r.trous).toBe(0);
+    expect(r.etat).toEqual(b.rep.etatLecture());
+    expect(octets).toBeLessThan(2000);
+    expect(entier).toBeLessThan(8000);
+  });
+
+  it('un complet au lancement et après allerA ; un trou de seq n’apparaît jamais ; la régie reconstitue l’état exact', () => {
+    const b = pret();
+    const { r, lire } = suivreRegie(b.rep);
+    lire(b.secondes(11));
+    lire(b.voter('pub_s1', 0));
+    lire(b.secondes(3));
+    lire(b.top());
+    lire(b.secondes(5));
+    expect(r.trous).toBe(0);
+    expect(r.deltas.length).toBeGreaterThan(5);
+    expect(r.etat).toEqual(b.rep.etatLecture());
+    // un saut : complet
+    const completsAvant = r.complets;
+    lire(b.envoyer('regie_1', { t: 'conduite', op: 'allerA', moment: 'm1' }));
+    expect(r.complets).toBe(completsAvant + 1);
+    expect(r.etat).toEqual(b.rep.etatLecture());
+    lire(b.secondes(2));
+    expect(r.trous).toBe(0);
+    expect(r.etat).toEqual(b.rep.etatLecture());
+  });
+
+  it('un nouveau lancer renvoie un complet à la régie', () => {
+    const b = pret();
+    b.secondes(4);
+    const { r, lire } = suivreRegie(b.rep);
+    lire(b.envoyer('regie_1', { t: 'conduite', op: 'lancer', mode: 'scene' }));
+    expect(r.complets).toBe(1);
+    expect(r.etat).toEqual(b.rep.etatLecture());
+  });
+
+  it('resync : la session reçoit un complet (seq suivant), puis les deltas repartent de là', () => {
+    const b = pret();
+    b.secondes(3);
+    const { r, lire } = suivreRegie(b.rep);
+    const out = b.envoyer('regie_1', { t: 'resync' });
+    lire(out);
+    expect(r.complets).toBe(1);
+    expect(r.etat).toEqual(b.rep.etatLecture());
+    lire(b.secondes(2));
+    expect(r.trous).toBe(0);
+    expect(r.deltas).toHaveLength(2);
+    expect(r.etat).toEqual(b.rep.etatLecture());
+  });
+
+  it('au plus une minute entre deux complets', () => {
+    const b = pret();
+    const { r, lire } = suivreRegie(b.rep);
+    lire(b.secondes(125));
+    expect(r.complets).toBeGreaterThanOrEqual(2);
+    expect(r.complets).toBeLessThanOrEqual(3);
+    expect(r.trous).toBe(0);
+  });
+
+  it('chaque session de la régie a sa propre numérotation', () => {
+    const b = pret();
+    b.secondes(2);
+    const out2 = b.hello('regie_2', 'regie');
+    const a = suivreRegie(b.rep, 'regie_1'), c = suivreRegie(undefined, 'regie_2');
+    c.lire(out2);
+    const sorties = b.secondes(3);
+    a.lire(sorties); c.lire(sorties);
+    expect(c.r.deltas.map(m => (m as { seq: number }).seq)).toEqual([2, 3, 4]);
+    expect(a.r.deltas.length).toBe(3);
+    expect(b.rep.instantane().sessions.regie_2!.lecture!.seq).toBe(4);
+  });
+
+  it('une régie déconnectée n’est plus suivie ; à la reconnexion : complet', () => {
+    const b = pret();
+    b.rep.fermer('regie_1');
+    expect(b.rep.instantane().sessions.regie_1!.lecture).toBeUndefined();
+    const out = b.hello('regie_1', 'regie');
+    const bienvenue = out[0]!.m;
+    if (bienvenue.t !== 'bienvenue') throw new Error();
+    expect(bienvenue.lecture).toMatchObject({ mode: 'complet', seq: 1 });
+  });
+
+  it('mémoire posée, signal et alertes : les deltas ne portent que ce qui change', () => {
+    const b = pret();
+    b.secondes(2);
+    const { r, lire } = suivreRegie(b.rep);
+    const out = b.envoyer('regie_1', { t: 'conduite', op: 'poser', nom: 'missions', valeur: 3 });
+    lire(out);
+    const d = r.deltas.at(-1) as { d: { memoires?: unknown; journal?: unknown[]; parcours?: unknown } };
+    expect(d.d.memoires).toEqual({ missions: 3 });
+    expect(d.d.journal).toHaveLength(1);
+    expect(d.d.parcours).toBeUndefined();
+    expect(r.etat).toEqual(b.rep.etatLecture());
   });
 });
 

@@ -189,6 +189,29 @@ describe('lireMessageServeur', () => {
     expect(refusS({ t: 'lecture', etat: { t: 'x' }, par: 'serveur', ts: 1 })).toMatch(/etat.t/);
   });
 
+  it('lecture : sans mode = complet (ancien format) ; complet avec seq ; delta contrôlé', () => {
+    const etat = { t: 12, moment: 'b5_q1', etape: 'b5_q1_s', tEtape: 2, parcours: [] };
+    expect(okS({ t: 'lecture', etat, par: 'serveur', ts: 1 })).toEqual({ t: 'lecture', mode: 'complet', etat, par: 'serveur', ts: 1 });
+    expect(okS({ t: 'lecture', mode: 'complet', etat, par: 'serveur', ts: 1, seq: 7 })).toMatchObject({ mode: 'complet', seq: 7 });
+    expect(refusS({ t: 'lecture', mode: 'complet', etat, par: 'serveur', ts: 1, seq: -1 })).toMatch(/seq/);
+    const delta = { t: 'lecture', mode: 'delta', seq: 8, ts: 2, par: 'serveur', d: { t: 13, tEtape: 3, memoires: { a: 1 }, journal: [{ t: 13 }], retires: ['issue', 'receptions.sig'] } };
+    expect(okS(delta)).toMatchObject({ t: 'lecture', mode: 'delta', seq: 8, d: { t: 13, memoires: { a: 1 } } });
+    expect(refusS({ ...delta, seq: undefined })).toMatch(/seq/);
+    expect(refusS({ ...delta, mode: 'diff' })).toMatch(/mode/);
+    expect(refusS({ ...delta, d: { tEtape: 3 } })).toMatch(/d.t/);
+    expect(refusS({ ...delta, d: { t: 1, tEtape: 3, journal: 'x' } })).toMatch(/d.journal/);
+    expect(refusS({ ...delta, d: { t: 1, tEtape: 3, memoires: [] } })).toMatch(/d.memoires/);
+    expect(refusS({ ...delta, d: { t: 1, tEtape: 3, retires: ['parcours'] } })).toMatch(/retires/);
+    expect(refusS({ ...delta, d: { t: 1, tEtape: 3, phase: 'ailleurs' } })).toMatch(/phase/);
+  });
+
+  it('bienvenue : lecture complète avec seq, ou ancien format sans mode', () => {
+    const etat = { t: 1, moment: 'm1', etape: null, tEtape: 0, parcours: [] };
+    const bienvenue = { t: 'bienvenue', v: 2, role: 'regie', session: 'regie_001', ts: 1, vue: null, cseq: 0 };
+    expect(okS({ ...bienvenue, lecture: { mode: 'complet', etat, par: 'serveur', ts: 1, seq: 1 } })).toMatchObject({ lecture: { mode: 'complet', seq: 1 } });
+    expect(okS({ ...bienvenue, lecture: { etat, par: 'serveur', ts: 1 } })).toMatchObject({ lecture: { mode: 'complet' } });
+  });
+
   it('salle (résumé pour la régie), agent.cmd', () => {
     expect(okS({ t: 'salle', ts: 1, acteurs: { public: { presents: 138, prets: 131 }, ministre: { presents: 1 } }, vote: { q: 'q1', recus: 121, parts: [41, 9, 37, 13] } }))
       .toMatchObject({ acteurs: { public: { presents: 138 } }, vote: { recus: 121 } });
