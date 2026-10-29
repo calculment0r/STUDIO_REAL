@@ -12,6 +12,8 @@ export interface Capacites {
   pleinEcran: boolean;
   wakeLock: boolean;
   camera: boolean;
+  /** RTCPeerConnection présent : la visio (écran visio-appel) peut envoyer et recevoir des flux */
+  webrtc?: boolean;
   /** Cache Storage (préchargement des vidéos) */
   cache: boolean;
 }
@@ -33,6 +35,7 @@ export function detecterCapacites(): Capacites {
     pleinEcran: typeof document !== 'undefined' && !!document.documentElement?.requestFullscreen,
     wakeLock: 'wakeLock' in navigator,
     camera: !!navigator.mediaDevices?.getUserMedia,
+    webrtc: typeof RTCPeerConnection !== 'undefined',
     cache: typeof caches !== 'undefined',
   };
 }
@@ -45,6 +48,7 @@ export function nomsCapacites(c: Capacites): string[] {
   if (c.pleinEcran) l.push('plein-ecran');
   if (c.wakeLock) l.push('wake-lock');
   if (c.camera) l.push('camera');
+  if (c.webrtc) l.push('webrtc');
   if (c.cache) l.push('cache');
   return l;
 }

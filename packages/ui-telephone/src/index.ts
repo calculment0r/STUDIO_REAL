@@ -8,5 +8,6 @@ export * from './identite';
 export * from './medias';
 export * from './capacites';
 export * from './telephone';
+export * from './visio';
 export { App, type ProprietesApp } from './App';
 export { COMPOSANTS_ECRANS, EcranTelephone, EcranInconnu, type Ecran, type MediasEcran, type ProprietesEcran } from './ecrans';

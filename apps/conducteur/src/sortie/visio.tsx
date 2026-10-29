@@ -1,8 +1,9 @@
 // Scène native « visio » de la sortie écran scène : la disposition de prototypes/figurants/pages/visio/scene.html
 // (deux cadres côte à côte, étiquettes en bas à gauche), plus la disposition « plein » (un poste en plein écran, la
-// ministre au bloc 6 d'Écho). SANS WebRTC dans ce lot : chaque cadre lit le flux de son poste dans le registre
-// flux-visio.ts ; tant qu'il n'y en a pas, la mire de flux/mire.ts (bande de latence) et « connexion… ».
-// Son : un poste n'est entendu sur la sono que si `son` est vrai (Franck, dans la salle, est coupé par défaut).
+// ministre au bloc 6 d'Écho). Chaque cadre lit le flux de son poste dans le registre flux-visio.ts, rempli par les
+// liaisons WebRTC de visio-rtc.ts ; tant qu'il n'y en a pas, la mire de flux/mire.ts (bande de latence) et « connexion… ».
+// Son : un poste n'est entendu sur la sono que si `son` est vrai (Franck, dans la salle, est coupé par défaut). Si le
+// navigateur refuse le son sans geste, la vidéo joue muette et le son revient au premier geste sur la page.
 import { useEffect, useRef } from 'react';
 import { dessinerMire } from '../flux/mire';
 import { useFluxVisio } from './flux-visio';
@@ -39,11 +40,20 @@ function Cadre({ poste, miniature }: { poste: PosteVisio; miniature: boolean }) 
     if (!v) return;
     if (v.srcObject !== flux) v.srcObject = flux;
     v.muted = !poste.son;
-    if (flux) void v.play().catch(() => {
-      // son refusé sans geste : on joue muet plutôt que pas du tout
+    if (!flux) return;
+    let attente: (() => void) | null = null;
+    void v.play().catch(() => {
+      // son refusé sans geste : on joue muet plutôt que pas du tout, et le son revient au premier geste
       v.muted = true;
       void v.play().catch(() => { /* rien */ });
+      if (!poste.son) return;
+      attente = () => { v.muted = false; void v.play().catch(() => { v.muted = true; }); };
+      document.addEventListener('pointerdown', attente, { once: true });
+      document.addEventListener('keydown', attente, { once: true });
     });
+    return () => {
+      if (attente) { document.removeEventListener('pointerdown', attente); document.removeEventListener('keydown', attente); }
+    };
   }, [flux, poste.son]);
   return (
     <div className="so-visio-cadre" data-poste={poste.id}>

@@ -1,7 +1,7 @@
 // Registre des flux de la visio de scène (scène native « visio ») : poste → MediaStream.
-// Ce lot n'ouvre AUCUNE liaison WebRTC : le registre reste vide et les cadres montrent la mire de flux/mire.ts avec
-// « connexion… ». Le lot visio le remplira (signalisation `rtc` du serveur de spectacle entre les acteurs franck,
-// ministre et scene, rapport 4 §4.6) avec poserFluxVisio(poste, flux) ; la scène suit sans rien changer d'autre.
+// Rempli par visio-rtc.ts (liaisons WebRTC avec les téléphones nommés, signalisation `rtc` du serveur de spectacle) :
+// poserFluxVisio(acteur, flux) à l'arrivée des pistes, poserFluxVisio(acteur, null) à la fin ou à la coupure ; vidé à
+// la fermeture de la page. Sans flux, les cadres montrent la mire de flux/mire.ts avec « connexion… ».
 import { useSyncExternalStore } from 'react';
 
 const flux = new Map<string, MediaStream>();

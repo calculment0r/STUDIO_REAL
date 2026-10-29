@@ -11,6 +11,8 @@
 //                                                        Le canal local reste le SECOURS : ses scènes ne passent que si
 //                                                        le serveur de spectacle est injoignable ; ses préchargements,
 //                                                        sa configuration et ses événements passent toujours.
+//                                                        Visio : les téléphones nommés offrent leur caméra par `rtc`,
+//                                                        visio-rtc.ts répond et remplit flux-visio.ts (scène « visio »).
 // Plusieurs régies peuvent la piloter (Conducteur, moniteur, autre machine) : la décision la plus récente gagne
 // (arbitrage.ts). Une vidéo introuvable s'affiche en clair et remonte aux régies (present.etat.absent).
 // Un message de régie illisible (autre version du protocole, scène inconnue) n'est PAS ignoré : la sortie renvoie un
@@ -41,6 +43,8 @@ import { salleDansAdresse, TransportSalle, type MessageSalleBrut } from './salle
 import { ContexteServices, ContexteTemps, Fondus, Scene1080, type Services } from './scenes';
 import { SonDeSalle } from './son-salle';
 import { lireFxScene, traduire } from './traduction';
+import { viderFluxVisio } from './flux-visio';
+import { configurationVisio, creerVisioRtc, type VisioRtc } from './visio-rtc';
 import { PoolVideos } from './videos';
 
 type Liaison = 'attente' | 'connecte' | 'perdu';
@@ -119,6 +123,8 @@ export function PageSortie() {
   const [etatSpectacle, setEtatSpectacle] = useState<EtatClientSpectacle | null>(null);
   const etatSpectacleRef = useRef<EtatClientSpectacle | null>(null);
   const client = useRef<ClientSortieSpectacle | null>(null);
+  /** liaisons WebRTC de la visio (avec le serveur de spectacle seulement) */
+  const visio = useRef<VisioRtc | null>(null);
   /** couche locale dont l'affichage doit être accusé au serveur (vseq de la vue) */
   const aAccuser = useRef<{ n: number; vseq: number } | null>(null);
   const configRef = useRef(config);
@@ -350,6 +356,11 @@ export function PageSortie() {
       ...(spectacle.acteur ? { acteur: spectacle.acteur } : {}),
     });
     client.current = c;
+    // visio : répond aux offres des téléphones nommés, suit la scène affichée (posée tout de suite, puis par l'effet plus bas)
+    const v = creerVisioRtc({ client: c, configuration: configurationVisio(spectacle) });
+    visio.current = v;
+    const s0 = sceneRef.current.scene;
+    v.scene(s0.type === 'visio' ? s0.postes.map((p) => p.id) : null);
     const desabonner = [
       c.surEtat((e) => { etatSpectacleRef.current = e; setEtatSpectacle(e); }),
       c.surVue(recevoirVue),
@@ -366,10 +377,24 @@ export function PageSortie() {
     return () => {
       clearInterval(battement);
       for (const f of desabonner) f();
+      v.fermer();
+      if (visio.current === v) visio.current = null;
       c.fermer();
       if (client.current === c) client.current = null;
     };
   }, [spectacle, id, recevoirVue, recevoirFx, precharges, pool, son]);
+
+  // visio : liaisons ouvertes tant que la scène montrée est « visio » (fermées 10 s après en être sortie)
+  useEffect(() => {
+    const s = scene.scene;
+    visio.current?.scene(s.type === 'visio' ? s.postes.map((p) => p.id) : null);
+  }, [scene.scene]);
+  // fermeture de la page : `fin` aux téléphones, registre des flux vidé
+  useEffect(() => {
+    const fin = () => { visio.current?.fermer(); viderFluxVisio(); };
+    window.addEventListener('pagehide', fin);
+    return () => window.removeEventListener('pagehide', fin);
+  }, []);
 
   // données vivantes du mur et audio de salle : suivent la scène montrée
   useEffect(() => { donneesMur.nouvelleVue(scene.scene); }, [donneesMur, scene.scene]);
