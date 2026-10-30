@@ -1,0 +1,11 @@
+{
+  "//": "Le noyau doit rester hébergeable ailleurs (Durable Object) : ni types Node, ni ws. Tests exclus (ils lisent des fichiers).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/serveur-spectacle-noyau.tsbuildinfo",
+    "types": [],
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src/noyau"],
+  "exclude": ["src/noyau/**/*.test.ts"]
+}

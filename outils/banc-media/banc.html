@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Banc de mesure vidéo</title>
+<!-- Page autonome : si le thème n'est pas servi à côté (autre serveur statique), les jetons locaux ci-dessous prennent le relais. -->
+<link rel="stylesheet" href="../../packages/theme/theme.css">
+<style>
+  :root {
+    --b-bg: var(--bg, #0a0d0b);
+    --b-tile: var(--tile, #0f1311);
+    --b-tile2: var(--tile2, #171d1a);
+    --b-ink: var(--ink, #e6eae7);
+    --b-ink2: var(--ink2, #a3aea8);
+    --b-ink3: var(--ink3, #7f8b86);
+    --b-cy: var(--cy, #b9cfd8);
+    --b-ort: var(--ort, #e0674a);
+    --b-on-ort: var(--on-ort, #170c08);
+    --b-gt: var(--gt, #3f9a6a);
+    --b-rec: var(--rec, #c8311f);
+    --b-filet: rgba(var(--lr, 185, 207, 216), .2);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--b-bg); color: var(--b-ink);
+    font: 15px/1.45 var(--f-ui, system-ui, sans-serif);
+    padding: 16px max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+  }
+  main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; margin: 0; font-weight: 700; }
+  .sous { color: var(--b-ink3); font-size: 12px; margin: 2px 0 0; }
+  .carte { background: var(--b-tile); border-radius: 10px; box-shadow: inset 0 0 0 1px var(--b-filet); padding: 14px; }
+  .carte h2 { margin: 0 0 8px; font: 600 11px/1 var(--f-mono, ui-monospace, monospace); letter-spacing: .16em; text-transform: uppercase; color: var(--b-cy); }
+  label { display: block; font: 11px/1 var(--f-mono, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--b-ink3); margin: 10px 0 5px; }
+  input, select {
+    width: 100%; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--b-ink);
+    background: var(--b-bg); box-shadow: inset 0 0 0 1px var(--b-filet); font-size: 16px; /* 16 px : pas de zoom automatique sur iPhone */
+  }
+  .rang { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  button {
+    min-height: 48px; padding: 0 20px; border-radius: 10px; font: 600 12px/1 var(--f-mono, ui-monospace, monospace);
+    letter-spacing: .14em; text-transform: uppercase; color: var(--b-ink); background: transparent;
+    box-shadow: inset 0 0 0 1px var(--b-filet); border: 0; cursor: pointer;
+  }
+  button.plein { background: var(--b-ort); color: var(--b-on-ort); box-shadow: none; }
+  button:disabled { opacity: .4; cursor: default; }
+  #etat { font: 12px/1.4 var(--f-mono, ui-monospace, monospace); color: var(--b-ink2); min-height: 1.4em; margin-top: 10px; }
+  #etat.erreur { color: var(--b-rec); }
+  .defile { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font: 12px/1.3 var(--f-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 8px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--b-filet); }
+  th { color: var(--b-ink3); font-weight: 500; text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+  th:first-child, td:first-child { text-align: left; }
+  tfoot td { color: var(--b-cy); font-weight: 600; }
+  td.ko { color: var(--b-rec); }
+  td.ok { color: var(--b-gt); }
+  pre {
+    margin: 0; max-height: 320px; overflow: auto; padding: 10px; border-radius: 8px; background: var(--b-bg);
+    box-shadow: inset 0 0 0 1px var(--b-filet); font: 11px/1.4 var(--f-mono, ui-monospace, monospace); color: var(--b-ink2);
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .note { font-size: 12px; color: var(--b-ink2); margin: 8px 0 0; }
+  .note code { font-family: var(--f-mono, ui-monospace, monospace); color: var(--b-cy); }
+  #scene { aspect-ratio: 16 / 9; max-width: 360px; background: var(--b-bg); border-radius: 8px; box-shadow: inset 0 0 0 1px var(--b-filet); overflow: hidden; }
+  #scene video { display: block; width: 100%; height: 100%; object-fit: contain; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Banc de mesure vidéo</h1>
+    <p class="sous">Temps jusqu'à la première image, sur cet appareil. Garde l'écran allumé et cette page au premier plan pendant la mesure.</p>
+  </header>
+
+  <section class="carte" aria-labelledby="t-reglages">
+    <h2 id="t-reglages">Réglages</h2>
+    <label for="f-src">Adresse de la vidéo (src)</label>
+    <input id="f-src" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://…/video.mp4">
+    <div class="rang">
+      <div>
+        <label for="f-mode">Mode</label>
+        <select id="f-mode">
+          <option value="froid">froid : lecture directe</option>
+          <option value="tampon">tampon : attend canplaythrough</option>
+          <option value="cache">cache : précharge puis lit un blob</option>
+        </select>
+      </div>
+      <div>
+        <label for="f-n">Répétitions</label>
+        <input id="f-n" type="number" inputmode="numeric" min="1" max="20" value="3">
+      </div>
+    </div>
+    <p class="note" id="n-envoyer" hidden></p>
+    <div class="actions">
+      <button id="b-lancer" class="plein" type="button">Lancer</button>
+    </div>
+    <div id="etat" role="status" aria-live="polite"></div>
+    <p class="note">
+      <code>froid</code> : chaque répétition ajoute un paramètre aléatoire à l'adresse pour ne pas être servie par le cache du navigateur.
+      <code>tampon</code> : <code>preload=auto</code>, puis <code>play()</code> seulement après <code>canplaythrough</code>.
+      <code>cache</code> : <code>fetch</code> complet dans le Cache Storage (si disponible, sinon en mémoire), puis lecture depuis un <code>blob:</code> ;
+      le temps de préchargement est compris dans les mesures (<code>t_src_pose</code> dit quand le <code>src</code> a été posé).
+    </p>
+  </section>
+
+  <section class="carte" aria-labelledby="t-apercu">
+    <h2 id="t-apercu">Aperçu</h2>
+    <div id="scene"></div>
+    <p class="note">La vidéo doit rester visible à l'écran : un navigateur peut ne pas décoder (ni compter une « première image ») pour une vidéo cachée.</p>
+  </section>
+
+  <section class="carte" aria-labelledby="t-mesures">
+    <h2 id="t-mesures">Mesures (ms)</h2>
+    <div class="defile">
+      <table id="tableau">
+        <thead>
+          <tr>
+            <th>Rép.</th><th>play()</th><th>métadonnées</th><th>canplay</th><th>1re image</th><th>attente</th><th>octets</th><th>réseau 1er octet</th>
+          </tr>
+        </thead>
+        <tbody id="corps"><tr><td colspan="8" style="text-align:left;color:var(--b-ink3)">Aucune mesure pour l'instant.</td></tr></tbody>
+        <tfoot id="pied"></tfoot>
+      </table>
+    </div>
+    <p class="note">
+      « Octets » et « réseau 1er octet » viennent de <code>performance.getEntriesByName(src)</code> (<code>transferSize</code>, <code>responseStart</code>).
+      Le navigateur ne les donne que si le serveur envoie l'en-tête <code>Timing-Allow-Origin: *</code> quand la vidéo vient d'une autre origine ;
+      sinon ils valent 0 ou « n/d ». Seules les requêtes terminées sont comptées, et Safari ne publie pas toujours les requêtes média.
+    </p>
+  </section>
+
+  <section class="carte" aria-labelledby="t-json">
+    <h2 id="t-json">JSON complet</h2>
+    <pre id="json" tabindex="0">{}</pre>
+    <div class="actions">
+      <button id="b-copier" type="button" disabled>Copier le JSON</button>
+    </div>
+    <div id="etat-copie" class="note" role="status" aria-live="polite"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const MODES = ['froid', 'tampon', 'cache'];
+  const DELAI_MAX_MS = 20000;   // sans première image au bout de ce délai, la répétition est notée en échec
+  const STABILISATION_MS = 1000; // on laisse jouer un peu après la 1re image pour compter les « waiting » et les requêtes finies
+  const arrondi = (x) => (x === null || x === undefined || !Number.isFinite(x) ? null : Math.round(x * 10) / 10);
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  const lignes = [];
+  let jsonCourant = null;
+
+  // ---- paramètres de l'adresse ----
+  const q = new URLSearchParams(location.search);
+  function urlHttp(valeur) {
+    if (!valeur) return null;
+    try {
+      const u = new URL(valeur, location.href);
+      return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null;
+    } catch { return null; }
+  }
+  $('f-src').value = q.get('src') || '';
+  if (MODES.includes(q.get('mode'))) $('f-mode').value = q.get('mode');
+  const nUrl = parseInt(q.get('n'), 10);
+  if (nUrl >= 1) $('f-n').value = Math.min(nUrl, 20);
+  const envoyer = urlHttp(q.get('envoyer'));
+  if (q.get('envoyer')) {
+    $('n-envoyer').hidden = false;
+    $('n-envoyer').textContent = envoyer
+      ? `À la fin de la mesure, le JSON sera envoyé en POST à : ${envoyer}`
+      : "Le paramètre « envoyer » n'est pas une adresse http(s) valide : rien ne sera envoyé.";
+  }
+
+  function etat(texte, erreur) {
+    $('etat').textContent = texte;
+    $('etat').className = erreur ? 'erreur' : '';
+  }
+
+  // ---- une répétition ----
+  function ressource(urlComplete) {
+    // Plusieurs entrées possibles (une par requête Range) : on additionne les octets et on garde le 1er octet le plus tôt.
+    const entrees = performance.getEntriesByName(urlComplete);
+    if (!entrees.length) return { entrees: 0, octets: null, ttfb_reseau: null };
+    let octets = 0, ttfb = Infinity, vu = false;
+    for (const e of entrees) {
+      octets += e.transferSize || 0;
+      if (e.responseStart > 0) { ttfb = Math.min(ttfb, e.responseStart - e.startTime); vu = true; }
+    }
+    return { entrees: entrees.length, octets: octets || null, ttfb_reseau: vu ? ttfb : null };
+  }
+
+  async function mesurer(src, mode, rep) {
+    const m = {
+      repetition: rep, mode, visibilite_debut: document.visibilityState, src_utilise: null,
+      t_src_pose: 0, t_metadata: null, t_canplay: null, t_canplaythrough: null, t_premiere_image: null,
+      methode_premiere_image: null, attente_ms: 0, attente_nb: 0,
+      play: null, play_erreur: null, t_play_resolu: null,
+      octets_transferes: null, requetes_vues: 0, reseau_premier_octet_ms: null,
+      octets_blob: null, cache_storage: null, erreur: null,
+    };
+    const t0 = performance.now();
+    const depuis = () => performance.now() - t0;
+    let url = new URL($('f-src').value, location.href);
+    url.searchParams.set('_banc', `${Date.now().toString(36)}${rep}${Math.random().toString(36).slice(2, 6)}`);
+    const urlReseau = url.href;
+    let urlLecture = urlReseau, urlBlob = null;
+
+    if (mode === 'cache') {
+      try {
+        const rep0 = await fetch(urlReseau, { cache: 'no-store' });
+        if (!rep0.ok) throw new Error(`HTTP ${rep0.status}`);
+        let blob;
+        if ('caches' in window) {
+          try {
+            const c = await caches.open('banc-media');
+            await c.put(urlReseau, rep0.clone());
+            const dedans = await c.match(urlReseau);
+            blob = await dedans.blob();
+            m.cache_storage = true;
+            await c.delete(urlReseau);
+          } catch { m.cache_storage = false; blob = await rep0.blob(); }
+        } else { m.cache_storage = false; blob = await rep0.blob(); }
+        m.octets_blob = blob.size;
+        urlBlob = URL.createObjectURL(blob);
+        urlLecture = urlBlob;
+      } catch (e) {
+        m.erreur = `prechargement: ${e.message || e}`;
+        return m;
+      }
+    }
+    m.src_utilise = urlLecture.startsWith('blob:') ? 'blob (voir src)' : urlReseau;
+
+    const v = document.createElement('video');
+    v.muted = true; v.defaultMuted = true; v.setAttribute('muted', '');
+    v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    v.preload = 'auto';
+    $('scene').appendChild(v);
+
+    let debutAttente = null, vuPlaying = false;
+    let resoudre; const fini = new Promise((r) => { resoudre = r; });
+    const note = (cle) => { if (m[cle] === null) m[cle] = depuis(); };
+    v.addEventListener('loadedmetadata', () => note('t_metadata'));
+    v.addEventListener('canplay', () => note('t_canplay'));
+    v.addEventListener('canplaythrough', () => note('t_canplaythrough'));
+    v.addEventListener('waiting', () => { if (debutAttente === null) { debutAttente = performance.now(); m.attente_nb++; } });
+    v.addEventListener('playing', () => {
+      if (debutAttente !== null) { m.attente_ms += performance.now() - debutAttente; debutAttente = null; }
+      vuPlaying = true;
+    });
+    v.addEventListener('error', () => { if (!m.erreur) m.erreur = `media:${v.error ? v.error.code : '?'}`; resoudre(); });
+    const tp = {}; // repli sans requestVideoFrameCallback : « playing » puis premier timeupdate
+    v.addEventListener('playing', () => {
+      if (tp.playing === undefined) tp.playing = depuis();
+      if (aRvfc) setTimeout(resoudre, 2000); // requestVideoFrameCallback n'a rien rendu 2 s après playing : on se rabat sur timeupdate / playing
+    });
+    const aRvfc = 'requestVideoFrameCallback' in v;
+    v.addEventListener('timeupdate', () => {
+      if (tp.timeupdate === undefined && vuPlaying && v.currentTime > 0) {
+        tp.timeupdate = depuis();
+        if (!aRvfc) resoudre(); // sans requestVideoFrameCallback, le 1er timeupdate après playing fait foi
+      }
+    });
+    if (aRvfc) {
+      v.requestVideoFrameCallback(() => {
+        if (m.t_premiere_image === null) { m.t_premiere_image = depuis(); m.methode_premiere_image = 'requestVideoFrameCallback'; resoudre(); }
+      });
+    }
+
+    const lancerLecture = () => {
+      try {
+        const p = v.play();
+        if (p && p.then) {
+          p.then(() => { m.play = 'ok'; m.t_play_resolu = depuis(); },
+                 (e) => { m.play = 'refuse'; m.play_erreur = e && e.name ? e.name : String(e); m.t_play_resolu = depuis(); resoudre(); });
+        } else { m.play = 'ok'; }
+      } catch (e) { m.play = 'refuse'; m.play_erreur = e && e.name ? e.name : String(e); resoudre(); }
+    };
+
+    m.t_src_pose = depuis();
+    v.src = urlLecture;
+    if (mode === 'tampon') {
+      v.load();
+      await Promise.race([
+        new Promise((r) => v.addEventListener('canplaythrough', r, { once: true })),
+        new Promise((r) => v.addEventListener('error', r, { once: true })),
+        pause(DELAI_MAX_MS),
+      ]);
+      if (m.t_canplaythrough === null && !m.erreur) m.erreur = 'delai: pas de canplaythrough';
+    }
+    if (!m.erreur) lancerLecture();
+
+    await Promise.race([fini, pause(DELAI_MAX_MS)]);
+    if (m.t_premiere_image === null && !m.erreur) {
+      if (tp.timeupdate !== undefined) { m.t_premiere_image = tp.timeupdate; m.methode_premiere_image = 'timeupdate'; }
+      else if (tp.playing !== undefined) { m.t_premiere_image = tp.playing; m.methode_premiere_image = 'playing'; }
+      else m.erreur = m.play === 'refuse' ? 'play refuse' : 'delai: pas de premiere image';
+    }
+    if (m.t_premiere_image !== null) await pause(STABILISATION_MS);
+    if (debutAttente !== null) { m.attente_ms += performance.now() - debutAttente; debutAttente = null; }
+    m.visibilite_fin = document.visibilityState;
+
+    // On coupe la lecture (annule les requêtes en cours), puis on lit les entrées « resource ».
+    v.pause(); v.removeAttribute('src'); v.load(); v.remove();
+    if (urlBlob) URL.revokeObjectURL(urlBlob);
+    await pause(100);
+    const res = ressource(urlReseau);
+    m.requetes_vues = res.entrees;
+    m.octets_transferes = res.octets;
+    m.reseau_premier_octet_ms = res.ttfb_reseau;
+    for (const k of ['t_src_pose', 't_metadata', 't_canplay', 't_canplaythrough', 't_premiere_image', 'attente_ms', 'reseau_premier_octet_ms']) m[k] = arrondi(m[k]);
+    m.t_play_resolu = arrondi(m.t_play_resolu);
+    return m;
+  }
+
+  // ---- affichage ----
+  const fmt = (x) => (x === null || x === undefined ? 'n/d' : String(x));
+  function cellule(tr, texte, classe) {
+    const td = document.createElement('td');
+    td.textContent = texte;
+    if (classe) td.className = classe;
+    tr.appendChild(td);
+  }
+  function percentile(valeurs, p) {
+    const v = valeurs.filter((x) => typeof x === 'number').sort((a, b) => a - b);
+    if (!v.length) return null;
+    const rang = (p / 100) * (v.length - 1), b = Math.floor(rang), h = Math.ceil(rang);
+    return arrondi(v[b] + (v[h] - v[b]) * (rang - b));
+  }
+  function dessiner() {
+    const corps = $('corps'); corps.textContent = '';
+    for (const m of lignes) {
+      const tr = document.createElement('tr');
+      cellule(tr, String(m.repetition));
+      cellule(tr, m.play === 'ok' ? 'ok' : m.play ? `refusé (${m.play_erreur})` : 'n/d', m.play === 'ok' ? 'ok' : 'ko');
+      cellule(tr, fmt(m.t_metadata));
+      cellule(tr, fmt(m.t_canplay));
+      cellule(tr, m.erreur && m.t_premiere_image === null ? `échec: ${m.erreur}` : fmt(m.t_premiere_image), m.t_premiere_image === null ? 'ko' : '');
+      cellule(tr, `${fmt(m.attente_ms)} (${m.attente_nb}×)`);
+      cellule(tr, m.octets_transferes ? String(m.octets_transferes) : 'n/d');
+      cellule(tr, fmt(m.reseau_premier_octet_ms));
+      corps.appendChild(tr);
+    }
+    const pied = $('pied'); pied.textContent = '';
+    if (lignes.length > 1) {
+      const tr = document.createElement('tr');
+      const vals = lignes.map((m) => m.t_premiere_image);
+      cellule(tr, 'p50 / p95 / max de la 1re image');
+      tr.firstChild.colSpan = 4;
+      cellule(tr, `${fmt(percentile(vals, 50))} / ${fmt(percentile(vals, 95))} / ${fmt(percentile(vals, 100))}`);
+      tr.lastChild.colSpan = 4;
+      pied.appendChild(tr);
+    }
+  }
+  function construireJson(params) {
+    const c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return {
+      outil: 'banc-media', version: 1, date: new Date().toISOString(),
+      parametres: params,
+      appareil: {
+        userAgent: navigator.userAgent,
+        connection: c ? { effectiveType: c.effectiveType ?? null, type: c.type ?? null, downlink: c.downlink ?? null, rtt: c.rtt ?? null, saveData: c.saveData ?? null } : null,
+        visibilityState: document.visibilityState,
+        ecran: `${screen.width}x${screen.height}@${window.devicePixelRatio || 1}`,
+        coeurs: navigator.hardwareConcurrency ?? null,
+        memoire_go: navigator.deviceMemory ?? null,
+        requestVideoFrameCallback: 'requestVideoFrameCallback' in HTMLVideoElement.prototype,
+        page: location.origin,
+      },
+      mesures: lignes,
+    };
+  }
+  function montrerJson(params) {
+    jsonCourant = construireJson(params);
+    $('json').textContent = JSON.stringify(jsonCourant, null, 2);
+    $('b-copier').disabled = false;
+  }
+
+  // ---- lancement ----
+  $('b-lancer').addEventListener('click', async () => {
+    const src = urlHttp($('f-src').value.trim());
+    if (!src) { etat("Adresse de la vidéo absente ou invalide (http ou https).", true); return; }
+    $('f-src').value = src;
+    const mode = $('f-mode').value;
+    const n = Math.max(1, Math.min(20, parseInt($('f-n').value, 10) || 1));
+    const params = { src, mode, n, envoyer: envoyer || null };
+    $('b-lancer').disabled = true; $('b-copier').disabled = true;
+    lignes.length = 0; dessiner(); $('etat-copie').textContent = '';
+    for (let i = 1; i <= n; i++) {
+      etat(`Mesure ${i} / ${n}…`);
+      try { lignes.push(await mesurer(src, mode, i)); }
+      catch (e) { lignes.push({ repetition: i, mode, erreur: `exception: ${e && e.message || e}`, t_premiere_image: null }); }
+      dessiner(); montrerJson(params);
+    }
+    let texte = `Terminé : ${n} mesure(s).`;
+    let erreur = false;
+    if (envoyer) {
+      try {
+        // text/plain : évite le préflight CORS, le récepteur lit le corps comme du JSON.
+        const r = await fetch(envoyer, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(jsonCourant) });
+        texte += r.ok ? ` Envoyé à ${envoyer} (HTTP ${r.status}).` : ` Envoi refusé par ${envoyer} (HTTP ${r.status}).`;
+        erreur = !r.ok;
+      } catch (e) { texte += ` Envoi impossible vers ${envoyer} : ${e && e.message || e}.`; erreur = true; }
+    }
+    etat(texte, erreur);
+    $('b-lancer').disabled = false;
+  });
+
+  $('b-copier').addEventListener('click', async () => {
+    const texte = $('json').textContent;
+    let ok = false;
+    try { await navigator.clipboard.writeText(texte); ok = true; } catch { /* page en http : pas d'API presse-papiers */ }
+    if (!ok) {
+      const z = document.createElement('textarea');
+      z.value = texte; z.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+      document.body.appendChild(z); z.focus(); z.select();
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      z.remove();
+    }
+    $('etat-copie').textContent = ok ? 'JSON copié.' : 'Copie impossible : appuie longuement dans le cadre ci-dessus pour sélectionner le texte.';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,9 +1,21 @@
 // Réserve d'éléments <video> de la sortie (chantier SORTIE SCÈNE) : les vidéos annoncées par la régie sont chargées
 // d'avance dans des éléments cachés ; à la bascule, la scène PREND l'élément déjà prêt (déplacé dans le DOM, son
-// tampon est gardé) au lieu d'en créer un : pas d'image noire au début du fondu enchaîné.
+// tampon est gardé) au lieu d'en créer un : pas d'image noire au début du fondu enchaîné. Un son (audio du mur) passe
+// par la même réserve : un <video> lit aussi un fichier audio, et reste caché.
+// L'état de chaque média annoncé (prêt à jouer, en chargement, introuvable) remonte à la régie (present.etat.precharges)
+// et au serveur de spectacle (battement `etat.media`).
+import type { EtatPrecharge } from './protocole';
 import type { BibliothequeMedias } from './medias';
 
-const MAX = 6;
+const MAX = 8;
+/** HTMLMediaElement.HAVE_FUTURE_DATA : assez de données pour démarrer sans attendre. */
+const PRET_A_JOUER = 3;
+
+/** État d'un élément de la réserve (pur : testable sans navigateur). */
+export function etatPrecharge(trouve: boolean | null, readyState: number): EtatPrecharge {
+  if (trouve === false) return 'absent';
+  return trouve && readyState >= PRET_A_JOUER ? 'pret' : 'charge';
+}
 
 /** Cadrage automatique : une vidéo dont le format s'écarte de plus de 20 % du 16:9 est montrée entière (contain). */
 export function cadrageAuto(largeur: number, hauteur: number): 'contain' | 'cover' {
@@ -74,6 +86,26 @@ export class PoolVideos {
     e.enScene = true;
     e.utilise = Date.now();
     return { el: e.el, pret: e.pret };
+  }
+
+  /** État des médias de la réserve (asset → prêt / en chargement / introuvable). */
+  etats(): Record<string, EtatPrecharge> {
+    const r: Record<string, EtatPrecharge> = {};
+    for (const [k, e] of this.entrees) if (!k.includes('#')) r[k] = etatPrecharge(e.trouve, e.el.readyState);
+    return r;
+  }
+
+  /** Part préchargée d'un média (0 → 1) : fin de la plage tamponnée sur la durée ; 1 s'il est prêt à jouer en entier. */
+  part(asset: string): number {
+    const e = this.entrees.get(asset);
+    if (!e || !e.trouve) return 0;
+    const el = e.el;
+    if (el.readyState >= 4) return 1;
+    try {
+      const d = el.duration;
+      if (d > 0 && Number.isFinite(d) && el.buffered.length) return Math.max(0, Math.min(1, el.buffered.end(el.buffered.length - 1) / d));
+    } catch { /* pas encore de plage */ }
+    return 0;
   }
 
   /** Rend l'élément : arrêté, remis au début, retourné dans la réserve. */

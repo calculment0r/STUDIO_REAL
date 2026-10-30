@@ -1,5 +1,5 @@
 // Évaluation des conditions des sorties et des passages.
-import type { Condition, Sortie } from './types';
+import type { Condition, Projet, Sortie } from './types';
 import type { Signaux } from './moteur';
 import { memoireEnNombre, normaliserNom } from './blocs-moteur';
 
@@ -76,4 +76,50 @@ export function conditionRemplie(g: Condition, ctx: ContexteCondition): boolean 
 export function sortieRemplie(s: Pick<Sortie, 'g' | 'mode'>, ctx: ContexteCondition): boolean {
   if (!s.g.length) return true;
   return s.mode === 'any' ? s.g.some(g => conditionRemplie(g, ctx)) : s.g.every(g => conditionRemplie(g, ctx));
+}
+
+// ── Signaux des acteurs (audit 2026-10, rapport 1 §4.4) ─────────────────────────────────────────────────────────────
+// Ce qu'un acteur renvoie entre dans le lecteur par `signal(nom, donnees)` sous le nom « <acteur>.<signal> » :
+// 'scene.fin-video', 'ministre.present', 'franck.transcription', 'eco.fin-appel', 'figurants.say'. Les conditions le lisent
+// comme tout signal extérieur : 'sig:ministre.present' (réceptions dans l'étape), 'sigv:scene.fin-video' (dernière valeur).
+
+/** Séparateur entre l'acteur et son signal. */
+export const SEPARATEUR_SIGNAL = '.';
+
+/** Nom de signal d'un acteur : nomSignalActeur('ministre', 'present') = 'ministre.present'. */
+export const nomSignalActeur = (acteur: string, signal: string): string => `${acteur}${SEPARATEUR_SIGNAL}${signal}`;
+
+/** Découpe « <acteur>.<signal> » (au premier point) ; null si le nom n'a pas cette forme. */
+export function lireSignalActeur(nom: string): { acteur: string; signal: string } | null {
+  if (typeof nom !== 'string') return null;
+  const i = nom.indexOf(SEPARATEUR_SIGNAL);
+  if (i <= 0 || i >= nom.length - 1) return null;
+  return { acteur: nom.slice(0, i).trim(), signal: nom.slice(i + 1).trim() };
+}
+
+/** Signal déclaré par un acteur du projet (proposé dans l'onglet « Attend » de l'inspecteur). */
+export interface SignalActeur {
+  /** nom complet, tel qu'écrit dans une condition après 'sig:' ou 'sigv:' */
+  nom: string;
+  acteur: string;
+  signal: string;
+  /** nom affiché de l'acteur */
+  acteurNom: string;
+}
+
+/** Les signaux que les acteurs du projet déclarent renvoyer, dans l'ordre des acteurs puis de leurs signaux. */
+export function signauxDuProjet(projet: Pick<Projet, 'acteurs'>): SignalActeur[] {
+  const out: SignalActeur[] = [];
+  const vus = new Set<string>();
+  for (const a of Array.isArray(projet.acteurs) ? projet.acteurs : []) {
+    if (!a || typeof a.id !== 'string' || !a.id || !Array.isArray(a.signaux)) continue;
+    for (const s of a.signaux) {
+      if (typeof s !== 'string' || !s) continue;
+      const nom = nomSignalActeur(a.id, s);
+      if (vus.has(cleSignal(nom))) continue;
+      vus.add(cleSignal(nom));
+      out.push({ nom, acteur: a.id, signal: s, acteurNom: typeof a.nom === 'string' && a.nom ? a.nom : a.id });
+    }
+  }
+  return out;
 }

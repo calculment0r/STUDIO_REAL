@@ -1,0 +1,253 @@
+# Protocole du serveur de spectacle (v2)
+
+**La référence unique** des messages échangés avec le serveur de spectacle STUDIO_REAL. Elle remplace, à terme,
+`apps/serveur/PROTOCOLE.md` (salle de projet v1) et `prototypes/figurants/PROTOCOLE.md` (serveur des figurants du 27/10),
+ainsi que les messages de la sortie écran scène (`apps/conducteur/src/sortie/protocole.ts`).
+
+- Types : `src/spectacle.ts`. Validation (à la main, sans dépendance) : `src/lire.ts`, fonctions
+  `lireMessageClient(x)` et `lireMessageServeur(x)` qui renvoient `{ message }` ou `{ message: null, raison }`.
+- Client commun (reconnexion, `hello` refait à chaque ouverture, file rejouée, ping → horloge du serveur) :
+  `src/client.ts`, `transportWebSocket(url, jeton, {hello})` et `transportMemoire({hello})` (tests, émulateur). Utilisé par
+  le téléphone (`@studio-real/ui-telephone`) et par la sortie écran scène (`apps/conducteur/src/sortie/client-spectacle.ts`).
+- Origine des décisions : `docs/audit-2026-10/01-architecture.md` §4.3 et §4.4, `02-sorties-et-emulateur.md` §4.3.
+- Le calcul de ce que voit chaque acteur est dans le modèle (`packages/modele/src/acteurs.ts`, `vueActeur()`).
+
+Un serveur, un protocole, des acteurs sur la planche : la **régie** conduit, le **serveur** fait tourner le lecteur et
+diffuse à chaque **acteur** sa vue ; les acteurs renvoient leurs entrées et ce qu'ils affichent ; les **agents** (figurants,
+ElevenLabs, Whisper, pont OSC) exécutent les commandes numérotées du lecteur et les accusent.
+
+## Transport
+
+- WebSocket, messages **JSON texte**, champ `t` obligatoire, **256 Ko** au plus. Version : **2** (`hello.v`).
+- Le premier message est `hello`. Tant qu'il n'est pas accepté, le serveur répond `refus`.
+- Bornes de toute donnée libre (`params`, `data`, `donnees`, `res`) : textes ≤ **2000** caractères, tableaux ≤ **200**
+  éléments, objets ≤ 200 clés, profondeur ≤ 8, clés `__proto__`, `prototype`, `constructor` interdites. Les champs
+  inconnus sont ignorés (le message est reconstruit).
+- Heures en millisecondes : `at`, `ts` = horloge du **serveur** ; `tc`, `heure`, `depuis`, `affiche` = horloge du **client**.
+  Le client calcule son décalage avec `ping{tc}` → `pong{tc, ts}`.
+
+## Rôles
+
+| `role` | Qui | Reçoit | Envoie |
+|---|---|---|---|
+| `auteur` | poste d'écriture | messages v1 de la salle de projet (`modif`, `verrou`, `mode`, `chat`, `commentaire`…), inchangés : `apps/serveur/src/logique/protocole.ts` | idem |
+| `regie` | le Conducteur en mode scène | `lecture`, `salle`, `etat` (acteurs nommés), `ack` | `conduite` |
+| `acteur` (+ `acteur:<id>`) | sortie scène, téléphone du public, téléphone nommé, prompteur | `vue`, `fx`, `ack` | `in`, `etat` |
+| `agent` (+ `acteur:<id>`) | service figurants, enveloppe ElevenLabs, Whisper, pont OSC | `agent.cmd` | `agent.ack`, `agent.in` |
+
+**Jetons** (`exploitation/spectacle.secrets.json`, `jetons`) : un jeton `regie` pour la régie, un jeton `agent` pour les agents,
+un jeton `public` pour la foule (tout acteur de cardinalité n) et **un jeton par acteur nommé** (`jetons.acteurs.<id>` : scène,
+téléphones nommés). Le serveur choisit le jeton attendu d'après le `hello` : `role:'acteur'` + acteur de la foule → `public` ;
+`role:'acteur'` + acteur nommé `X` → `acteurs[X]` ; `regie` → `regie` ; `agent` → `agent`. Un jeton d'acteur nommé ne vaut que
+pour cet acteur, et le jeton public ne vaut que pour la foule : sinon `refus{code:'jeton', fatal:true}` et fermeture 4003.
+Le jeton n'est jamais conservé dans l'adresse une fois la connexion faite (lien d'un acteur nommé :
+`/t/#acteur=<id>&jeton=<son jeton>` ; lien du public : `/t/#jeton=<jeton public>`).
+
+## Numérotation, reprise, idempotence
+
+| Numéro | Portée | Règle |
+|---|---|---|
+| `cseq` | par session, client → serveur | croissant (1, 2, 3…) sur tout message qui change quelque chose (`conduite`, `in`, `agent.in`). Un `cseq` déjà vu n'est pas réappliqué : `ack{statut:'doublon'}`. Le client renvoie sans risque ce qui n'a pas été acquitté. |
+| `seq` (lecture) | par session de la régie, serveur → régie | croît de 1 à chaque message `lecture` envoyé à CETTE session. Un trou → la régie envoie `resync` et reçoit un `lecture` complet (voir « La lecture de la régie »). |
+| `vseq` | par acteur (et par personne pour une vue ciblée), serveur → client | croissant sur chaque `vue`. Un trou → le client envoie `resync` et reçoit la vue courante. |
+| `n` | par représentation | numéro de commande du lecteur ; `agent.cmd` est **idempotent** chez l'agent (rejouer `n = 57` ne relance pas Junon). |
+
+- À la connexion, `bienvenue` porte la **vue courante** de l'acteur (instantané) et le dernier `cseq` reçu de la session.
+- Les `fx` dont `at + ttl` est passé ne sont pas rejoués.
+- Une seule voix par personne et par question : l'unicité `(personne, q)` est tenue par le serveur.
+
+## Client → serveur
+
+| `t` | Rôle | Champs | Réponse |
+|---|---|---|---|
+| `hello` | tous | `v` (= 2), `role`, `acteur?` (obligatoire pour `acteur` et `agent`), `personne?`, `session`, `jeton`, `vseq?`, `cseq?`, `app?{version, build}`, `capacites?[]`, `pseudo?` (2 à 20 caractères, téléphone du public) | `bienvenue`, ou `refus` |
+| `conduite` | regie | `cseq`, `op` + champs de l'op (tableau suivant) | `ack` ; puis `lecture` |
+| `in` | acteur | `cseq`, `k`, `q?` (question), `data`, `heure?` (tableau suivant) | `ack` |
+| `etat` | acteur | battement : `heure`, `ecran` (`{vseq, ecran, cle?, depuis}` ou `null`), `visible`, `enLigne?`, `rttMs?`, `decalageMs?`, `media?[]{asset, pret 0→1, lecture}`, `batterie?` (0→100), `erreurs?[]` | — |
+| `agent.ack` | agent | `n`, `statut` (`recu` \| `fait` \| `echec` \| `refus`), `detail?` | — (`fait` → signal `accuse:<étape>` du lecteur) |
+| `agent.in` | agent | `cseq`, `k` (nom : `say` `{persona, texte, couleur?}` = réplique d'un figurant montrée au mur, `stat`, `transcript`, `fin-appel`…), `data` | `ack` (`refus filtre` : réplique refusée par la modération) |
+| `ping` | tous | `tc` | `pong` |
+| `resync` | tous | — | `vue` courante (acteur), `lecture` complet (régie qui a déjà une lecture) ou `bienvenue` |
+| `rtc` | acteur | `vers` (acteur ou session), `signal` (objet opaque, ≤ 64 Ko) | `rtc` relayé |
+
+`etat` est envoyé 1 fois par seconde par un écran, 1 fois toutes les 5 s par un téléphone. Il dit ce qui est **affiché**
+(pas ce qui a été demandé) : la régie compare avec la dernière `vue` et affiche l'écart.
+
+### Ce que la régie voit des sorties (rail des sorties, rapport 2 §4.2 a)
+
+- Un acteur **nommé** (cardinalité 1 : écran scène, téléphone d'un comédien, de la ministre) : son battement `etat`, et son
+  accusé d'affichage (`in{k:'accuse'}`), sont relayés tels quels à la régie (`etat`, serveur → régie).
+- La **foule** (public) n'est pas relayée personne par personne : `salle.acteurs.<id>` porte `parEcran` (écrans affichés
+  par les personnes EN LIGNE ; clé `''` = aucun écran ; les autres sont hors ligne : `presents − enLigne`) et `rttMs`
+  (aller-retour médian, arrondi à 10 ms).
+- Pour tous : `salle.acteurs.<id>.demande` = la vue commune diffusée (`vseq`, `ecran`, `at`, `cle`). La régie compare
+  demandé et affiché : écart au-delà de 2 s → ambre, au-delà de 5 s → rouge.
+
+### `conduite` : les ordres de la régie
+
+| `op` | Champs | Effet |
+|---|---|---|
+| `top` | — | top régie (`lecteur.top()`) |
+| `lancer` | `mode?` (`repetition` \| `scene`), `graine?` | démarre une représentation (nouveau `run`) |
+| `pause` | `pause` (défaut vrai) | arrête / relance l'horloge du lecteur |
+| `allerA` | `moment`, `etape?` | `lecteur.allerA()` |
+| `reprendre` | `point?` | repart d'un point de reprise (`lecteur.reprendre()`) |
+| `poser` | `nom`, `valeur` (nombre, texte, vrai/faux) | pose une mémoire (`lecteur.poser()`) |
+| `signal` | `nom`, `donnees?` | signal extérieur (`lecteur.signal()`) |
+| `forcer` | `acteur` (acteur ou cible dans la foule), `vue{ecran, params?}` | impose une vue à la main, journalisée (remplace l'arbitrage des régies de la sortie) |
+| `panique` | `actif` (défaut vrai) | tous les acteurs sur leur écran de sécurité ; `actif:false` lève la panique |
+| `valider` | `id`, `ok`, `texte?` | décision sur une réplique de figurant en attente (ex `fig.valide`) |
+| `retenir` | `actif` (défaut vrai) | tient (`true`) ou relâche (`false`) l'étape en cours : ni le temps ni un signal ne la terminent, seul `top` en sort (`lecteur.retenir()`) |
+| `prolonger` | `secondes` (entier de 1 à 600) | ajoute des secondes à la durée minimale de l'étape en cours, cumulable (`lecteur.prolonger()`) |
+
+### `in` : les entrées des acteurs
+
+Une seule famille pour tout ce qu'un acteur renvoie (ex `entree` et `ack{n, affiche}` des sorties, `vote.choix`,
+`msg`, `choix.reponse` des figurants). Chaque entrée devient, côté serveur, un signal du lecteur nommé
+`<acteur>.<k>` (`public.vote`, `scene.fin-video`, `franck.transcription`), et les votes alimentent `Signaux`
+(`quorum`, `issue`, `votes`).
+
+| `k` | `data` | Exemple |
+|---|---|---|
+| `vote` | `index` (0 → 25), `numero?` ; `q` = question | `{"t":"in","cseq":42,"k":"vote","q":"q1","data":{"index":2}}` |
+| `texte` | `texte` (≤ 2000, non vide) ; `q?` | commentaire, « pourquoi ? » — 8 par 10 s et par personne (`ack refus trop-vite`), modéré (`ack refus filtre`), puis montré au mur (fx `message`, voir plus bas) |
+| `reaction` | `emoji` (≤ 16), `n?` (1 → 100) | 😂 |
+| `pret` | `pret` (défaut vrai) | téléphone prêt |
+| `presence` | `visible` | l'onglet passe au premier plan / en arrière-plan |
+| `fin-video` | `asset`, `vseq?` | vidéo jouée une seule fois, terminée |
+| `transcription` | `texte`, `final?` | micro du comédien |
+| `accuse` | `vseq`, `affiche` (heure client de l'affichage), `refus?` (`version` \| `invalide` \| `capacite`) | accusé d'affichage d'une vue : latence = `affiche` − `vue.at`, ramené à l'horloge du serveur |
+
+## Serveur → client
+
+| `t` | Destinataires | Champs |
+|---|---|---|
+| `bienvenue` | l'émetteur du `hello` | `v`, `role`, `acteur?`, `session`, `ts`, `vue` (vue courante ou `null`), `cseq` (dernier reçu de la session), `lecture?` (régie : un `lecture` complet sans le `t`, voir ci-dessous), `pseudo?` (acteur : pseudo retenu par le serveur, filtré et unique, gardé à la reconnexion) |
+| `vue` | un acteur (ou une personne de la foule) | `acteur`, `vseq`, `at`, `ecran` (ou `null` : aucun écran encore), `params`, `cle?` |
+| `fx` | un acteur | `acteur`, `id`, `at`, `kind` (`vibrer`, `son`, `flash`, `pop`…), `p`, `ttl` (ms, ≤ 10 min) |
+| `lecture` | une session de la régie | deux formes (voir « La lecture de la régie ») : `{mode:'complet', etat, par, ts, seq}` ou `{mode:'delta', seq, ts, par, d}` — émis par le serveur en scène |
+| `salle` | régie | `ts`, `acteurs{<id>: {presents, prets?, enLigne?, demande?{vseq, ecran, at, cle?}, parEcran?{<écran>: n}, rttMs?}}`, `vote?{q, recus, parts[], force?}` (`force` : résultat imposé par la banque des votes) — ≤ 4 par seconde |
+| `etat` | régie | battement d'un acteur NOMMÉ (cardinalité 1) relayé : `acteur`, `personne?`, `ts` (serveur), `heure` (client), `ecran` (`{vseq, ecran, cle?, depuis}` ou `null`), `visible`, `enLigne?`, `rttMs?`, `media?[]`, `batterie?`, `erreurs?[]`, `app?` |
+| `agent.cmd` | un agent | `n`, `type` (`figurants.cmd`, `appel`, `machine`…), `moment?`, `etape`, `donnees`, `at?` |
+| `ack` | l'émetteur d'un `cseq` | `cseq`, `statut` (`ok` \| `doublon` \| `refus` \| `ferme`), `raison?`, `res?` |
+| `refus` | l'émetteur | `code`, `message`, `fatal?` (le serveur ferme) — hello invalide, jeton faux, version |
+| `pong` | l'émetteur | `tc`, `ts` |
+| `resync` | un client | `raison` : renvoyer `hello` (redémarrage, nouvelle représentation) |
+| `rtc` | l'acteur visé | `de`, `vers`, `signal`, `ts` |
+
+### La lecture de la régie (`lecture`, deux formes)
+
+L'état de lecture (`EtatLecture` du modèle) grandit pendant la soirée (parcours, journal, commandes, alertes, reprises…) : il
+n'est plus renvoyé en entier chaque seconde. Le serveur garde, **par session de la régie**, ce qu'il lui a déjà envoyé, et
+numérote chaque message `lecture` de cette session (`seq`, +1 à chaque envoi).
+
+- **`complet`** — `{"t":"lecture","mode":"complet","etat":{…},"par":"serveur","ts":…,"seq":n}` : l'état entier. Envoyé dans
+  `bienvenue.lecture` (même forme, sans `t`), à la demande (`resync`), après `lancer`, `allerA` et `reprendre`
+  (ou si un tableau a rétréci), et au plus une minute après le complet précédent.
+- **`delta`** — `{"t":"lecture","mode":"delta","seq":n,"ts":…,"par":"serveur","d":{…}}` : seul ce qui a changé depuis le
+  dernier `lecture` envoyé à cette session. `d.t` et `d.tEtape` sont toujours là ; les autres champs n'apparaissent que
+  s'ils ont changé :
+  valeurs simples (`retard`, `moment`, `etape`, `attenteGo`, `bloque`, `termine`, `phase`, `retenu`, `prolonge`, `issue`,
+  `sequence`) = la nouvelle valeur ;
+  `parcours`, `journal`, `commandes`, `alertes` = **les entrées ajoutées** (à concaténer à celles déjà reçues) ;
+  `memoires`, `receptions`, `tours`, `attentes`, `votes` = **les clés changées** (à fusionner) ;
+  `reprises` = la liste entière (elle est courte et ses points se remplacent) ;
+  `retires` = ce qui a disparu : un champ facultatif (`"issue"`) ou une clé d'un dictionnaire (`"receptions.sig"`).
+  Rien n'est envoyé quand rien n'a changé. En lecture normale : une centaine d'octets par seconde.
+- **Règle du `seq`** : la régie garde le `seq` du dernier message appliqué. Un `complet` pose l'état et le `seq` ; un
+  `delta` n'est appliqué que si son `seq` vaut le dernier + 1 (et qu'un état de base existe). Sinon il est ignoré, la régie
+  envoie `{"t":"resync"}` (une demande à la fois) et le serveur répond par un `complet`. À chaque nouvelle liaison, la
+  régie repart du `complet` de `bienvenue`.
+- **Compatibilité** : la version du protocole reste 2 (champs facultatifs ajoutés). Un `lecture` sans `mode` est un `complet`
+  (ancien format : `seq` absent, jamais suivi de `delta`). Les fonctions `calculerDelta` et `fusionnerDelta`
+  (`src/lecture-delta.ts`) font le calcul côté serveur et la fusion côté régie.
+
+### La vue d'un acteur
+
+`vue.ecran` est l'un des écrans que l'acteur déclare (`Acteur.ecrans` du projet) ; `vue.params` sont les réglages de
+l'envoi, où `"$question"` a été remplacé par le paramètre `question` de l'étape. Un acteur garde son dernier écran tant
+qu'un envoi ne le remplace pas : la vue se recalcule à tout instant depuis le parcours du lecteur, ce qui rend la reprise
+possible sans journal côté téléphone. Pour l'écran scène, `params` a la forme d'une `Scene` de la sortie
+(`apps/conducteur/src/sortie/protocole.ts`), plus les écrans `mur`, `visio`, `flux-video`.
+
+### L'acteur `scene` (sortie écran scène)
+
+La sortie du Conducteur (`sortie.html#spectacle=<wss://…/ws>&jeton=…`) se présente en
+`hello{role:'acteur', acteur:'scene', app{version, build}, capacites}` (capacités = écrans qu'elle sait montrer) et accuse
+chaque vue quand elle est **à l'écran** (`in{k:'accuse', data{vseq, affiche}}`, avec `refus:'capacite'` pour un écran
+inconnu, `'invalide'` pour des réglages inutilisables). Battement `etat` 1 fois par seconde avec `media[]` (préchargés,
+en lecture, introuvables). Écrans et réglages qu'elle comprend (conversion : `sceneDeVue`, `sortie/traduction.ts`) :
+
+| `ecran` | `params` |
+|---|---|
+| `noir` (ou `null`) | — |
+| `accueil-qr`, `qr` | `titre?`, `consigne?`, `code?`, `adresse?` (défaut : configuration de la sortie) |
+| `video` | `asset` (nom d'un média LOCAL, sans chemin), `boucle?` (défaut vrai), `son?`, `cadrage?`, `legende?` |
+| `flux-video` | `asset?` (défaut `flux_insta_jim.mp4`), lue une fois, avec le son |
+| `titre` | `titre` ou `texte`, `surtitre?`, `sousTitre?` |
+| `mur` | `titre?`, `messages?[]{id?, pseudo, texte, couleur? (jeton « --cy »), grand?}`, `vote?` (objet `{etat:'ouvert'\|'revele', numero?, question, reponses[], comptes?[], pourcents?[], resultat?}` ou texte `'ouvert'\|'revele'\|'ferme'` avec ces champs à côté ; `scores` = résultats imposés), `audio?` (`'x.mp3'` ou `{asset, depuis? (heure serveur de sa position 0, défaut vue.at), boucle?}`, `null` = aucun), `qr?` (vrai : QR d'accueil en coin) |
+| `vote` | `question`, `reponses[]`, `etat?`, `comptes?[]`, `gagnant?` |
+| `visio` | `postes[]` (ids, ou `{id, nom}`), `son?{<poste>: bool}` (défaut coupé), `noms?{<poste>: texte}`, `disposition?` (`cote` \| `plein`), `plein?` |
+| `streamer`, `image`, `chrono`, `page` | comme les scènes de la sortie (`page` reste l'exception : iframe) |
+
+Tout écran porte en plus `precharger?[]` (médias à mettre en mémoire). Effets (`fx.kind`) : `message` (ajout au mur),
+`a-vote` `{pseudo?, index?}` (pop « @x a voté », +1 sur la réponse), `pop`, `reaction`, `coeurs`, `fusee`, `alerte`,
+`gabarit` ; les autres sont ignorés. La sortie ne lit jamais de fichier de banque : tout est dans la vue.
+
+### Ce que le serveur fabrique pour le mur
+
+Destinataires : chaque acteur dont les écrans contiennent `mur` (dans Écho : `scene`) ; ces effets sont rejoués à sa
+reconnexion tant que leur `ttl` court (200 au plus) et ne partent jamais pendant la panique.
+
+| Origine | Effet | `p` | Aussi à la régie | `ttl` |
+|---|---|---|---|---|
+| `in{k:'texte'}` accepté et modéré | `message` | `{id:'<acteur>/<personne>/<n>', pseudo, texte (mots interdits → `***`), couleur (jeton), grand:true}` | oui (`fx.acteur` = l'auteur) | 30 s |
+| `agent.in{k:'say', data:{persona, texte, couleur?}}` d'un agent figurants | `message` | `{id:'fig/<n>', pseudo: persona, texte, couleur (jeton valide, sinon `--ink2`), grand:false}` | oui | 30 s |
+| vote accepté | `a-vote` | `{pseudo, index}` | non (elle a `salle.vote`) | 10 s |
+
+Le serveur complète aussi les vues de vote avec la banque des votes (`prototypes/figurants/banques/<banque>/votes.json`) :
+`mur` avec `vote:'ouvert'|'revele'|'ferme'` et `numero` → `vote:{etat, numero, question, reponses[]}`, plus à la
+révélation `comptes[]` (voix réelles, ou `scores` de la banque : résultat forcé, et `salle.vote.force`), `pourcents[]`,
+`gagnant` (index de la réponse majoritaire, absent en cas d'égalité) et `resultat` (phrase de la banque) ; `vote` →
+`question`, `reponses[]`. Ce que la vue porte déjà n'est pas remplacé.
+
+## Exemple : la question 1 d'Écho
+
+```jsonc
+// → (téléphone)  {"t":"hello","v":2,"role":"acteur","acteur":"public","personne":"tel_8f3a","session":"s_9c1d2e","jeton":"…","vseq":17}
+// ←              {"t":"bienvenue","v":2,"role":"acteur","acteur":"public","session":"s_9c1d2e","ts":1793102124925,"cseq":0,
+//                 "vue":{"acteur":"public","vseq":18,"at":1793102120000,"ecran":"vote","params":{"numero":1,"question":"…","reponses":["…"]},"cle":"b5_q1/b5_q1_s#1@8"}}
+// →              {"t":"in","cseq":1,"k":"accuse","data":{"vseq":18,"affiche":1793102125010}}
+// →              {"t":"in","cseq":2,"k":"vote","q":"1","data":{"index":2}}
+// ←              {"t":"ack","cseq":2,"statut":"ok"}
+// → (régie)      {"t":"conduite","cseq":9,"op":"top"}
+// ← (régie)      {"t":"ack","cseq":9,"statut":"ok"}   puis   {"t":"lecture","mode":"delta","seq":42,"ts":…,"par":"serveur","d":{"t":812,"tEtape":0,"etape":"vote","parcours":[["b5_q1","b5_q1_s",812]]}}
+// ← (figurants)  {"t":"agent.cmd","n":57,"type":"figurants.cmd","etape":"b5_q1_s","donnees":{"densite":"calme"}}
+// → (figurants)  {"t":"agent.ack","n":57,"statut":"fait"}
+```
+
+## Correspondance avec les anciens protocoles
+
+| Ancien | Nouveau |
+|---|---|
+| salle v1 `hello{v:1, role:'auteur'\|'regie'\|'poste'}` | `hello{v:2, role}` ; `poste` → `acteur` |
+| salle v1 `scene{message}` (relais opaque, arbitré par la sortie) | `vue` de l'acteur `scene` ; forçage = `conduite{op:'forcer'}` |
+| salle v1 `lecture` envoyé par la régie | `lecture` émis par le serveur ; la régie envoie `conduite` |
+| sortie `bonjour{v, id}` | `hello{role:'acteur', acteur:'scene', app, capacites}` |
+| sortie `present{scene, n, etat}` | `etat{ecran:{vseq, ecran, cle, depuis}, media…}` |
+| sortie `fin-video{asset, n}` | `in{k:'fin-video', data:{asset, vseq}}` → signal `scene.fin-video` |
+| rapport 2 `ack{n, affiche}`, `entree{type, valeur}` | `in{k:'accuse'}`, `in{k}` (une seule famille) |
+| figurants `hello{role:'telephone'\|'chat'\|'ministre'…}` | `hello{role:'acteur', acteur:'public'\|'scene'\|'ministre'}` |
+| figurants `vote.choix{numero, index}`, `msg{texte}`, `choix.reponse` | `in{k:'vote'}`, `in{k:'texte'}` |
+| figurants `tel.cmd`, `ecran`, `vote.cmd`, `junon` (régie) | `envois` des étapes du projet → `vue` (conversion : `commandesVersEnvois` du modèle) |
+| figurants `fig.cmd` / `fig.valide` / `fig.stat` | `agent.cmd{type:'figurants.cmd'}` / `conduite{op:'valider'}` / `agent.in{k:'stat'}` |
+| figurants `asr{kind, texte}` | `in{k:'transcription'}` (acteur comédien) ou `agent.in` (agent `asr`) |
+| figurants `welcome`, `pong{tc, ts}` | `bienvenue`, `pong{tc, ts}` (inchangé) |
+
+## Reste à décider ou à faire (lots suivants)
+
+- **L2** (serveur) : brancher ces messages dans le Durable Object (`apps/serveur`), le module représentation, l'état de salle,
+  la diffusion par `vseq`, le journal unique ; porter les messages `auteur` v1 dans ce paquet (`salle`).
+- Validation par schémas (zod) ou à la main : **non tranché** (rapport 6, Q5) ; ce paquet est à la main, sans dépendance.
+- Tirage au sort `public:aleatoire:n` : fait par le serveur (graine de la représentation), transmis au modèle par
+  `ContexteFoule.tirages`.

@@ -2,7 +2,7 @@
 // tiroir des assets, superpositions. Assemble <Planche/> (chantier PLANCHE) et <Conduite/> (chantier CONDUITE).
 // Au démarrage : `?projet=live` ouvre le spectacle LIVE, `?projet=echo` le spectacle ÉCHO ; sinon la dernière salle collaborative est rouverte si son jeton
 // est connu (sans serveur : statut « hors ligne », tout reste local, aucun message bloquant).
-import { BoutonTap } from './BoutonTap';
+import { BarreScene } from './BarreScene';
 import { useEffect, useRef, type DragEvent } from 'react';
 import { reprendreDerniereSalle } from '../collab';
 import { chargerEcho, chargerLive, projetDemandeParAdresse } from './projet-live';
@@ -16,9 +16,12 @@ import { EnTete } from './EnTete';
 import { Recherche } from './Recherche';
 import { Panneau } from './Panneau';
 import { TiroirAssets, TYPE_ASSET, type AssetGlisse } from './TiroirAssets';
-import { AlerteSecurite, Aide, CadreEnLecture, Projets, Pupitre } from './Superpositions';
+import { AlerteSecurite, Aide, CadreEnLecture, FenetreEmulateur, Projets, Pupitre } from './Superpositions';
+import { FenetreActeurs } from './FenetreActeurs';
 import { useRaccourcis } from './raccourcis';
 import { useRelaisSortie } from '../sortie';
+import { demarrerSpectacle } from '../etat/spectacle';
+import { RailSorties } from './RailSorties';
 import './coquille.css';
 
 /** Moment visé par un dépôt : la sélection, sinon le moment en cours, sinon le premier. */
@@ -104,6 +107,7 @@ export function App() {
   useRaccourcis();
   useEffect(() => demarrerBoucle(), []);
   useRelaisSortie();   // traduit la lecture en scènes pour la sortie Écran scène (une seule fois pour toute l'app)
+  useEffect(() => demarrerSpectacle(), []);   // client régie du serveur de spectacle (relié si l'onglet a ses réglages)
   const demarre = useRef(false);
   useEffect(() => {
     if (demarre.current) return;   // StrictMode monte deux fois en développement
@@ -118,6 +122,7 @@ export function App() {
     <div className="coquille">
       <CadreEnLecture />
       <EnTete />
+      <RailSorties />
       <div className="corps">
         {vue !== 'tracks' && (
           <div className="haut">
@@ -138,12 +143,14 @@ export function App() {
           </div>
         )}
       </div>
-      <BoutonTap />
+      <BarreScene />
       <TiroirAssets />
       <Recherche />
+      <FenetreEmulateur />
       <AlerteSecurite />
       <Pupitre />
       <Projets />
+      <FenetreActeurs />
       <Aide />
     </div>
   );

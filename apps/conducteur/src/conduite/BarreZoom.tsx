@@ -6,6 +6,7 @@ import { glisser } from './glisser';
 
 interface Props {
   total: number; pps: number; defilement: number; largeurVue: number;
+  /** repère de la tête de lecture : déplacé par `transform` (TeteDeLecture.tsx), jamais par `left` */
   repere: RefObject<HTMLSpanElement | null>;
   onVue: (pps: number, defilement: number) => void;
 }

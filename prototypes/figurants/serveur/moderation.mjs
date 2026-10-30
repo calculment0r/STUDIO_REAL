@@ -15,7 +15,7 @@ const HOMOGLYPHES = { 'а': 'a', 'е': 'e', 'о': 'o', 'р': 'p', 'с': 'c', 'х
 export function nettoyer(texte) {
   return String(texte ?? '')
     .normalize('NFKC')
-    .replace(/[​-‏‪-‮⁠-⁤﻿­]/g, '')
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u00AD]/g, '')
     .replace(/[\p{Cc}\p{Cs}\p{Co}]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -68,7 +68,7 @@ const RE_URL = [
 ];
 const RE_MAIL = /[a-z0-9._%+-]+\s*(?:@|\(\s*at\s*\)|\[\s*at\s*\]|\sarobase\s)\s*[a-z0-9-]+\s*(?:\.|\spoint\s)\s*[a-z]{2,}/;
 const RE_TEL = /(?:\+?\d[\s.\-()/]{0,2}){9,}/;                 // 9 chiffres ou plus, séparateurs compris
-const RE_CHIFFRES_FIG = /\d[\s.\-]?\d[\s.\-]?\d[\s.\-]?\d/;     // figurants : pas de nombre de 4 chiffres (numéro, adresse)
+const RE_CHIFFRES_FIG = /\d[\s.-]?\d[\s.-]?\d[\s.-]?\d/;     // figurants : pas de nombre de 4 chiffres (numéro, adresse)
 
 /**
  * Une liste compilée : entrées normalisées.

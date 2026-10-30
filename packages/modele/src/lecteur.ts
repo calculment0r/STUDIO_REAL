@@ -93,6 +93,10 @@ interface Interne {
   mot?: string;
   /** l'événement « 10 s restantes » du chrono courant est parti */
   dixSecondes: boolean;
+  /** étape (ou passage) tenue : ni le temps ni un signal ne la terminent, seul le top régie sort */
+  retenu: boolean;
+  /** secondes ajoutées à la durée minimale de l'étape en cours (cumulables) */
+  prolonge: number;
   /** étapes entrées depuis le dernier appel de l'API (garde-fou contre les enchaînements sans fin) */
   chaine: number;
 }
@@ -112,6 +116,34 @@ function valeurDonnees(d: unknown): number | string | boolean | undefined {
 const virgule = (n: number) => String(n).replace('.', ',');
 const capitale = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** Copie d'un tableau qui ne fait que grandir (parcours, alertes, journal, commandes) ou qui est remplacé d'un bloc (reprises) :
+ *  tant que le tableau source est le même et de même longueur, la MÊME copie est rendue (la référence ne change pas) ; à
+ *  l'ajout, une copie neuve ne copie que les éléments nouveaux ; un tableau source remplacé est recopié en entier. Les
+ *  éléments déjà copiés ne sont jamais modifiés (le moteur ne fait que pousser dans ces tableaux). */
+function copieurDeTableau<S, C = S>(copier: (x: S) => C): (a: S[]) => C[] {
+  let source: S[] | null = null, n = 0, copie: C[] = [];
+  return (a) => {
+    if (a === source && a.length === n) return copie;
+    copie = a === source && a.length > n ? [...copie, ...a.slice(n).map(copier)] : a.map(copier);
+    source = a; n = a.length;
+    return copie;
+  };
+}
+
+/** Copie d'un dictionnaire de valeurs simples (mémoires, tours, réceptions, attentes, votes) : la même copie tant que
+ *  le contenu est égal (clés et valeurs), une copie neuve dès qu'une valeur change. */
+function copieurDeDictionnaire<V>(): (r: Record<string, V>) => Record<string, V> {
+  let derniere: Record<string, V> | null = null;
+  return (r) => {
+    if (derniere) {
+      const a = Object.keys(r), b = Object.keys(derniere);
+      if (a.length === b.length && a.every(k => k in derniere! && derniere![k] === r[k])) return derniere;
+    }
+    derniere = { ...r };
+    return derniere;
+  };
+}
+
 export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLecteur): Lecteur => {
   const graine = options.graine ?? (options.mode === 'repetition' ? GRAINE_REPETITION : Math.floor(Math.random() * 2 ** 32));
   let prng = creerPrng(graine);
@@ -123,7 +155,7 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
       t: 0, im: -1, etape: null, tEtape: 0, phase: 'etape', attenteGo: false, retard: 0, bloque: false, termine: false,
       issue: undefined, votes: undefined, memoires: { ...(projet.memoires ?? {}) }, parcours: [], attentes: {}, alertes: [],
       tours: {}, tirage: null, cadres: [], receptions: {}, valeursSignaux: {}, journal: [], commandes: [], reprises: [],
-      mot: undefined, dixSecondes: false, chaine: 0,
+      mot: undefined, dixSecondes: false, retenu: false, prolonge: 0, chaine: 0,
     };
   }
 
@@ -156,26 +188,38 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.commandes.push(cmd);
   }
 
+  // Copies mémoïsées pour etat() : une référence qui ne change que si le contenu change (voir copieurDeTableau).
+  const copieMemoires = copieurDeDictionnaire<number | string | boolean>();
+  const copieParcours = copieurDeTableau<[string, string, number]>(p => [...p] as [string, string, number]);
+  const copieAttentes = copieurDeDictionnaire<number>();
+  const copieAlertes = copieurDeTableau<AlerteLecture>(a => ({ ...a }));
+  const copieTours = copieurDeDictionnaire<number>();
+  const copieJournal = copieurDeTableau<EvenementLecture>(j => ({ ...j }));
+  const copieCommandes = copieurDeTableau<CommandeLecture>(x => ({ ...x, donnees: { ...x.donnees } }));
+  const copieReprises = copieurDeTableau<Reprise, PointReprise>(r => {
+    const p: PointReprise = {
+      nom: r.nom, t: r.t, moment: r.moment, etape: r.cadres[0]?.appelant ?? r.etape, restaure: r.restaure,
+      memoires: { ...r.memoires },
+    };
+    if (r.issue !== undefined) p.issue = r.issue;
+    return p;
+  });
+  const copieReceptions = copieurDeDictionnaire<number>();
+  const copieVotes = copieurDeDictionnaire<number>();
+
   function etat(): EtatLecture {
     const c0 = s.cadres[0];
     const c = cadre();
     const e: EtatLecture = {
       t: s.t, moment: moment()?.id ?? null, etape: etapeMoment(), tEtape: c0 ? s.t - c0.debut : s.tEtape,
       attenteGo: s.attenteGo, retard: s.retard, bloque: s.bloque, termine: s.termine, issue: s.issue,
-      memoires: { ...s.memoires }, parcours: s.parcours.map(p => [...p] as [string, string, number]),
-      phase: s.phase, attentes: { ...s.attentes }, alertes: s.alertes.map(a => ({ ...a })), tours: { ...s.tours },
-      journal: s.journal.map(j => ({ ...j })), commandes: s.commandes.map(x => ({ ...x, donnees: { ...x.donnees } })),
-      reprises: s.reprises.map(r => {
-        const p: PointReprise = {
-          nom: r.nom, t: r.t, moment: r.moment, etape: r.cadres[0]?.appelant ?? r.etape, restaure: r.restaure,
-          memoires: { ...r.memoires },
-        };
-        if (r.issue !== undefined) p.issue = r.issue;
-        return p;
-      }),
-      receptions: { ...s.receptions },
+      memoires: copieMemoires(s.memoires), parcours: copieParcours(s.parcours),
+      phase: s.phase, attentes: copieAttentes(s.attentes), alertes: copieAlertes(s.alertes), tours: copieTours(s.tours),
+      journal: copieJournal(s.journal), commandes: copieCommandes(s.commandes), reprises: copieReprises(s.reprises),
+      receptions: copieReceptions(s.receptions),
+      retenu: s.retenu, prolonge: s.prolonge,
     };
-    if (s.votes) e.votes = { ...s.votes };
+    if (s.votes) e.votes = copieVotes(s.votes);
     if (c && s.etape) e.sequence = { id: c.seq.id, nom: c.seq.nom, etape: s.etape, tEtape: s.tEtape, chemin: s.cadres.map(x => x.seq.nom) };
     return e;
   }
@@ -187,6 +231,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.cadres = [];
     s.attenteGo = false;
     s.bloque = false;
+    s.retenu = false;
+    s.prolonge = 0;
     const m = moment();
     if (!m) { terminer(); return; }
     const id = etapeId ?? entreeMoment(m, s.issue);
@@ -206,6 +252,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.receptions = {};
     s.mot = undefined;
     s.dixSecondes = false;
+    s.retenu = false;
+    s.prolonge = 0;
     const c = cadre();
     if (c) journaliser('sous-etape', c.seq.nom, id);
     else s.parcours.push([m.id, id, s.t]);
@@ -301,6 +349,7 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.tEtape = 0;
     s.bloque = false;
     s.attenteGo = false;
+    s.prolonge = 0;   // la prolongation ne vaut que pour l'étape où elle a été demandée
     s.receptions = {};
     // Sans condition, le passage se décide tout de suite ; avec conditions, on attend les signaux du passage
     // (prochain avancer), le temps du passage repartant de zéro comme dans le design.
@@ -313,6 +362,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     s.cadres = [];
     s.attenteGo = false;
     s.bloque = false;
+    s.retenu = false;
+    s.prolonge = 0;
     s.termine = true;
     if (s.im >= projet.ev.length) s.im = projet.ev.length - 1;
   }
@@ -335,7 +386,9 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
   function evaluerEtape(force: boolean) {
     const st = etapeCourante();
     if (!moment() || !st) { finConteneur(); return; }
-    const d = dureeEtape(st) * facteur();
+    // Étape tenue : seul le top régie (force) la termine ; les signaux restent comptés mais n'évaluent pas la sortie.
+    if (s.retenu && !force) return;
+    const d = dureeEtape(st) * facteur() + s.prolonge;
     const outs = sortiesDe(st.id);
     const c = ctx();
     const comp = comportementBloc(st.ty);
@@ -458,7 +511,7 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     const m = moment();
     if (!m) { terminer(); return; }
     if (force) { franchir(); return; }
-    if (s.attenteGo) return;
+    if (s.retenu || s.attenteGo) return;
     const g = m.gate ?? { mode: 'auto' as const, g: [] };
     const pret = sortieRemplie({ g: g.g, mode: 'all' }, ctx()) || s.tEtape >= PLAFOND_ATTENTE;
     if (!pret) return;
@@ -521,6 +574,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
     top() {
       demarrerSiBesoin();
       if (s.termine) return etat();
+      // Le top régie lève la retenue : l'étape tenue sort alors comme une étape bloquée (son « sinon »).
+      s.retenu = false;
       if (s.phase === 'passage') evaluerPassage(true);
       else if (s.phase === 'etape') evaluerEtape(true);
       return etat();
@@ -537,6 +592,8 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
       s.t = ep ? ep.debut : (pl?.debut ?? s.t);
       s.termine = false;
       s.phase = 'etape';
+      s.retenu = false;
+      s.prolonge = 0;
       entrerMoment(i, cible);
       return etat();
     },
@@ -572,6 +629,29 @@ export const creerLecteur: FabriqueLecteur = (projet: Projet, options: OptionsLe
         if (mot !== undefined) { s.mot = mot; journaliser('mot', mot, texte); }
       }
       reevaluer();
+      return etat();
+    },
+    retenir(actif: boolean) {
+      demarrerSiBesoin();
+      if (s.termine) return etat();
+      const voulu = !!actif;
+      if (voulu === s.retenu) return etat();
+      s.retenu = voulu;
+      journaliser('retenir', voulu ? 'retenu' : 'relâché', voulu);
+      // Relâcher réévalue aussitôt : une étape dont la durée est échue repart sans attendre le prochain pas de temps.
+      if (!voulu) reevaluer();
+      return etat();
+    },
+    prolonger(secondes: number) {
+      demarrerSiBesoin();
+      if (s.termine || !Number.isFinite(secondes) || secondes <= 0) return etat();
+      s.prolonge += secondes;
+      journaliser('prolonger', 'prolonger', secondes);
+      // Une étape déclarée bloquée (durée échue sans sortie remplie) retrouve du temps devant elle.
+      if (s.bloque && s.phase === 'etape') {
+        const st = etapeCourante();
+        if (st && s.tEtape < dureeEtape(st) * facteur() + s.prolonge) s.bloque = false;
+      }
       return etat();
     },
     reprendre(nomPoint?: string) {

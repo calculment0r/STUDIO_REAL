@@ -10,12 +10,15 @@ html.so-page-sortie, html.so-page-sortie body, html.so-page-sortie #racine { hei
 .so-hote { position: absolute; inset: 0; overflow: hidden; background: var(--black); }
 .so-1080 { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: 50% 50%; overflow: hidden; background: var(--black); }
 .so-couche { position: absolute; inset: 0; }
-.so-calque { position: absolute; inset: 0; pointer-events: none; transition: opacity 500ms ease; }
+/* page gardée montée (scène « page ») : empilée avec les couches par z-index (≤ 3), sous le calque et la carte de refus */
+.so-page-gardee { position: absolute; inset: 0; }
+.so-iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--noir-ecran); }
+.so-calque { position: absolute; inset: 0; pointer-events: none; transition: opacity 500ms ease; z-index: 10; }
 .so-calque canvas { display: block; width: 100%; height: 100%; transition: opacity 500ms ease; }
 
 .so-micro { font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .18em; font-weight: 600; }
 .so-chiffres { font-variant-numeric: tabular-nums; }
-.so-rampe { height: 10px; width: 420px; border-radius: 5px; background: linear-gradient(90deg, var(--rampe-1), var(--rampe-2), var(--rampe-3), var(--rampe-4), var(--rampe-5)); }
+.so-rampe { height: 10px; width: 420px; border-radius: var(--rayon-petit); background: linear-gradient(90deg, var(--rampe-1), var(--rampe-2), var(--rampe-3), var(--rampe-4), var(--rampe-5)); }
 @keyframes so-pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
 .so-pulse { animation: so-pulse 1.1s ease-in-out infinite; }
 
@@ -24,7 +27,7 @@ html.so-page-sortie, html.so-page-sortie body, html.so-page-sortie #racine { hei
 
 /* ── QR d'accueil ───────────────────────────────────────────────────────────────── */
 .so-qr { position: absolute; inset: 0; background: var(--bg); display: flex; align-items: center; gap: 100px; padding: 0 110px; }
-.so-qr-plaque { flex: none; width: 840px; height: 840px; border-radius: 28px; background: var(--ink); padding: 24px; box-shadow: 0 0 0 6px var(--tile2), 0 30px 120px var(--ombre-3); }
+.so-qr-plaque { flex: none; width: 840px; height: 840px; border-radius: var(--rayon); background: var(--ink); padding: 24px; box-shadow: 0 0 0 6px var(--tile2), 0 30px 120px var(--ombre-3); }
 .so-qr-plaque svg { display: block; width: 100%; height: 100%; }
 .so-qr-fond { fill: var(--ink); }
 .so-qr-modules { fill: var(--well2); }
@@ -48,7 +51,7 @@ html.so-page-sortie, html.so-page-sortie body, html.so-page-sortie #racine { hei
 .so-absent-titre { font-size: 64px; font-weight: 700; line-height: 1.15; color: var(--ink); overflow-wrap: anywhere; }
 .so-absent-aide { font-size: 26px; color: var(--ink3); }
 .so-legende { position: absolute; left: 0; right: 0; bottom: 70px; text-align: center; font-size: 64px; font-weight: 700; color: var(--ink); text-shadow: 0 4px 0 var(--well2), 0 0 24px var(--well2); }
-.so-bandeau { position: absolute; left: 48px; top: 40px; padding: 10px 26px; border-radius: 999px; background: var(--rec); color: var(--on-rec); font-size: 30px; }
+.so-bandeau { position: absolute; left: 48px; top: 40px; padding: 10px 26px; border-radius: var(--rayon); background: var(--rec); color: var(--on-rec); font-size: 30px; }
 .so-mire { position: absolute; inset: 0; background: var(--well2); }
 .so-mire canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
 .so-mire-texte { position: absolute; left: 0; right: 0; top: 47%; text-align: center; font-size: 34px; color: var(--ink); text-shadow: 0 2px 0 var(--well2), 0 0 18px var(--well2); }
@@ -67,8 +70,8 @@ html.so-page-sortie, html.so-page-sortie body, html.so-page-sortie #racine { hei
 .so-vote-col { flex: 1; display: flex; flex-direction: column; align-items: stretch; gap: 18px; transition: opacity 600ms ease; }
 .so-vote-col.terne { opacity: .35; }
 .so-vote-pct { font-size: 96px; color: var(--ink); text-align: center; }
-.so-vote-puits { flex: 1; position: relative; border-radius: 18px; background: var(--tile); box-shadow: inset 0 0 0 2px rgba(var(--lr), .16); overflow: hidden; }
-.so-vote-barre { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 18px 18px 0 0; transition: height 350ms cubic-bezier(.2, .9, .3, 1.2); }
+.so-vote-puits { flex: 1; position: relative; border-radius: var(--rayon); background: var(--tile); box-shadow: inset 0 0 0 2px rgba(var(--lr), .16); overflow: hidden; }
+.so-vote-barre { position: absolute; left: 0; right: 0; bottom: 0; border-radius: var(--rayon) var(--rayon) 0 0; transition: height 350ms cubic-bezier(.2, .9, .3, 1.2); }
 .so-vote-col.gagne .so-vote-barre { animation: so-pulse 0.9s ease-in-out 3; }
 .so-vote-lib { font-size: 64px; font-weight: 700; text-align: center; line-height: 1.05; }
 
@@ -77,8 +80,8 @@ html.so-page-sortie, html.so-page-sortie body, html.so-page-sortie #racine { hei
 .so-chrono-titre { font-size: 44px; color: var(--cy); max-width: 1600px; text-align: center; }
 .so-chrono-temps { font-size: 430px; line-height: 1; color: var(--ink); }
 .so-chrono.fin .so-chrono-temps { color: var(--rec); animation: so-pulse 1s steps(2) infinite; }
-.so-chrono-piste { width: 1500px; height: 24px; border-radius: 12px; background: var(--tile); overflow: hidden; }
-.so-chrono-jauge { height: 100%; background: var(--ort); border-radius: 12px; transition: width 250ms linear; }
+.so-chrono-piste { width: 1500px; height: 24px; border-radius: var(--rayon); background: var(--tile); overflow: hidden; }
+.so-chrono-jauge { height: 100%; background: var(--ort); border-radius: var(--rayon); transition: width 250ms linear; }
 .so-chrono.fin .so-chrono-jauge { background: var(--rec); }
 
 /* ── titre / carton ────────────────────────────────────────────────────────────── */
@@ -89,45 +92,127 @@ html.so-page-sortie, html.so-page-sortie body, html.so-page-sortie #racine { hei
 
 /* ── témoin de connexion et commandes (pixels réels, hors scène) ─────────────────── */
 .so-temoin {
-  position: absolute; right: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 999px;
+  position: absolute; right: 14px; bottom: 12px; display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: var(--rayon);
   background: var(--hdr-bg); color: var(--ink2); font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
   transition: opacity 900ms ease; pointer-events: none; z-index: 20;
 }
-.so-temoin i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink3); }
+.so-temoin i { width: 8px; height: 8px; border-radius: var(--rayon-rond); background: var(--ink3); }
 .so-temoin.connecte i { background: var(--gt); }
 .so-temoin.perdu i { background: var(--rec); animation: so-pulse 1s ease-in-out infinite; }
 .so-temoin.attente i { background: var(--rampe-1); animation: so-pulse 1.4s ease-in-out infinite; }
 .so-temoin.cache { opacity: 0; }
 
 .so-commandes {
-  position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; padding: 6px; border-radius: 10px;
+  position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; padding: 6px; border-radius: var(--rayon);
   background: var(--hdr-bg); box-shadow: 0 8px 30px var(--ombre-2), inset 0 0 0 1px rgba(var(--lr), .16); z-index: 30; transition: opacity 300ms ease;
 }
 .so-commandes.cache { opacity: 0; pointer-events: none; }
 .so-commandes button {
-  height: 30px; padding: 0 12px; border-radius: 7px; border: none; cursor: pointer; background: transparent; color: var(--ink2);
+  height: 30px; padding: 0 12px; border-radius: var(--rayon); border: none; cursor: pointer; background: transparent; color: var(--ink2);
   font-family: var(--f-mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; box-shadow: inset 0 0 0 1px rgba(var(--lr), .16);
 }
 .so-commandes button:hover { color: var(--ink); background: var(--tile2); }
 .so-commandes button.on { color: var(--ink); background: var(--tile2); box-shadow: inset 0 0 0 1px var(--cy); }
 .so-commandes .so-info { font-family: var(--f-mono); font-size: 9px; letter-spacing: .12em; color: var(--ink3); text-transform: uppercase; padding: 0 8px; }
 .so-alerte {
-  position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); padding: 8px 16px; border-radius: 8px; z-index: 25;
+  position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); padding: 8px 16px; border-radius: var(--rayon); z-index: 25;
   background: var(--hdr-bg); color: var(--ink); font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
   box-shadow: inset 0 0 0 1px var(--rampe-1);
 }
 
 /* ── côté régie : bouton et vignette ─────────────────────────────────────────────── */
 .so-bouton { position: relative; }
-.so-bouton .so-pastille { position: absolute; right: 4px; top: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink3); }
+.so-bouton .so-pastille { position: absolute; right: 4px; top: 4px; width: 6px; height: 6px; border-radius: var(--rayon-rond); background: var(--ink3); }
 .so-bouton[data-etat="ouverte"] .so-pastille { background: var(--rampe-1); }
 .so-bouton[data-etat="connectee"] .so-pastille { background: var(--gt); }
+.so-bouton[data-etat="ecart"] .so-pastille { background: var(--rampe-1); }
+.so-bouton[data-etat="perimee"] .so-pastille { background: var(--rec); animation: so-pulse 1.1s ease-in-out infinite; }
 .so-bouton[data-alerte] .so-pastille { background: var(--rec); }
-.so-apercu { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: var(--black); box-shadow: inset 0 0 0 1px rgba(var(--lr), .16); }
-.so-apercu .so-hote { border-radius: 6px; }
+.so-apercu { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--rayon-petit); overflow: hidden; background: var(--black); box-shadow: inset 0 0 0 1px rgba(var(--lr), .16); }
+.so-apercu .so-hote { border-radius: var(--rayon-petit); }
 .so-apercu-legende {
   position: absolute; left: 6px; bottom: 5px; right: 6px; display: flex; justify-content: space-between; gap: 6px; pointer-events: none;
   font-family: var(--f-mono); font-size: 7.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink2); text-shadow: 0 1px 0 var(--well2);
 }
 .so-apercu-legende b { color: var(--ink); font-weight: 600; }
 .so-apercu-legende .manuel { color: var(--rampe-1); }
+/* bandeaux de la vignette : écart (ambre) et sortie périmée (rouge) */
+.so-apercu-bandeau {
+  position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 3px 6px;
+  font-family: var(--f-mono); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; background: var(--rampe-1); color: var(--on-rampe);
+}
+.so-apercu-bandeau.perimee { background: var(--rec); color: var(--on-rec); }
+.so-apercu-bandeau span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.so-apercu-bandeau button {
+  flex: none; padding: 2px 6px; border: none; border-radius: var(--rayon-petit); cursor: pointer; background: transparent; color: inherit;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; box-shadow: inset 0 0 0 1px currentColor;
+}
+.so-apercu-bandeau button:hover { background: var(--tile2); color: var(--ink); }
+
+/* ── carte de refus (page de sortie) : scène inconnue ou illisible, à recharger ─────── */
+.so-refus { position: absolute; inset: 0; z-index: 11; background: var(--bg); display: flex; flex-direction: column; justify-content: center; gap: 40px; padding: 0 140px; }
+.so-refus-sur { font-size: 34px; color: var(--rampe-1); }
+.so-refus-titre { font-size: 120px; font-weight: 700; color: var(--ink); line-height: 1.05; overflow-wrap: anywhere; }
+.so-refus-consigne { font-size: 80px; font-weight: 600; color: var(--ink); }
+.so-refus-aide { font-size: 44px; color: var(--ink2); }
+
+/* ── mur (scène native : chat, vote en grand, bandeau titre, QR en coin) ──────────── */
+.so-mur { position: absolute; inset: 0; background: var(--bg); color: var(--ink); overflow: hidden; }
+.so-mur-titre {
+  position: absolute; left: 0; right: 0; top: 0; height: 120px; display: flex; align-items: center; padding: 0 70px; z-index: 2;
+  font-size: 56px; letter-spacing: .06em; color: var(--ink); background: var(--tile); box-shadow: inset 0 -2px 0 var(--filet-14);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.so-mur-flux {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 40px 70px 50px;
+  font-size: 54px; line-height: 1.22;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, var(--ink) 18%); mask-image: linear-gradient(to bottom, transparent 0, var(--ink) 18%);
+}
+.so-mur.avec-titre .so-mur-flux { top: 120px; }
+.so-mur-ligne { padding: 12px 4px; box-shadow: inset 0 -1px 0 var(--filet-10); overflow-wrap: anywhere; animation: so-mur-entree 260ms ease both; }
+.so-mur-ligne.grand { font-size: 1.5em; padding: 16px 4px; }
+.so-mur-ligne.grand .so-mur-texte { font-weight: 600; }
+.so-mur-pseudo { font-weight: 700; margin-right: .45em; }
+.so-mur-pseudo::after { content: ':'; }
+.so-mur-texte { color: var(--ink); }
+@keyframes so-mur-entree { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.so-mur-vote { position: absolute; inset: 0; z-index: 3; background: var(--bg); display: flex; flex-direction: column; gap: 34px; padding: 70px 110px 60px; }
+.so-mur.avec-titre .so-mur-vote { top: 120px; }
+.so-mur-vote-et { font-size: 32px; color: var(--ort); }
+.so-mur-vote-total { color: var(--ink2); }
+.so-mur-vote-q { margin: 0; font-size: 70px; font-weight: 700; line-height: 1.15; color: var(--ink); max-width: 1700px; }
+.so-mur-reponses { display: flex; flex-direction: column; gap: 22px; }
+.so-mur-rep {
+  position: relative; overflow: hidden; display: flex; align-items: center; gap: 40px; padding: 26px 40px; border-radius: var(--rayon);
+  background: var(--tile); box-shadow: inset 0 0 0 2px var(--filet-14); font-size: 60px; line-height: 1.15; transition: opacity 600ms ease;
+}
+.so-mur-rep-barre { position: absolute; left: 0; top: 0; bottom: 0; background: var(--tile2); transition: width 1.2s cubic-bezier(.2, .9, .3, 1); z-index: 0; }
+.so-mur-rep > b, .so-mur-rep > span, .so-mur-rep > em { position: relative; z-index: 1; }
+.so-mur-rep > b { color: var(--ort); min-width: 1.2em; }
+.so-mur-rep-texte { flex: 1; min-width: 0; }
+.so-mur-rep > em { font-style: normal; color: var(--ink2); }
+.so-mur-rep.gagne { box-shadow: inset 0 0 0 5px var(--ort); }
+.so-mur-rep.gagne .so-mur-rep-barre { background: color-mix(in srgb, var(--ort) 35%, transparent); }
+.so-mur-rep.gagne > em { color: var(--ort); }
+.so-mur-rep.terne { opacity: .45; }
+.so-mur-resultat { margin: auto 0 0; font-size: 64px; font-weight: 700; color: var(--ort); line-height: 1.15; }
+
+.so-mur-qr { position: absolute; right: 50px; bottom: 50px; z-index: 4; width: 300px; padding: 18px; border-radius: var(--rayon); background: var(--ink); display: flex; flex-direction: column; gap: 10px; align-items: stretch; box-shadow: 0 20px 80px var(--ombre-3); }
+.so-mur-qr svg { display: block; width: 100%; height: auto; }
+.so-mur-qr .so-micro { font-size: 18px; color: var(--well2); text-align: center; }
+
+/* ── visio (scène native : cadres côte à côte ou un poste en plein écran) ─────────── */
+.so-visio { position: absolute; inset: 0; display: grid; gap: 22px; padding: 22px; background: var(--black); }
+.so-visio.plein { padding: 0; gap: 0; }
+.so-visio-cadre { position: relative; min-width: 0; min-height: 0; border-radius: var(--rayon); overflow: hidden; background: var(--well2); }
+.so-visio.plein .so-visio-cadre { border-radius: 0; }
+.so-visio-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 400ms ease; }
+.so-visio-video.on { opacity: 1; }
+.so-visio-attente { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.so-visio-mire { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.so-visio-attente .so-micro { position: relative; font-size: 34px; color: var(--ink); text-shadow: 0 2px 0 var(--well2), 0 0 18px var(--well2); }
+.so-visio-etiquette {
+  position: absolute; left: 26px; bottom: 22px; font-size: 40px; font-weight: 700; letter-spacing: .12em; color: var(--ink);
+  text-shadow: 0 2px 10px var(--black), 0 0 2px var(--black);
+}

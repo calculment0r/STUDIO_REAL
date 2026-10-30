@@ -17,7 +17,7 @@ const ICI = path.dirname(fileURLToPath(import.meta.url));
 const RACINE = path.resolve(ICI, '..', '..', '..');
 const env = process.env;
 const CONFIG = {
-  port: parseInt(env.PORT || '8787', 10),
+  port: parseInt(env.PORT || '8788', 10),
   hote: env.HOTE || '0.0.0.0',
   ollamaUrl: env.OLLAMA_URL || 'http://localhost:11434',
   modeleOllama: env.MODELE_OLLAMA || 'qwen3:8b',
@@ -192,6 +192,15 @@ async function santeOllama() {
 }
 const minuteurSante = setInterval(santeOllama, 15000);
 
+serveur.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`erreur : le port ${CONFIG.port} est déjà pris. Relancer sur un autre port, par exemple : PORT=8789 node index.mjs`);
+    journal.ecrire({ e: 'erreur', code: 'EADDRINUSE', port: CONFIG.port });
+  } else {
+    console.error(`erreur à l'écoute : ${err.message}`);
+  }
+  process.exit(2);
+});
 serveur.listen(CONFIG.port, CONFIG.hote, async () => {
   const adr = serveur.address();
   const config = { ...CONFIG, anthropic: fournisseurs.anthropic.disponible() ? 'clé présente' : 'absent' };
@@ -216,3 +225,11 @@ function arreter() {
 }
 process.on('SIGINT', arreter);
 process.on('SIGTERM', arreter);
+// Windows : fermeture de la fenêtre (SIGHUP) et Ctrl+Pause (SIGBREAK) ; signal inconnu sur la plateforme = ignoré.
+try { process.on('SIGHUP', arreter); } catch { /* signal inconnu */ }
+try { process.on('SIGBREAK', arreter); } catch { /* signal inconnu */ }
+process.on('uncaughtException', (e) => {
+  journal.ecrire({ e: 'erreur', message: e.message, pile: e.stack });
+  console.error(`erreur non capturée : ${e.message}`);
+  process.exit(1);
+});

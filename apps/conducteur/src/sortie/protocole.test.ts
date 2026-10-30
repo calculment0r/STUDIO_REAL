@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { Horloge, mmssRebours, restantCompteur } from './horloge';
 import { clesNom } from './medias';
 import {
-  adresseEntree, adresseLisible, borneFondu, cleScene, lireMessageRegie, lireMessageSortie, msgConfig, msgEtat, msgEvenement,
-  msgHeure, msgPrecharger, msgScene, sceneValide, VERSION_SORTIE,
+  adresseEntree, adresseLisible, borneFondu, BUILD_SORTIE, cleScene, examinerMessageRegie, lireMessageRegie, lireMessageSortie, msgBonjour,
+  msgConfig, msgEtat, msgEvenement, msgHeure, msgPrecharger, msgPresent, msgRecharger, msgScene, msgSource, sceneValide, VERSION_SORTIE,
 } from './protocole';
-import { pourcentages, traceQr } from './scenes';
-import { cadrageAuto } from './videos';
+import { clePage, hotePage, pourcentages, traceQr } from './scenes';
+import { cadrageAuto, etatPrecharge } from './videos';
 
 describe('protocole du canal régie → sortie', () => {
   it('les messages construits sont relus à l’identique', () => {
@@ -49,9 +49,101 @@ describe('protocole du canal régie → sortie', () => {
     expect(lireMessageSortie({ t: 'bonjour', v: 1, id: 'sortie_abc', heure: 1 })).not.toBeNull();
     expect(lireMessageSortie({ t: 'present', v: 1, id: 'sortie_abc', heure: 1, scene: 'video', n: 3 })).not.toBeNull();
     expect(lireMessageSortie({ t: 'present', v: 1, id: 'sortie_abc', heure: 1, scene: 'cinema', n: 3 })).toBeNull();
-    expect(lireMessageSortie({ t: 'fin-video', v: 1, id: 'sortie_abc', heure: 1, asset: 'a.mp4', n: 3 })).not.toBeNull();
+    expect(lireMessageSortie({ t: 'fin-video', v: VERSION_SORTIE, id: 'sortie_abc', heure: 1, asset: 'a.mp4', n: 3 })).not.toBeNull();
     expect(lireMessageSortie({ t: 'au-revoir', v: 1, id: 'sortie_abc' })).not.toBeNull();
     expect(lireMessageSortie({ t: 'bonjour', v: 1, heure: 1 })).toBeNull();
+  });
+
+  it('version 3 du protocole (v2 : scène « page », refus, recharger ; v3 : mur, visio, source)', () => {
+    expect(VERSION_SORTIE).toBe(3);
+    expect(typeof BUILD_SORTIE).toBe('string');
+    expect(BUILD_SORTIE.length).toBeGreaterThan(0);
+  });
+
+  it('v3 : scènes natives mur et visio validées, message source relu, état des préchargements', () => {
+    const mur = {
+      type: 'mur', titre: 'Écho', qr: 'https://e.test/?r=K7', audio: { asset: 'junon.mp3', depuis: 1000 },
+      messages: [{ id: 'm1', pseudo: 'zoe', texte: 'salut', couleur: '--cy', grand: true }],
+      vote: { etat: 'revele', numero: 1, question: 'Q ?', reponses: ['a', 'b'], comptes: [3, 1], pourcents: [75, 25], resultat: 'A gagne' },
+    };
+    expect(sceneValide(mur)).toBe(true);
+    // couleur en clair, chemin de fichier, trop de réponses : refusés
+    expect(sceneValide({ ...mur, messages: [{ pseudo: 'x', texte: 'y', couleur: '#ff0000' }] })).toBe(false);
+    expect(sceneValide({ ...mur, audio: { asset: '../banques/echo/votes.json' } })).toBe(false);
+    expect(sceneValide({ ...mur, vote: { ...mur.vote, reponses: Array(9).fill('r') } })).toBe(false);
+    const visio = { type: 'visio', postes: [{ id: 'franck', nom: 'Jim', son: false }, { id: 'ministre', nom: 'Junon', son: true }], disposition: 'cote' };
+    expect(sceneValide(visio)).toBe(true);
+    expect(sceneValide({ ...visio, postes: [] })).toBe(false);
+    expect(sceneValide({ ...visio, disposition: 'mosaique' })).toBe(false);
+    const s = msgSource({ url: 'wss://spectacle.test/ws', jeton: 'sr_scene_x' }, 5);
+    expect(lireMessageRegie(JSON.parse(JSON.stringify(s)))).toEqual(s);
+    expect(lireMessageRegie(msgSource(null, 5))).toEqual(msgSource(null, 5));
+    expect(lireMessageRegie({ ...s, spectacle: { url: 'https://pas-ws.test', jeton: 'x' } })).toBeNull();
+    expect(lireMessageRegie({ ...s, spectacle: { url: 'wss://a.test/ws', jeton: 'avec espace' } })).toBeNull();
+    expect(etatPrecharge(null, 0)).toBe('charge');
+    expect(etatPrecharge(false, 0)).toBe('absent');
+    expect(etatPrecharge(true, 2)).toBe('charge');
+    expect(etatPrecharge(true, 4)).toBe('pret');
+  });
+
+  it('bonjour et present portent la version et le build ; present porte la scène vue', () => {
+    const b = msgBonjour('sortie_abc', 5);
+    expect(b).toMatchObject({ t: 'bonjour', v: VERSION_SORTIE, version: VERSION_SORTIE, build: BUILD_SORTIE });
+    expect(lireMessageSortie(JSON.parse(JSON.stringify(b)))).toEqual(b);
+    const p = msgPresent({ id: 'sortie_abc', vue: { type: 'page', url: 'https://mur.test/salle' }, n: 4, source: 'regie_x1' }, 5);
+    expect(p).toMatchObject({ t: 'present', version: VERSION_SORTIE, build: BUILD_SORTIE, scene: 'page', vue: { type: 'page', url: 'https://mur.test/salle' }, n: 4 });
+    expect(lireMessageSortie(JSON.parse(JSON.stringify(p)))).toEqual(p);
+    expect(msgPresent({ id: 'sortie_abc', vue: null, n: 0 }, 5)).toMatchObject({ scene: null, vue: null });
+    // une vue illisible est retirée, le battement reste lu
+    expect(lireMessageSortie({ ...p, vue: { type: 'cinema' } })).not.toHaveProperty('vue');
+    // une sortie PÉRIMÉE (v1, sans version ni build) reste lisible : la régie la repère
+    expect(lireMessageSortie({ t: 'present', v: 1, id: 'sortie_abc', heure: 1, scene: 'titre', n: 1 })).toMatchObject({ v: 1 });
+    // fin-video : version exacte
+    expect(lireMessageSortie({ t: 'fin-video', v: 1, id: 'sortie_abc', heure: 1, asset: 'a.mp4', n: 3 })).toBeNull();
+  });
+
+  it('une scène de type inconnu produit un refus (plus d’abandon silencieux) et une carte', () => {
+    const r = examinerMessageRegie({ t: 'scene', v: VERSION_SORTIE, heure: 1, n: 1, fondu: 0, scene: { type: 'cinema' }, source: 'regie_x1' });
+    expect(r).toEqual({ refus: { raison: 'invalide', recu: 'scene:cinema', carte: true, versionRecue: VERSION_SORTIE, source: 'regie_x1', typeScene: 'cinema' } });
+    // une régie PLUS RÉCENTE (protocole inconnu) : refus « version » et carte (c'est la sortie qu'il faut recharger)
+    expect(examinerMessageRegie({ t: 'scene', v: VERSION_SORTIE + 1, heure: 1, n: 1, fondu: 0, scene: { type: 'hologramme' } }))
+      .toMatchObject({ refus: { raison: 'version', recu: `scene:hologramme v${VERSION_SORTIE + 1}`, carte: true } });
+    // une régie PLUS ANCIENNE : refus « version », mais la scène en cours reste (pas de carte)
+    expect(examinerMessageRegie({ t: 'scene', v: 1, heure: 1, n: 1, fondu: 0, scene: { type: 'noir' } }))
+      .toMatchObject({ refus: { raison: 'version', carte: false } });
+    // un autre message illisible : refus sans carte
+    expect(examinerMessageRegie({ t: 'heure', v: 99, heure: 1 })).toMatchObject({ refus: { raison: 'version', recu: 'heure v99', carte: false } });
+    expect(examinerMessageRegie({ t: 'evenement', v: VERSION_SORTIE, heure: 1, evenement: { type: 'laser' } })).toMatchObject({ refus: { raison: 'invalide', carte: false } });
+    // texte reçu nettoyé
+    expect(examinerMessageRegie({ t: 'scene', v: VERSION_SORTIE, heure: 1, n: 1, fondu: 0, scene: { type: '<img src=x>' } }))
+      .toMatchObject({ refus: { typeScene: 'imgsrcx' } });
+    // les messages d'une autre sortie et ce qui n'est pas un objet sont ignorés ; un message valide passe
+    expect(examinerMessageRegie({ t: 'present', v: 1, id: 'sortie_b', heure: 1, scene: 'noir', n: 0 })).toBeNull();
+    expect(examinerMessageRegie({ t: 'refus', v: 2, id: 'sortie_b', heure: 1, raison: 'invalide', version: 2 })).toBeNull();
+    expect(examinerMessageRegie('bonjour')).toBeNull();
+    expect(examinerMessageRegie(msgHeure(5))).toEqual({ message: msgHeure(5) });
+  });
+
+  it('recharger est un message de régie valide, quelle que soit sa version', () => {
+    const m = msgRecharger(5);
+    expect(m).toEqual({ t: 'recharger', v: VERSION_SORTIE, heure: 5 });
+    expect(lireMessageRegie(JSON.parse(JSON.stringify(m)))).toEqual(m);
+    expect(lireMessageRegie({ t: 'recharger', v: 99, heure: 5 })).toEqual({ t: 'recharger', v: 99, heure: 5 });
+    expect(lireMessageRegie({ t: 'recharger', v: 99 })).toBeNull();
+    expect(examinerMessageRegie(m)).toEqual({ message: m });
+  });
+
+  it('refus : lu par la régie', () => {
+    const r = { t: 'refus', v: VERSION_SORTIE, id: 'sortie_abc', heure: 1, raison: 'invalide', version: VERSION_SORTIE, recu: 'scene:cinema', versionRecue: VERSION_SORTIE };
+    expect(lireMessageSortie(r)).toEqual(r);
+    expect(lireMessageSortie({ ...r, raison: 'autre' })).toBeNull();
+    expect(lireMessageSortie({ ...r, source: 'a b' })).toBeNull();
+  });
+
+  it('scène « page » : clé par adresse, hôte dans la vignette', () => {
+    expect(clePage('https://mur.test/salle?x=1')).toBe('page:https://mur.test/salle?x=1');
+    expect(hotePage('https://mur.test:8443/salle')).toBe('mur.test:8443');
+    expect(hotePage('pas une adresse')).toBe('pas une adresse');
   });
 
   it('adresse d’entrée du public : code de représentation en ?r=', () => {

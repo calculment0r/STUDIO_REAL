@@ -1,0 +1,38 @@
+name: verifier
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    env:
+      SR_SANS_SERVEUR: '1'
+      SR_SANS_NAVIGATEUR: '1'
+    steps:
+      - name: Cloner le dépôt
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Vérifier les types
+        run: npm run typecheck
+
+      - name: Tests rapides
+        run: npm test
+
+      - name: Projets vérifiés
+        run: npm run verifier-projets
+
+      # Bloquant : 0 erreur exigée (eslint.config.js à la racine). Les avertissements ne font pas échouer l'étape.
+      - name: Lint
+        run: npm run lint

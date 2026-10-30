@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CommandeLecture, EtatLecture, Projet } from '@studio-real/modele';
 import brutLive from '../../../../projets/live/live.conducteur.json?raw';
-import { configParDefaut, type ConfigSortie } from './protocole';
-import { clipActif, sceneDeNom, tempsDansMoment, traduire } from './traduction';
+import { adresseLisible, configParDefaut, sceneValide, type ConfigSortie } from './protocole';
+import { ASSET_FLUX_DEFAUT, clipActif, ECRANS_SORTIE, lireFxScene, sceneDeNom, sceneDeVue, tempsDansMoment, traduire } from './traduction';
 
 const LIVE = (JSON.parse(brutLive) as { project: Projet }).project;
 const CONFIG: ConfigSortie = { ...configParDefaut('LIVE'), adresse: 'https://exemple.test/live/', code: 'K7Q2', secours: 'connexion_perdue.mp4' };
@@ -134,5 +134,153 @@ describe('traduction : chrono visible et scène déclarée', () => {
     const neutre = [{ id: 'x', name: 'Attendre', ty: 'f2', c: 0, r: 0, dx: 0, dy: 0, k: [5] }];
     expect(traduire({ projet: projet(neutre, 0), lecture: etat('m', 'x', 1), enLecture: true, config: CONFIG }).scene.type).toBe('accueil-qr');
     expect(traduire({ projet: projet(neutre, 1), lecture: etat('m', 'x', 1), enLecture: true, config: CONFIG }).scene).toEqual({ type: 'streamer' });
+  });
+});
+
+// ── serveur de spectacle : vue de l'acteur `scene` → scène de rendu ────────────────────────────────────────────
+describe('vue de l’acteur scene → scène (sceneDeVue)', () => {
+  const vue = (ecran: string | null, params: Record<string, unknown> = {}, at = 5000) => sceneDeVue({ ecran, params, at }, CONFIG);
+  const scene = (ecran: string | null, params: Record<string, unknown> = {}, at = 5000) => {
+    const r = vue(ecran, params, at);
+    if (!('scene' in r)) throw new Error(`refus ${r.refus} pour ${ecran}`);
+    return r.scene;
+  };
+
+  it('noir, et aucun écran encore (null) : noir', () => {
+    expect(scene('noir')).toEqual({ type: 'noir' });
+    expect(scene(null)).toEqual({ type: 'noir' });
+  });
+
+  it('accueil-qr (et qr) : le QR de la configuration, réglable', () => {
+    expect(scene('accueil-qr')).toEqual({ type: 'accueil-qr', adresse: 'https://exemple.test/live/?r=K7Q2', titre: 'LIVE', consigne: 'Scannez pour entrer', code: 'K7Q2' });
+    expect(scene('qr', { titre: 'ÉCHO', code: 'Z9' })).toMatchObject({ type: 'accueil-qr', titre: 'ÉCHO', code: 'Z9', adresse: 'https://exemple.test/live/?r=Z9' });
+  });
+
+  it('lien du public du serveur (jeton public dans le fragment) : QR d’accueil et QR du mur, sauf adresse imposée par la vue', () => {
+    const c: ConfigSortie = { ...CONFIG, lienPublic: 'https://spectacle.exemple/t/#jeton=sr_public_abc' };
+    const lien = 'https://spectacle.exemple/t/?r=K7Q2#jeton=sr_public_abc';
+    const r = sceneDeVue({ ecran: 'accueil-qr', params: {}, at: 5000 }, c);
+    expect(r).toEqual({ scene: { type: 'accueil-qr', adresse: lien, titre: 'LIVE', consigne: 'Scannez pour entrer', code: 'K7Q2' } });
+    expect(sceneDeVue({ ecran: 'mur', params: { qr: true }, at: 5000 }, c)).toMatchObject({ scene: { type: 'mur', qr: lien } });
+    // adresse imposée par la vue : elle passe avant
+    expect(sceneDeVue({ ecran: 'qr', params: { adresse: 'https://autre.test/x/' }, at: 5000 }, c)).toMatchObject({ scene: { adresse: 'https://autre.test/x/?r=K7Q2' } });
+    // sans lien du serveur : l'adresse de la configuration, comme avant
+    expect(sceneDeVue({ ecran: 'accueil-qr', params: {}, at: 5000 }, CONFIG)).toMatchObject({ scene: { adresse: 'https://exemple.test/live/?r=K7Q2' } });
+    // la ligne sous le QR n'affiche pas le jeton
+    expect(adresseLisible(lien)).toBe('spectacle.exemple/t/?r=K7Q2');
+  });
+
+  it('video : asset local, boucle par défaut ; sans asset (ou avec un chemin) : refus invalide', () => {
+    expect(scene('video', { asset: 'zoom_junon.mp4', boucle: false, son: true, cadrage: 'contain', legende: 'Junon' }))
+      .toEqual({ type: 'video', asset: 'zoom_junon.mp4', boucle: false, son: true, cadrage: 'contain', legende: 'Junon' });
+    expect(scene('video', { asset: 'a.mp4' })).toEqual({ type: 'video', asset: 'a.mp4' });
+    expect(vue('video', {})).toEqual({ refus: 'invalide', ecran: 'video' });
+    expect(vue('video', { asset: '../secret/a.mp4' })).toEqual({ refus: 'invalide', ecran: 'video' });
+  });
+
+  it('flux-video : la vidéo LOCALE du flux Instagram, lue une fois avec le son (plus de page flux/ en iframe)', () => {
+    expect(scene('flux-video')).toEqual({ type: 'video', asset: ASSET_FLUX_DEFAUT, boucle: false, son: true, cadrage: 'contain' });
+    expect(scene('flux-video', { asset: 'flux_b.mp4', boucle: true, son: false })).toMatchObject({ asset: 'flux_b.mp4', boucle: true, son: false });
+  });
+
+  it('titre : titre ou texte, surtitre, sous-titre', () => {
+    expect(scene('titre', { titre: 'ENTRACTE', surtitre: 'Écho', sousTitre: '10 min' })).toEqual({ type: 'titre', titre: 'ENTRACTE', surtitre: 'Écho', sousTitre: '10 min' });
+    expect(scene('titre', { texte: 'Fin' })).toEqual({ type: 'titre', titre: 'Fin' });
+  });
+
+  it('mur : messages, vote objet, audio repris depuis l’heure de la vue, titre, QR en coin', () => {
+    const s = scene('mur', {
+      titre: 'ÉCHO · LE MUR', qr: true, audio: 'junon_discours.mp3',
+      messages: [{ id: 1, pseudo: '@zoe', texte: 'salut', couleur: '--cy', grand: true }, { pseudo: 'x', texte: '' }, { auteur: 'kev', texte: 'yo', couleur: 'red' }],
+      vote: { etat: 'ouvert', numero: 1, question: 'Dur d’être un homme blanc ?', reponses: ['oui', 'non', 'bof', 'joker'], comptes: [4, 1, 0, 2] },
+    }, 7000);
+    expect(s).toEqual({
+      type: 'mur', titre: 'ÉCHO · LE MUR', qr: 'https://exemple.test/live/?r=K7Q2', audio: { asset: 'junon_discours.mp3', depuis: 7000 },
+      messages: [{ id: '1', pseudo: 'zoe', texte: 'salut', couleur: '--cy', grand: true }, { pseudo: 'kev', texte: 'yo' }],
+      vote: { etat: 'ouvert', numero: 1, question: 'Dur d’être un homme blanc ?', reponses: ['oui', 'non', 'bof', 'joker'], comptes: [4, 1, 0, 2] },
+    });
+  });
+
+  it('mur : forme des commandes converties ({vote:"revele", scores}) → pourcentages ; vote fermé et audio null : rien', () => {
+    expect(scene('mur', { vote: 'revele', numero: 2, question: 'Q', reponses: ['a', 'b', 'c', 'd'], scores: [41, 9, 37, 13], resultat: 'Le public a choisi A' }))
+      .toEqual({ type: 'mur', vote: { etat: 'revele', numero: 2, question: 'Q', reponses: ['a', 'b', 'c', 'd'], comptes: [41, 9, 37, 13], pourcents: [41, 9, 37, 13], resultat: 'Le public a choisi A' } });
+    expect(scene('mur', { vote: 'ferme', audio: null })).toEqual({ type: 'mur' });
+    expect(scene('mur', { audio: { asset: 'president.mp3', depuis: 1234, boucle: true } })).toEqual({ type: 'mur', audio: { asset: 'president.mp3', depuis: 1234, boucle: true } });
+  });
+
+  it('vote : la scène de vote existante, alimentée (réponses en options, comptes en résultats, gagnant à la révélation)', () => {
+    expect(scene('vote', { question: 'Où ?', reponses: ['toit', 'métro'], comptes: [3, 7], etat: 'revele' }))
+      .toEqual({ type: 'vote', question: 'Où ?', options: [{ cle: 'A', libelle: 'toit' }, { cle: 'B', libelle: 'métro' }], phase: 'revele', resultats: { A: 3, B: 7 }, gagnant: 'B' });
+    expect(scene('vote', { question: 'Où ?', options: ['x', 'y'] })).toMatchObject({ phase: 'ouvert', options: [{ cle: 'A', libelle: 'x' }, { cle: 'B', libelle: 'y' }] });
+  });
+
+  it('visio : postes, son par poste (Franck coupé), noms, disposition côte à côte ou plein écran', () => {
+    expect(scene('visio', { postes: ['franck', 'ministre'], son: { franck: false, ministre: true }, noms: { ministre: 'Junon Maréchal · ministre', franck: 'Jim' } }))
+      .toEqual({ type: 'visio', disposition: 'cote', postes: [{ id: 'franck', nom: 'Jim', son: false }, { id: 'ministre', nom: 'Junon Maréchal · ministre', son: true }] });
+    expect(scene('visio', { postes: ['franck', 'ministre'], son: { ministre: true }, disposition: 'plein' })).toMatchObject({ disposition: 'plein', plein: 'ministre' });
+    expect(scene('visio', { son: { franck: false, ministre: true }, disposition: 'plein', plein: 'franck' })).toMatchObject({ plein: 'franck', postes: [{ id: 'franck' }, { id: 'ministre' }] });
+    expect(vue('visio', {})).toEqual({ refus: 'invalide', ecran: 'visio' });
+  });
+
+  it('streamer, image, chrono, page ; écran inconnu : refus capacite', () => {
+    expect(scene('streamer', { gabarit: 'folie', bandeau: 'EN DIRECT' })).toEqual({ type: 'streamer', gabarit: 'folie', bandeau: 'EN DIRECT' });
+    expect(scene('image', { asset: 'affiche.png' })).toEqual({ type: 'image', asset: 'affiche.png' });
+    expect(scene('chrono', { duree: 30, titre: 'Votez' })).toEqual({ type: 'chrono', duree: 30, titre: 'Votez' });
+    expect(scene('page', { url: 'https://mur.test/' })).toEqual({ type: 'page', url: 'https://mur.test/' });
+    expect(vue('page', { url: 'javascript:alert(1)' })).toEqual({ refus: 'invalide', ecran: 'page' });
+    expect(vue('hologramme')).toEqual({ refus: 'capacite', ecran: 'hologramme' });
+  });
+
+  it('toute scène produite est valide pour le protocole de la sortie', () => {
+    for (const e of ECRANS_SORTIE) {
+      const r = vue(e, { asset: 'a.mp4', url: 'https://p.test/', postes: ['a'], question: 'q', reponses: ['x'] });
+      expect('scene' in r && sceneValide(r.scene), e).toBe(true);
+    }
+  });
+});
+
+describe('effets de l’acteur scene (lireFxScene)', () => {
+  it('message du mur, « @x a voté », pop, réactions ; inconnu : ignoré', () => {
+    expect(lireFxScene('message', { id: 'm9', pseudo: 'lou', texte: 'bravo', couleur: '--ort' })).toEqual({ message: { id: 'm9', pseudo: 'lou', texte: 'bravo', couleur: '--ort' } });
+    expect(lireFxScene('a-vote', { pseudo: '@lou', index: 2 })).toEqual({ vote: { pseudo: 'lou', index: 2 } });
+    expect(lireFxScene('a-vote', { index: 99 })).toEqual({ vote: {} });
+    expect(lireFxScene('pop', { pseudo: 'lou', texte: 'trop fort', style: 'vedette' })).toEqual({ evenement: { type: 'pop', auteur: 'lou', texte: 'trop fort', style: 'vedette' } });
+    expect(lireFxScene('coeurs', { n: 1000 })).toEqual({ evenement: { type: 'coeurs', n: 200 } });
+    expect(lireFxScene('gabarit', { gabarit: 'folie' })).toEqual({ evenement: { type: 'gabarit', gabarit: 'folie' } });
+    expect(lireFxScene('message', { pseudo: 'x' })).toBeNull();
+    expect(lireFxScene('vibrer', {})).toBeNull();
+  });
+});
+
+describe('préchargement étendu : envois à venir vers l’écran scène et params.sortie', () => {
+  const e = (id: string, o: Partial<Projet['ev'][number]['st'][number]> = {}) => ({ id, name: id, ty: 'k:scene', c: 0, r: 0, dx: 0, dy: 0, k: [5], ...o });
+  const P: Projet = {
+    titre: 'Essai', acts: [{ n: 'I' }],
+    ev: [
+      {
+        id: 'm', act: 0, name: 'M', entry: 'a', gate: { mode: 'auto', g: [] },
+        st: [
+          e('a', { envois: [{ vers: 'scene', ecran: 'mur', params: { audio: 'junon_discours.mp3' } }, { vers: 'public', ecran: 'video', params: { asset: 'telephone.mp4' } }] }),
+          e('b', { params: { zoom: 'zoom_junon.mp4' }, envois: [{ vers: 'scene', ecran: 'video', params: { asset: '$zoom' } }] }),
+          e('c', { envois: [{ vers: 'scene', ecran: 'video', params: { asset: 'jamais.mp4' } }] }),
+        ],
+        tr: [{ a: 'a', b: 'b', g: [], mode: 'all' }, { a: 'b', b: 'c', g: [], mode: 'all' }],
+      },
+      {
+        id: 'n', act: 0, name: 'N', entry: 'x', gate: { mode: 'auto', g: [] }, tr: [],
+        st: [e('x', { params: { sortie: { type: 'page', url: 'https://tunnel.test/prototypes/figurants/pages/flux/' } } })],
+      },
+    ],
+    sens: { aff: 50, part: 50, calme: 50, pen: 50 }, hold: {}, go: {}, ver: 1, nid: 10, tracks: [],
+  };
+
+  it('l’étape courante, ses suivantes, l’entrée du moment suivant ; pas les envois au public ni les étapes lointaines', () => {
+    const r = traduire({ projet: P, lecture: etat('m', 'a', 1, { tEtape: 1 }), enLecture: true, config: CONFIG });
+    expect(r.precharger).toEqual(['junon_discours.mp3', 'zoom_junon.mp4', ASSET_FLUX_DEFAUT, 'connexion_perdue.mp4']);
+  });
+
+  it('la page flux/ du prototype devient la vidéo locale native', () => {
+    const r = traduire({ projet: P, lecture: etat('n', 'x', 1, { tEtape: 1 }), enLecture: true, config: CONFIG });
+    expect(r.scene).toEqual({ type: 'video', asset: ASSET_FLUX_DEFAUT, boucle: false, son: true, cadrage: 'contain' });
   });
 });

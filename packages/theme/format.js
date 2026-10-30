@@ -1,4 +1,4 @@
-// @studio-real/theme : formats des temps, copie de apps/conducteur/src/theme/format.ts (fm() du design).
+// @studio-real/theme : formats des temps, copie de apps/conducteur/src/theme/format.ts (fm() du design) : le Conducteur garde son format.ts typé ; une valeur se change des deux côtés.
 // Toujours MM:SS entiers, jamais de décimale. Module ES : `import { mmss } from '…/packages/theme/format.js'`.
 
 /** 125.7 → « 02:05 ». Les minutes dépassent 99 si besoin. @param {number} s @returns {string} */

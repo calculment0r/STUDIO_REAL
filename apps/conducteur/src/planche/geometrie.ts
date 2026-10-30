@@ -79,6 +79,45 @@ export function cadrer(r: Rect, l: number, h: number): Camera {
   return { z, px: l / 2 - (r.x + r.w / 2) * z, py: haut - r.y * z + Math.max(0, (ah - r.h * z) / 2) };
 }
 
+/** Zoom de la caméra de spectacle : choisi une fois, puis constant. On garde le zoom courant s'il est lisible (niveau
+ *  ÉTAPES ou plus près) ; en vue d'ensemble, on passe au niveau ÉTAPES. */
+export function zoomDeSpectacle(zCourant: number): number {
+  return niveauZoom(zCourant) === 'loin' ? ZOOM_NIVEAU.moyen : bornerZoom(zCourant);
+}
+
+/** Caméra de spectacle : place le rectangle r dans la planche SANS changer le zoom z (panoramique seul).
+ *  Si r tient dans la vue il est centré ; sinon son bord gauche (et son bord haut) est calé sur la marge. */
+export function cadrerSansZoom(r: Rect, l: number, h: number, z: number, haut = 64, bas = 56, marge = 40): Camera {
+  const dispoL = l - 2 * marge, dispoH = h - haut - bas;
+  const px = r.w * z <= dispoL ? l / 2 - (r.x + r.w / 2) * z : marge - r.x * z;
+  const py = r.h * z <= dispoH ? haut + (dispoH - r.h * z) / 2 - r.y * z : haut - r.y * z;
+  return { z, px, py };
+}
+
+/** Flèche « PROCHAIN » : où, au bord de la vue, pointer vers un rectangle hors champ. */
+export interface FlecheProchain {
+  /** Direction du centre de la vue vers le centre de la cible, en radians (atan2, y vers le bas). */
+  angle: number;
+  /** Bord de la vue où la flèche se pose. */
+  bord: 'gauche' | 'droite' | 'haut' | 'bas';
+  /** Position de la flèche sur ce bord, en fraction de la largeur (u) et de la hauteur (v) de la vue, 0 → 1. */
+  u: number;
+  v: number;
+}
+
+/** Calcule la flèche à partir de deux rectangles du monde : la vue et la cible. Rien (null) si le centre de la cible est déjà dans la vue. */
+export function flecheProchain(vue: Rect, cible: Rect): FlecheProchain | null {
+  if (vue.w <= 0 || vue.h <= 0) return null;
+  const cx = vue.x + vue.w / 2, cy = vue.y + vue.h / 2;
+  const dx = cible.x + cible.w / 2 - cx, dy = cible.y + cible.h / 2 - cy;
+  const hw = vue.w / 2, hh = vue.h / 2;
+  if (Math.abs(dx) <= hw && Math.abs(dy) <= hh) return null;
+  const sx = dx === 0 ? Infinity : hw / Math.abs(dx), sy = dy === 0 ? Infinity : hh / Math.abs(dy);
+  const s = Math.min(sx, sy);
+  const bord = sx <= sy ? (dx > 0 ? 'droite' : 'gauche') : (dy > 0 ? 'bas' : 'haut');
+  return { angle: Math.atan2(dy, dx), bord, u: (cx + dx * s - vue.x) / vue.w, v: (cy + dy * s - vue.y) / vue.h };
+}
+
 /** Rapproche la caméra de la cible (suivi en mode Jouer) ; a = part du chemin parcourue (0 → 1). */
 export function rapprocher(c: Camera, cible: Camera, a: number): Camera {
   const k = Math.max(0, Math.min(1, a));
@@ -264,8 +303,18 @@ export function libelleCondition(g: Condition): string {
     }
     default:
       if (g.k.startsWith('mem:')) return `mémoire « ${g.k.slice(4)} » ${op} ${v}`;
-      return `${g.k} ${op} ${v}`;
+      return libelleSignal(g) ?? `${g.k} ${op} ${v}`;
   }
+}
+
+/** Condition sur le signal d'un acteur ('sig:ministre.raccroche' ≥ 1 → « signal ministre.raccroche reçu ») ; null sinon. */
+export function libelleSignal(g: Condition): string | null {
+  if (g.k.startsWith('sig:')) {
+    const nom = g.k.slice(4);
+    return g.op === '≥' && Number(g.v) === 1 ? `signal ${nom} reçu` : `signal ${nom} ${g.op} ${g.v}`;
+  }
+  if (g.k.startsWith('sigv:')) return `${g.k.slice(5)} ${g.op} ${g.v}`;
+  return null;
 }
 
 /** Règle lisible d'une sortie ; une sortie sans condition est le « sinon » (ou « à la fin » si elle est seule). */

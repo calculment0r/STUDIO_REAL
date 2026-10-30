@@ -1,3 +1,5 @@
+> **Remplacé par packages/protocole/PROTOCOLE.md** ([protocole unique v2](../../packages/protocole/PROTOCOLE.md)) ; ce document reste valable pour le code actuel jusqu’à la bascule (lot L2).
+
 # P0.5 Figurants : protocole et découpage
 
 Prototype de la chaîne **voix du comédien → transcription → orchestrateur → répliques des figurants dans le chat**.

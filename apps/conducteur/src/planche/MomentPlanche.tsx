@@ -2,13 +2,15 @@
 // Tout est posé en coordonnées du MONDE dans le calque transformé de la planche : le panoramique et le zoom ne
 // re-rendent pas ce composant (seul le niveau de zoom sémantique, l'état de lecture ou le projet le font).
 import { memo, useMemo, type CSSProperties, type PointerEvent as RPointerEvent } from 'react';
-import { dureeEtape, type Etape } from '@studio-real/modele';
+import { dureeEtape, type Acteur, type Etape } from '@studio-real/modele';
+import { useHorloge, useTempsArrondi } from '../etat/horloge';
 import {
   entreesDe, fm, hauteurBloc, liensDuMoment, regleSortie, libelleCondition, rondEntree, rondSortie, statutSortie,
   LARGEUR_BLOC, type CadreMoment, type Niveau, type StatutEtape,
 } from './geometrie';
 import { ApercuEtape, infoBloc, type ThemePlanche } from './pont-blocs';
 import { LIGNE, px, teinte } from './styles';
+import { pointPuces, pucesEtape } from './acteurs';
 
 export interface ApiPlanche {
   saisirEtape: (e: RPointerEvent, moment: string, etape: string, poignee: boolean) => void;
@@ -16,9 +18,12 @@ export interface ApiPlanche {
   choisirSortie: (e: RPointerEvent, moment: string, index: number) => void;
   deplacerSortie: (moment: string, index: number, sens: -1 | 1) => void;
   saisirRotatif: (e: RPointerEvent, moment: string, etape: string, i: number, v0: number) => void;
+  /** Poignée « envoyer » d'un bloc : tirer vers un acteur de la bande. */
+  saisirEnvoi: (e: RPointerEvent, moment: string, etape: string) => void;
 }
 
-export interface EtatActif { etape: string; tEtape: number; bloque: boolean }
+/** L'étape en cours d'un moment. Pas de temps ici : le reste, la jauge et l'aperçu lisent l'horloge eux-mêmes (voir plus bas). */
+export interface EtatActif { etape: string; bloque: boolean }
 export interface RotatifProvisoire { etape: string; i: number; v: number }
 
 export interface ProprietesMoment {
@@ -42,6 +47,8 @@ export interface ProprietesMoment {
   lienDepuis: string | null;
   editable: boolean;
   rotatif: RotatifProvisoire | null;
+  /** Acteurs du projet (puces d'ordres et poignée « envoyer » sous les blocs). */
+  acteurs?: Acteur[];
   tag: string;
   api: ApiPlanche;
 }
@@ -150,7 +157,7 @@ export const MomentPlanche = memo(function MomentPlanche(p: ProprietesMoment) {
               sel={p.selEtape === st.id} terne={p.terne} entree={entrees.includes(st.id)}
               sorties={parSource.get(st.id) ?? []} moment={m} selSortie={p.selSortie}
               rotatif={p.rotatif && p.rotatif.etape === st.id ? p.rotatif : null}
-              cibleLien={!!p.lienDepuis && p.lienDepuis !== st.id} editable={p.editable} api={p.api} />
+              cibleLien={!!p.lienDepuis && p.lienDepuis !== st.id} editable={p.editable} api={p.api} acteurs={p.acteurs} />
           ))}
         </>
       )}
@@ -158,11 +165,31 @@ export const MomentPlanche = memo(function MomentPlanche(p: ProprietesMoment) {
   );
 });
 
+// ── le temps de l'étape en cours : trois petits composants, les seuls du bloc qui suivent l'horloge ─────────────────────
+/** Durée restante MM:SS de l'étape en cours (une validation par seconde). */
+function ResteEtape({ d }: { d: number }) {
+  const reste = useHorloge(h => Math.floor(Math.max(0, d - h.tEtape) + 1e-6));
+  return <>{fm(reste)}</>;
+}
+
+/** Jauge de l'étape en cours (au quart de seconde). */
+function JaugeEtape({ d, couleur }: { d: number; couleur: string }) {
+  const t = useTempsArrondi('tEtape', 0.25);
+  const prog = Math.max(0, Math.min(1, t / d));
+  return <span style={{ width: (prog * 100).toFixed(1) + '%', background: couleur }} />;
+}
+
+/** Aperçu vivant du bloc en cours : lui donne le temps de l'étape au quart de seconde (il se dessine seul entre deux). */
+function ApercuEnCours(p: { ty: string; k: number[]; theme: ThemePlanche; echelle: number }) {
+  const t = useTempsArrondi('tEtape', 0.25);
+  return <ApercuEtape ty={p.ty} k={p.k} t={t} actif theme={p.theme} echelle={p.echelle} />;
+}
+
 interface ProprietesBloc {
   st: Etape; si: number; pos: { x: number; y: number }; momentId: string; niveau: Niveau; NH: number; theme: ThemePlanche;
   statut: StatutEtape; actif: EtatActif | null; sel: boolean; terne: boolean; entree: boolean;
   sorties: number[]; moment: CadreMoment['moment']; selSortie: number; rotatif: RotatifProvisoire | null;
-  cibleLien: boolean; editable: boolean; api: ApiPlanche;
+  cibleLien: boolean; editable: boolean; api: ApiPlanche; acteurs?: Acteur[];
 }
 
 const TXT_STATUT: Record<StatutEtape, string> = { neutre: 'à jouer', joue: 'joué', actif: 'en cours', avenir: 'à venir', ignore: 'non choisi' };
@@ -175,7 +202,7 @@ function BlocEtape(b: ProprietesBloc) {
   const act = b.statut === 'actif';
   const ignore = b.statut === 'ignore';
   const d = dureeEtape(st);
-  const prog = act && b.actif ? Math.max(0, Math.min(1, b.actif.tEtape / d)) : b.statut === 'joue' ? 1 : 0;
+  const enCours = act && !!b.actif;
   const bloque = !!(act && b.actif?.bloque);
   const k = b.rotatif ? st.k.map((v, i) => (i === b.rotatif!.i ? b.rotatif!.v : v)) : st.k;
 
@@ -206,7 +233,7 @@ function BlocEtape(b: ProprietesBloc) {
         : b.cibleLien ? `inset 0 0 0 ${px(1)} ${teinte('var(--cy)', 50)}` : `inset 0 0 0 ${px(1)} ${LIGNE(0.18)}`;
   const long = st.name.length > 14;
   const pointCouleur = COULEUR_STATUT[b.statut] ?? acc;
-  const resteOuDuree = act && b.actif ? fm(Math.max(0, d - b.actif.tEtape)) : fm(d);
+
   const nbS = b.sorties.length;
 
   return (
@@ -224,12 +251,18 @@ function BlocEtape(b: ProprietesBloc) {
             </span>
             <span className="planche-bloc__sous">{String(b.si + 1).padStart(2, '0')} · {info.label} · {TXT_STATUT[b.statut]}</span>
           </span>
-          <span className="planche-chiffre" style={{ fontSize: 11, color: act ? 'var(--ort)' : 'var(--ink2)', flex: 'none', width: 40, textAlign: 'right' }}>{resteOuDuree}</span>
-          <span className="planche-bloc__prog"><span style={{ width: (prog * 100).toFixed(1) + '%', background: act ? 'var(--ort)' : 'var(--gt)' }} /></span>
+          <span className="planche-chiffre" style={{ fontSize: 11, color: act ? 'var(--ort)' : 'var(--ink2)', flex: 'none', width: 40, textAlign: 'right' }}>{enCours ? <ResteEtape d={d} /> : fm(d)}</span>
+          <span className="planche-bloc__prog">
+            {enCours
+              ? <JaugeEtape d={d} couleur="var(--ort)" />
+              : <span style={{ width: (b.statut === 'joue' ? 100 : 0).toFixed(1) + '%', background: act ? 'var(--ort)' : 'var(--gt)' }} />}
+          </span>
           {bloque && <span className="planche-bloque planche-pulse">BLOQUÉ</span>}
         </div>
         <div className="planche-bloc__apercu">
-          <ApercuEtape ty={st.ty} k={k} t={act && b.actif ? b.actif.tEtape : 0} actif={act} theme={b.theme} echelle={niveau === 'pres' ? 2 : 1} />
+          {enCours
+            ? <ApercuEnCours ty={st.ty} k={k} theme={b.theme} echelle={niveau === 'pres' ? 2 : 1} />
+            : <ApercuEtape ty={st.ty} k={k} t={0} actif={act} theme={b.theme} echelle={niveau === 'pres' ? 2 : 1} />}
         </div>
         {niveau === 'pres' && (
           <>
@@ -273,7 +306,33 @@ function BlocEtape(b: ProprietesBloc) {
         )}
       </div>
       {ronds}
+      <OrdresBloc b={b} />
     </>
+  );
+}
+
+/** Sous le bloc, à taille d'écran constante : la poignée « envoyer » (tirer vers un acteur de la bande) et la rangée
+ *  des puces d'ordres (« PUBLIC · vote 1 »), une par envoi de l'étape. */
+function OrdresBloc({ b }: { b: ProprietesBloc }) {
+  const { st, pos, niveau, momentId, api } = b;
+  const puces = pucesEtape(st, b.acteurs);
+  const avecActeurs = !!b.acteurs?.length;
+  if (!puces.length && !(avecActeurs && b.editable)) return null;
+  const p = pointPuces(pos, niveau);
+  return (
+    <div className="planche-ecran" style={{ left: p.x, top: p.y, zIndex: 4, opacity: b.terne ? 0.45 : 1 }}>
+      <div className="planche-ordres" style={{ width: `calc(${LARGEUR_BLOC}px * var(--z) + 120px)` }}>
+        {avecActeurs && b.editable && (
+          <span data-ui="1" className="planche-envoyer" title="Envoyer : tirer vers un acteur de la bande PLATEAU"
+            onPointerDown={e => api.saisirEnvoi(e, momentId, st.id)} onDoubleClick={e => e.stopPropagation()}>↗</span>
+        )}
+        {puces.map(x => (
+          <span key={x.index} className={'planche-puce' + (x.tenu ? '' : ' passe')} title={x.texte} style={{ boxShadow: `inset 0 0 0 1px ${x.couleur}` }}>
+            <i style={{ background: x.couleur }} />{x.texte}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 

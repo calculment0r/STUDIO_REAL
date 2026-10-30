@@ -6,19 +6,22 @@
 // puis consigne régie → téléphone, reprise de la caméra (piste coupée), latence mesurée par mire horodatée, et
 // sortie.html?…&stats=1 (réception par recevoirFluxStreamer dans la vraie page de sortie). Arrête tout à la fin.
 // Désactiver : SR_SANS_NAVIGATEUR=1 (ou SR_SANS_SERVEUR=1). Navigateur : SR_EDGE=<chemin> (défaut : Edge x86).
+// Test LENT (projet vitest « conducteur-lent », `npm run test:lent`). Pilote CDP : ../test-outils/cdp.ts.
+// Quand il se saute, il l'annonce : nom de describe « [SAUTÉ : raison] … » et un avertissement en tête de sortie.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lancerEdge, nomAvecSaut, pause, portLibre, raisonSautNavigateur, tuer, type Cdp, type Onglet } from '../test-outils/cdp';
 
 const CONDUCTEUR = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SERVEUR = join(CONDUCTEUR, '..', 'serveur');
-const EDGE = process.env.SR_EDGE ?? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const SANS = process.env.SR_SANS_NAVIGATEUR === '1' || process.env.SR_SANS_SERVEUR === '1' || !existsSync(EDGE);
+const RAISON_SAUT = raisonSautNavigateur();
+const SANS = RAISON_SAUT !== null;
+if (SANS) console.warn(`[SAUTÉ : ${RAISON_SAUT}] flux streamer de bout en bout : aucun serveur ni navigateur lancé`);
 const ADMIN = 'jeton-admin-essai-flux-0123456789';
 const ENV = { ...process.env, WRANGLER_SEND_METRICS: 'false', CI: '1', NO_COLOR: '1' };
 
@@ -32,72 +35,6 @@ let journal = '';
 let cdp: Cdp | null = null;
 let projet = { id: '', jeton: '' };
 let avecSortie = false;
-
-const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const portLibre = () => new Promise<number>((ok, ko) => {
-  const s = createServer();
-  s.once('error', ko);
-  s.listen(0, '127.0.0.1', () => { const a = s.address(); s.close(() => ok(typeof a === 'object' && a ? a.port : 0)); });
-});
-const tuer = (p: ChildProcess | null) => {
-  if (!p?.pid) return;
-  if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F'], { stdio: 'ignore' });
-  else p.kill('SIGTERM');
-};
-
-/** Client minimal du protocole DevTools (WebSocket natif de Node 24). */
-class Cdp {
-  private id = 0;
-  private attente = new Map<number, { ok: (v: any) => void; ko: (e: Error) => void }>();
-  private ws: WebSocket;
-  /** événements reçus (console, exceptions) des onglets où Runtime est activé */
-  evenements: any[] = [];
-  ouvert: Promise<void>;
-  constructor(url: string) {
-    this.ws = new WebSocket(url);
-    this.ouvert = new Promise((ok, ko) => { this.ws.onopen = () => ok(); this.ws.onerror = () => ko(new Error('CDP injoignable')); });
-    this.ws.onmessage = (e) => {
-      const m = JSON.parse(String(e.data));
-      if (m.method) { this.evenements.push(m); if (this.evenements.length > 500) this.evenements.shift(); }
-      const a = m.id !== undefined ? this.attente.get(m.id) : undefined;
-      if (!a) return;
-      this.attente.delete(m.id);
-      if (m.error) a.ko(new Error(m.error.message)); else a.ok(m.result);
-    };
-  }
-  envoyer(method: string, params: Record<string, unknown> = {}, sessionId?: string): Promise<any> {
-    const id = ++this.id;
-    this.ws.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
-    return new Promise((ok, ko) => this.attente.set(id, { ok, ko }));
-  }
-  async onglet(url: string): Promise<Onglet> {
-    const { targetId } = await this.envoyer('Target.createTarget', { url });
-    const { sessionId } = await this.envoyer('Target.attachToTarget', { targetId, flatten: true });
-    return new Onglet(this, targetId, sessionId);
-  }
-  fermer() { try { this.ws.close(); } catch { /* fermé */ } }
-}
-
-class Onglet {
-  readonly cdp: Cdp; readonly targetId: string; readonly sessionId: string;
-  constructor(cdp: Cdp, targetId: string, sessionId: string) { this.cdp = cdp; this.targetId = targetId; this.sessionId = sessionId; }
-  async eval<T = any>(expression: string): Promise<T> {
-    const r = await this.cdp.envoyer('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }, this.sessionId);
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
-    return r.result.value as T;
-  }
-  /** Attend que l'expression soit vraie (truthy) ; renvoie sa valeur. */
-  async attendre<T = any>(expression: string, ms = 20_000, quoi = expression): Promise<T> {
-    const fin = Date.now() + ms;
-    let derniere: unknown;
-    for (;;) {
-      try { derniere = await this.eval(expression); if (derniere) return derniere as T; } catch (e) { derniere = (e as Error).message; }
-      if (Date.now() > fin) throw new Error(`délai dépassé : ${quoi} (dernier : ${JSON.stringify(derniere)})`);
-      await pause(250);
-    }
-  }
-  fermer() { return this.cdp.envoyer('Target.closeTarget', { targetId: this.targetId }); }
-}
 
 beforeAll(async () => {
   if (SANS) return;
@@ -136,19 +73,7 @@ beforeAll(async () => {
   projet = await r.json();
 
   // 3. Edge sans tête, fausse caméra et faux micro, permissions accordées
-  const portCdp = await portLibre();
-  edge = spawn(EDGE, [
-    '--headless=new', `--remote-debugging-port=${portCdp}`, `--user-data-dir=${join(tmp, 'profil')}`, '--no-first-run', '--no-default-browser-check',
-    '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--autoplay-policy=no-user-gesture-required',
-    '--disable-background-timer-throttling', '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', 'about:blank',
-  ], { stdio: 'ignore' });
-  let url = '';
-  for (const limite = Date.now() + 30_000; !url;) {
-    try { url = (await (await fetch(`http://127.0.0.1:${portCdp}/json/version`)).json()).webSocketDebuggerUrl; } catch { /* pas prêt */ }
-    if (!url) { if (Date.now() > limite) throw new Error('Edge ne répond pas'); await pause(250); }
-  }
-  cdp = new Cdp(url);
-  await cdp.ouvert;
+  ({ edge, cdp } = await lancerEdge(tmp));
 }, 240_000);
 
 afterAll(() => {
@@ -158,7 +83,7 @@ afterAll(() => {
   try { rmSync(tmp, { recursive: true, force: true }); } catch { /* fichiers verrouillés sous Windows */ }
 });
 
-describe.skipIf(SANS)('flux streamer de bout en bout (Edge sans tête, fausse caméra)', () => {
+describe.skipIf(SANS)(nomAvecSaut(RAISON_SAUT, 'flux streamer de bout en bout (Edge sans tête, fausse caméra)'), () => {
   const lien = (role: string, extra = '') => `${base}/streamer.html#role=${role}&projet=${projet.id}&jeton=${projet.jeton}${extra}`;
   let moniteur: Onglet;
   let telephone: Onglet;
@@ -228,7 +153,7 @@ describe.skipIf(SANS)('flux streamer de bout en bout (Edge sans tête, fausse ca
   }, 90_000);
 
   it('sortie.html (chantier SORTIE) reçoit le flux par recevoirFluxStreamer, incrustation ?stats=1', async (ctx) => {
-    if (!avecSortie) { console.log('[flux] sortie.html non construite : vérification sautée'); ctx.skip(); return; }
+    if (!avecSortie) { console.warn('[SAUTÉ : sortie.html non construite] vérification de la sortie : la construction de sortie.html a échoué ou la page est absente'); ctx.skip('sortie.html non construite'); return; }
     const sortie = await cdp!.onglet(`${base}/sortie.html?projet=${projet.id}&jeton=${projet.jeton}&stats=1`);
     await cdp!.envoyer('Runtime.enable', {}, sortie.sessionId);
     await pause(6000);

@@ -1,10 +1,11 @@
 // Validation d'un projet et chargement d'un fichier « studio-real/conducteur@1 » (ou d'un Projet nu).
-import type { Condition, Etape, FichierConducteur, Moment, Passage, Projet, SalleSimulee, Sequence, Sortie } from './types';
+import type { Acteur, Condition, Etape, FichierConducteur, Moment, Passage, Projet, SalleSimulee, Sequence, Sortie } from './types';
 import { FORMAT } from './types';
-import { OPERATEURS, estCleCondition } from './conditions';
+import { OPERATEURS, cleSignal, estCleCondition, lireSignalActeur } from './conditions';
+import { RE_ID_ACTEUR, TYPES_ACTEUR, cibleDansFoule, cleQuand, modeleActeur, quandValide } from './acteurs';
 import {
   BLOCS_MOTEUR, SORTIES_NOMMEES, TY_BOUCLE, TY_GARDE, TY_MEMOIRE, TY_TIRAGE, TYPES_VOTE, comportementBloc, normaliserNom,
-  poidsTirage, reglagesComedien, reglagesMemoire, reglagesSequence, sortiesBoucle, sortiesGarde, trouverSequence,
+  poidsTirage, reglagesComedien, reglagesMemoire, reglagesSequence, reglagesSignal, sortiesBoucle, sortiesGarde, trouverSequence,
 } from './blocs-moteur';
 
 export type NiveauProbleme = 'erreur' | 'avertissement';
@@ -36,6 +37,10 @@ export function validerProjet(p: Projet): Probleme[] {
   const memoiresConnues = new Set(Object.keys(p.memoires ?? {}));
   for (const m of [...p.ev, ...(Array.isArray(p.sequences) ? p.sequences : [])])
     for (const st of m?.st ?? []) if (st && st.ty === TY_MEMOIRE) memoiresConnues.add(reglagesMemoire(st).nom);
+
+  // Acteurs du spectacle (rapport 1 §4.4) : pour vérifier les envois et les signaux attendus.
+  const acteurs = verifierActeurs();
+  let envoisSansActeurs = false;
 
   const idsMoments = new Map<string, number>();
   p.ev.forEach((m, i) => {
@@ -121,6 +126,7 @@ export function validerProjet(p: Projet): Probleme[] {
         if (outs.length && poidsTirage(st, outs).every(x => x === 0)) avt('tirage-poids-nuls', `${nom} : tous les poids sont à 0 ; la sortie 1 sera toujours prise.`, m.id, st.id);
       }
       verifierBlocEvenement(st, outs, nom, m.id);
+      verifierEnvois(st, nom, m.id);
     }
 
     // Accessibilité et fin du moment.
@@ -177,11 +183,17 @@ export function validerProjet(p: Projet): Probleme[] {
       for (const st of q.st) {
         if (!st || typeof st.id !== 'string') continue;
         verifierBlocEvenement(st, q.tr.filter(o => o && o.a === st.id), `${nomS}, ${BLOC[st.ty] ?? 'étape'} « ${st.name || st.id} »`, '');
+        verifierEnvois(st, `${nomS}, étape « ${st.name || st.id} »`, '');
+        if (Array.isArray(st.envois) && st.envois.length)
+          avt('envoi-dans-sequence', `${nomS}, étape « ${st.name || st.id} » : les envois d’une étape de séquence ne sont pas encore joués (vueActeur) ; placez-les sur l’étape « Séquence » du moment.`, '', st.id);
         if (comportementBloc(st.ty) === 'sequence' && appelle(p.sequences, st, q.id, 0))
           avt('sequence-recursive', `${nomS} : elle s’appelle elle-même (directement ou non) ; le lecteur sortira directement.`);
       }
     }
   }
+
+  if (envoisSansActeurs)
+    avt('envois-sans-acteurs', 'Des étapes ont des envois, mais le projet ne déclare aucun acteur (« acteurs ») : les cibles ne sont pas vérifiées.');
 
   if (p.sens && typeof p.sens === 'object') {
     for (const k of ['aff', 'part', 'calme', 'pen'] as const) {
@@ -209,12 +221,98 @@ export function validerProjet(p: Projet): Probleme[] {
       if (!trouverSequence(p.sequences, r.sequence))
         avt('sequence-inconnue', `${nom} : la séquence « ${r.sequence || '(aucune)'} » n’existe pas ; sortie directe.`, moment, etape);
     }
+    if (comp === 'signal') verifierSignalActeur(reglagesSignal(st).signal, nom, moment, etape);
+    if (st.params && Object.prototype.hasOwnProperty.call(st.params, 'cmds'))
+      avt('cmds-a-convertir', `${nom} : params.cmds (commandes du prototype) est encore présent ; à convertir en envois aux acteurs (commandesVersEnvois).`, moment, etape);
+  }
+
+  /** Liste des acteurs : identifiants uniques, type connu, listes lisibles, aucun secret dans la configuration d'un agent. */
+  function verifierActeurs(): Map<string, Acteur> {
+    const vus = new Map<string, Acteur>();
+    if (p.acteurs === undefined) return vus;
+    if (!Array.isArray(p.acteurs)) { err('acteurs-illisibles', 'La liste des acteurs (« acteurs ») est illisible.'); return vus; }
+    p.acteurs.forEach((a, i) => {
+      if (!a || typeof a !== 'object' || typeof a.id !== 'string' || !RE_ID_ACTEUR.test(a.id)) {
+        err('acteur-sans-id', `L’acteur n° ${i + 1} n’a pas d’identifiant valable (lettres, chiffres, - et _, sans point ni deux-points).`);
+        return;
+      }
+      const nomA = `Acteur « ${a.nom || a.id} »`;
+      if (vus.has(a.id)) err('acteur-id-double', `${nomA} : l’identifiant « ${a.id} » est déjà utilisé par un autre acteur.`);
+      vus.set(a.id, a);
+      if (!TYPES_ACTEUR.includes(a.type)) err('acteur-type-inconnu', `${nomA} : le type « ${String(a.type)} » est inconnu (${TYPES_ACTEUR.join(', ')}).`);
+      else if (a.type === 'agent' && !modeleActeur(a)) avt('agent-genre-inconnu', `${nomA} : agent sans genre connu (figurants, elevenlabs, asr, osc).`);
+      if (a.cardinalite !== 1 && a.cardinalite !== 'n') err('acteur-cardinalite', `${nomA} : la cardinalité doit être 1 (acteur nommé) ou 'n' (foule).`);
+      if (!Array.isArray(a.ecrans) || !a.ecrans.every(e => typeof e === 'string')) err('acteur-ecrans', `${nomA} : la liste des écrans (« ecrans ») est illisible.`);
+      if (!Array.isArray(a.signaux) || !a.signaux.every(e => typeof e === 'string')) err('acteur-signaux', `${nomA} : la liste des signaux (« signaux ») est illisible.`);
+      const config = a.agent?.config;
+      if (config && typeof config === 'object' && Object.keys(config).some(k => /cle|key|secret|token|jeton|password|mot.?de.?passe/i.test(k)))
+        avt('agent-secret', `${nomA} : la configuration de l’agent semble contenir une clé ou un secret ; il ne doit jamais être écrit dans le projet.`);
+    });
+    return vus;
+  }
+
+  /** Envois d'une étape : cible, acteur, écran qu'il sait afficher, effet, quand, envois contradictoires. */
+  function verifierEnvois(st: Etape, ou: string, moment: string) {
+    const envois: unknown = st.envois;
+    if (envois === undefined) return;
+    if (!Array.isArray(envois)) { err('envois-illisibles', `${ou} : la liste des envois (« envois ») est illisible.`, moment, st.id); return; }
+    if (envois.length && !acteurs.size) envoisSansActeurs = true;
+    const ecrans = new Map<string, number>();
+    envois.forEach((x: unknown, j) => {
+      const nomE = `${ou}, envoi n° ${j + 1}`;
+      if (!x || typeof x !== 'object' || Array.isArray(x)) { err('envoi-illisible', `${nomE} : illisible.`, moment, st.id); return; }
+      const e = x as Record<string, unknown>;
+      const cible = cibleDansFoule(e.vers);
+      if (!cible) {
+        err('envoi-cible-invalide', `${nomE} : la cible « ${String(e.vers)} » est illisible (ex. scene, public, public:ont-vote:A, public:aleatoire:3).`, moment, st.id);
+        return;
+      }
+      const a = acteurs.get(cible.acteur);
+      const nomA = a ? `« ${a.nom || a.id} »` : `« ${cible.acteur} »`;
+      if (acteurs.size && !a) err('envoi-acteur-inconnu', `${nomE} : l’acteur « ${cible.acteur} » n’existe pas dans le projet.`, moment, st.id);
+      if (a && cible.filtre && a.cardinalite !== 'n') avt('envoi-filtre-sans-foule', `${nomE} : la cible « ${String(e.vers)} » filtre une foule, mais ${nomA} est un acteur nommé.`, moment, st.id);
+      if (e.ecran === undefined && e.fx === undefined) avt('envoi-vide', `${nomE} : ni écran ni effet pour ${nomA}.`, moment, st.id);
+      if (e.ecran !== undefined && (typeof e.ecran !== 'string' || !e.ecran)) err('envoi-ecran-illisible', `${nomE} : l’écran doit être un nom.`, moment, st.id);
+      else if (typeof e.ecran === 'string' && a && Array.isArray(a.ecrans) && !a.ecrans.includes(e.ecran))
+        err('envoi-ecran-inconnu', `${nomE} : ${nomA} ne sait pas afficher l’écran « ${e.ecran} » (écrans : ${a.ecrans.join(', ') || 'aucun'}).`, moment, st.id);
+      if (e.fx !== undefined && (typeof e.fx !== 'string' || !e.fx)) err('envoi-effet-illisible', `${nomE} : l’effet doit être un nom.`, moment, st.id);
+      else if (typeof e.fx === 'string' && a) {
+        const m = modeleActeur(a);
+        if (m && !m.fx.includes(e.fx)) avt('envoi-effet-inconnu', `${nomE} : effet « ${e.fx} » inconnu pour ${nomA} (effets : ${m.fx.join(', ') || 'aucun'}).`, moment, st.id);
+      }
+      if (e.params !== undefined && (!e.params || typeof e.params !== 'object' || Array.isArray(e.params)))
+        err('envoi-params-illisibles', `${nomE} : les réglages (« params ») doivent être un objet.`, moment, st.id);
+      if (e.quand !== undefined && !quandValide(e.quand))
+        err('envoi-quand-invalide', `${nomE} : « quand » attend 'entree', 'sortie' ou { apres: secondes ≥ 0 }.`, moment, st.id);
+      if (e.tenir !== undefined && typeof e.tenir !== 'boolean') err('envoi-tenir-invalide', `${nomE} : « tenir » attend vrai ou faux.`, moment, st.id);
+      if (typeof e.ecran === 'string' && e.ecran) {
+        const cle = `${cible.acteur}|${JSON.stringify(cible.filtre)}|${cleQuand(e.quand)}`;
+        const avant = ecrans.get(cle);
+        if (avant !== undefined)
+          avt('envois-contradictoires', `${ou} : les envois n° ${avant + 1} et ${j + 1} donnent chacun un écran à « ${String(e.vers)} » au même instant ; seul le dernier restera.`, moment, st.id);
+        ecrans.set(cle, j);
+      }
+    });
+  }
+
+  /** Un signal attendu de la forme « <acteur>.<signal> » doit être déclaré par cet acteur (Acteur.signaux). */
+  function verifierSignalActeur(nom: string, ou: string, moment: string, etape?: string) {
+    if (!acteurs.size) return;
+    const sa = lireSignalActeur(nom);
+    if (!sa) return;
+    const a = [...acteurs.values()].find(x => cleSignal(x.id) === cleSignal(sa.acteur));
+    if (!a) return;   // pas un signal d'acteur (ex. 'go.story', 'video.fin')
+    const signaux = Array.isArray(a.signaux) ? a.signaux : [];
+    if (!signaux.some(s => typeof s === 'string' && cleSignal(s) === cleSignal(sa.signal)))
+      avt('signal-jamais-renvoye', `${ou} : on attend « ${nom} », mais ${a.nom || a.id} ne renvoie pas le signal « ${sa.signal} » (signaux : ${signaux.join(', ') || 'aucun'}).`, moment, etape);
   }
 
   function verifierCondition(g: Condition, ou: string, moment: string, etape?: string) {
     if (!g || typeof g !== 'object') { err('condition-illisible', `${ou} : une condition est illisible.`, moment, etape); return; }
     if (!estCleCondition(g.k)) { err('condition-inconnue', `${ou} : la condition « ${String(g.k)} » est inconnue (t, pres, quorum, prets, bruit, assis, issue, mem:<nom>, sig:<nom>, sigv:<nom>).`, moment, etape); return; }
     if (!OPERATEURS.includes(g.op)) err('condition-operateur', `${ou} : l’opérateur « ${String(g.op)} » est inconnu.`, moment, etape);
+    if (g.k.startsWith('sig:')) verifierSignalActeur(g.k.slice(4), ou, moment, etape);
+    else if (g.k.startsWith('sigv:')) verifierSignalActeur(g.k.slice(5), ou, moment, etape);
     if (g.k === 'issue') {
       if (typeof g.v !== 'string' || !g.v) err('condition-issue', `${ou} : la condition sur l’issue attend une lettre (A, B, T…).`, moment, etape);
       if (g.op !== '=' && g.op !== '≠') err('condition-issue-operateur', `${ou} : l’issue se compare avec = ou ≠.`, moment, etape);
@@ -312,6 +410,8 @@ export function normaliserProjet(p: Brut): Projet {
   if (typeof p.titre === 'string') out.titre = p.titre;
   if (estObjet(p.memoires)) out.memoires = p.memoires as Projet['memoires'];
   if (Array.isArray(p.sequences)) out.sequences = (p.sequences as unknown[]).filter(estObjet).map(normaliserSequence);
+  // Acteurs et envois (rapport 1 §4.4) : gardés tels quels, validerProjet() les contrôle.
+  if (p.acteurs !== undefined) out.acteurs = p.acteurs as Projet['acteurs'];
   return out;
 }
 
@@ -350,6 +450,7 @@ function normaliserEtape(e: Brut, j: number): Etape {
   };
   if (typeof e.asset === 'string') out.asset = e.asset;
   if (estObjet(e.params)) out.params = e.params;
+  if (e.envois !== undefined) out.envois = e.envois as Etape['envois'];
   return out;
 }
 

@@ -85,7 +85,7 @@ export class Pops {
     for (const it of this.items) if (it.out < 0) { it.out = this.ctx.time; return; }
   }
 
-  update(dt) {
+  update(_dt) {
     const now = this.ctx.time, L = this.items;
     for (let i = L.length - 1; i >= 0; i--) {
       const it = L[i], age = now - it.born;
@@ -369,7 +369,7 @@ export class Gauge {
   add(w) { this.energy = Math.min(this.cap * 1.3, this.energy + w); }
 
   update(dt) {
-    const { theme, kit, time } = this.ctx;
+    const { theme, time } = this.ctx;
     this.energy *= Math.exp(-dt / 2.4);
     const target = clamp(this.energy / this.cap, 0, 1);
     this.level = lerp(this.level, target, clamp(dt * 6, 0, 1));
@@ -453,7 +453,7 @@ export class VoteReveal {
 
   update(dt) {
     if (this.state === 'idle') return;
-    const { time, kit, theme, pFront } = this.ctx;
+    const { time } = this.ctx;
     const age = time - this.t0;
     const total = this.counts.reduce((a, b) => a + b, 0) || 1;
     const maxC = Math.max(1, ...this.counts);

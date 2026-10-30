@@ -81,3 +81,21 @@ export function configurationRtc(explicites?: RTCIceServer[], relaisForce?: bool
 
 /** Un TURN est-il configuré ? (affiché sur les pages : « relais possible ») */
 export const aUnTurn = (s: RTCIceServer[]) => s.some((x) => (Array.isArray(x.urls) ? x.urls : [x.urls]).some((u) => /^turns?:/i.test(u)));
+
+/**
+ * Serveurs ICE donnés par le serveur de spectacle (`GET <urlHttp>/ice`, jeton de n'importe quel rôle) : identifiants
+ * TURN éphémères si le propriétaire a collé une clé, sinon STUN public. Ne lève jamais : refus, délai (4 s) ou réponse
+ * illisible → la configuration habituelle (adresse, localStorage, VITE_SERVEURS_ICE, STUN public).
+ */
+export async function chercherIce(urlHttp: string, jeton: string, f: typeof fetch = (...a) => fetch(...a)): Promise<RTCIceServer[]> {
+  try {
+    const ctrl = new AbortController();
+    const minuteur = setTimeout(() => ctrl.abort(), 4000);
+    const r = await f(`${urlHttp.replace(/\/+$/, '')}/ice`, { headers: { authorization: `Bearer ${jeton}` }, cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(minuteur);
+    if (!r.ok) return serveursIce();
+    return normaliserIce(((await r.json()) as { iceServers?: unknown }).iceServers) ?? serveursIce();
+  } catch {
+    return serveursIce();
+  }
+}

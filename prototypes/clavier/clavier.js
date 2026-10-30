@@ -29,7 +29,6 @@
   const vv = window.visualViewport || null;
   const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rand = (a, b) => a + Math.random() * (b - a);
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const haptic = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) { /* iOS : pas de vibration */ } };
 
   // la couleur de la barre du navigateur = --bg (lue dans le theme packages/theme/, jamais ecrite ici)

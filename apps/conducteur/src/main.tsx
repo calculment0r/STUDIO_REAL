@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client';
 import './theme/index.css';
 import { chargerPolicePrivee } from './theme/polices';
 import App from './App';
-import { demarrerPontFigurants } from './coquille/pont-figurants';
 
+// Le pont des figurants (coquille/pont-figurants.ts) est retiré : le serveur de spectacle le remplace (client régie :
+// etat/spectacle.ts, démarré par la coquille).
 void chargerPolicePrivee();
-demarrerPontFigurants();   // spectacle du soir : chaque top pilote téléphones, mur et vote
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

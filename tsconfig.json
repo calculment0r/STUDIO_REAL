@@ -1,0 +1,18 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/modele" },
+    { "path": "./packages/protocole" },
+    { "path": "./packages/ui-telephone" },
+    { "path": "./packages/emulateur" },
+    { "path": "./packages/agents" },
+    { "path": "./apps/telephone" },
+    { "path": "./apps/serveur/tsconfig.json" },
+    { "path": "./apps/serveur-spectacle/tsconfig.json" },
+    { "path": "./apps/serveur-spectacle/tsconfig.noyau.json" },
+    { "path": "./apps/serveur/tsconfig.tests.json" },
+    { "path": "./apps/conducteur/tsconfig.app.json" },
+    { "path": "./apps/conducteur/tsconfig.node.json" },
+    { "path": "./projets" }
+  ]
+}

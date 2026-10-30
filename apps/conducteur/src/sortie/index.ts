@@ -10,8 +10,9 @@ export { BoutonSortieScene, IcoSortieScene } from './BoutonSortieScene';
 export { ApercuSortie } from './ApercuSortie';
 export { ouvrirSortieScene, fermerSortieScene, adresseSortie } from './fenetre';
 export {
-  useSortie, publierScene, relacherScene, publierEvenement, configurerSortie, precharger, surFinVideo, sceneDeCommande,
+  useSortie, publierScene, relacherScene, publierEvenement, configurerSortie, precharger, surFinVideo, sceneDeCommande, choisirSourceSortie,
   type CommandeScene, type EtatRelais, type EtatFenetre,
 } from './relais';
 export { adresseSortieDistante } from './salle';
-export type { Scene, TypeScene, EvenementScene, ConfigSortie, Gabarit } from './protocole';
+export type { Scene, TypeScene, EvenementScene, ConfigSortie, Gabarit, SourceSpectacle } from './protocole';
+export { poserFluxVisio } from './flux-visio';

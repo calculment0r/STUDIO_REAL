@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "outDir": "../../node_modules/.cache/tsc/protocole",
+    "rootDir": "src",
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/protocole.tsbuildinfo",
+    "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": ["src"],
+  "references": [{ "path": "../modele" }]
+}

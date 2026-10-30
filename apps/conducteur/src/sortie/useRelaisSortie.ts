@@ -9,7 +9,7 @@ import { useMagasin } from '../etat/magasin';
 import { identite, jetonAdmin, jetonProjet, urlServeur, useSalle } from '../etat/serveur';
 import { transportLocal } from './canal';
 import {
-  ajouterTransport, arreterRelais, definirSalleFlux, definirTitreProjet, demarrerRelais, publierAuto, surFinVideo, surRelache, useSortie,
+  ajouterTransport, arreterRelais, definirSalleFlux, definirTitreProjet, demarrerRelais, publierAuto, rechargerSortie, surFinVideo, surRelache, useSortie,
 } from './relais';
 import { TransportSalle } from './salle';
 import { traduire } from './traduction';
@@ -51,11 +51,8 @@ export function brancherRelaisSortie(o: { salle?: boolean } = {}): () => void {
   surRelache(calculer);
   calculer();
 
-  // fin d'une vidéo jouée une seule fois → signal au moteur
-  const finVideo = surFinVideo((asset) => {
-    const s = useMagasin.getState();
-    if (s.enLecture) s.envoyerSignal('video.fin', { valeur: asset, asset });
-  });
+  // fin d'une vidéo jouée une seule fois → signal au moteur, toujours (même pendant une attente du top ou une pause)
+  const finVideo = surFinVideo((asset) => useMagasin.getState().recevoirFinVideo(asset));
 
   // autre machine : la salle du serveur, ouverte quand la coquille y est connectée
   let salle: { id: string; t: TransportSalle; retirer: () => void } | null = null;
@@ -89,8 +86,10 @@ export function brancherRelaisSortie(o: { salle?: boolean } = {}): () => void {
   };
 }
 
-/** Hook de la coquille : relaie automatiquement le spectacle vers la sortie écran scène. */
-export function useRelaisSortie(o: { salle?: boolean } = {}): void {
+/** Hook de la coquille : relaie automatiquement le spectacle vers la sortie écran scène. Renvoie les actions sur la
+ *  sortie (rechargerSortie : recharge une sortie périmée ou qui refuse les scènes). */
+export function useRelaisSortie(o: { salle?: boolean } = {}): { rechargerSortie: () => void } {
   const salle = o.salle !== false;
   useEffect(() => brancherRelaisSortie({ salle }), [salle]);
+  return { rechargerSortie };
 }

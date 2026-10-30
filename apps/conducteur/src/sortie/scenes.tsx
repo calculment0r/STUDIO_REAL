@@ -7,8 +7,10 @@ import type { CalqueReactions } from './calque/calque';
 import type { GestionFlux, EtatFlux } from './flux';
 import { mmssRebours, restantCompteur } from './horloge';
 import type { BibliothequeMedias } from './medias';
+import { SceneMur, type DonneesMur } from './mur';
 import { adresseLisible, cleScene, type EtatScene, type Scene } from './protocole';
 import { cadrageAuto, type PoolVideos } from './videos';
+import { SceneVisio } from './visio';
 
 export const LARGEUR = 1920;
 export const HAUTEUR = 1080;
@@ -30,6 +32,8 @@ export interface Services {
   secoursDefaut?: string;
   /** un média demandé est introuvable (oui) ou de nouveau trouvé / plus à l'écran (non) : remonte aux régies */
   absent?: (asset: string, oui: boolean) => void;
+  /** messages et voix du mur arrivés par effets depuis la dernière vue (scène « mur ») */
+  mur?: DonneesMur;
 }
 export const ContexteServices = createContext<Services | null>(null);
 
@@ -84,12 +88,35 @@ export function Scene1080({ children, className }: { children: ReactNode; classN
 
 interface Couche { cle: string; scene: Scene; n: number; fondu: number; visible: boolean }
 
-/** Empile les scènes : la nouvelle apparaît PAR-DESSUS l'ancienne en `fondu` ms, puis l'ancienne est retirée. */
-export function Fondus({ scene, n, fondu, miniature = false }: { scene: Scene | null; n: number; fondu: number; miniature?: boolean }) {
+/** Clé d'une scène « page » : son adresse seule (l'iframe gardée montée ne dépend que d'elle). */
+export const clePage = (url: string): string => 'page:' + url;
+
+/** Hôte d'une adresse (vignette d'une scène « page ») ; l'adresse brute si elle ne se lit pas. */
+export function hotePage(url: string): string {
+  try { return new URL(url).host || url; } catch { return url; }
+}
+
+/**
+ * Empile les scènes : la nouvelle apparaît PAR-DESSUS l'ancienne en `fondu` ms, puis l'ancienne est retirée.
+ * Une scène « page » (iframe : mur du serveur, visio) n'est PAS dans les couches : elle vit dans une couche GARDÉE,
+ * montée une fois par adresse (clé : clePage) et seulement cachée quand une autre scène passe devant — une suite
+ * mur → noir → mur ne recharge donc pas la page (ni ne reconnecte son WebSocket). Sa couche dans la pile ne porte que
+ * l'ordre et le fondu ; l'ordre d'empilement passe par z-index (déplacer une iframe dans le DOM la rechargerait).
+ * La page gardée est posée AVANT les couches (.so-page-gardee, pas .so-couche) : la dernière .so-couche reste la
+ * scène du dessus (essais de bout en bout).
+ */
+export function Fondus({ scene, n, fondu, miniature = false, surAffiche }: {
+  scene: Scene | null; n: number; fondu: number; miniature?: boolean;
+  /** la couche `n` est À L'ÉCRAN (rendue visible : le fondu commence) — accusé d'affichage au serveur de spectacle */
+  surAffiche?: (n: number) => void;
+}) {
   const [couches, setCouches] = useState<Couche[]>([]);
+  /** adresse de la dernière scène « page » montrée (page de sortie seulement) : son iframe reste montée */
+  const [pageGardee, setPageGardee] = useState<string | null>(null);
   const cle = scene ? cleScene(scene) : '';
   useEffect(() => {
     if (!scene) { setCouches([]); return; }
+    if (scene.type === 'page' && !miniature) setPageGardee(scene.url);
     setCouches((l) => {
       if (l.length && l[l.length - 1].cle === cle) return l;
       return [...l.slice(-2), { cle, scene, n, fondu, visible: fondu <= 0 }];
@@ -111,28 +138,55 @@ export function Fondus({ scene, n, fondu, miniature = false }: { scene: Scene | 
   }, [cle]);
   // l'ancienne couche part quand la nouvelle est entièrement visible
   const derniere = couches[couches.length - 1];
+  const rappelAffiche = useRef(surAffiche);
+  rappelAffiche.current = surAffiche;
+  useEffect(() => {
+    if (derniere?.visible) rappelAffiche.current?.(derniere.n);
+  }, [derniere?.visible, derniere?.n]);
   useEffect(() => {
     if (!derniere?.visible || couches.length < 2) return;
     const t = setTimeout(() => setCouches((l) => l.slice(-1)), derniere.fondu + 50);
     return () => clearTimeout(t);
   }, [derniere?.visible, derniere?.fondu, couches.length]);
+  const gardee = (c: Couche) => !miniature && c.scene.type === 'page' && c.scene.url === pageGardee;
+  // place de la page gardée dans la pile : celle de sa couche (la plus haute), sinon cachée sous tout
+  let iPage = -1;
+  couches.forEach((c, i) => { if (gardee(c)) iPage = i; });
+  const cPage = iPage >= 0 ? couches[iPage] : null;
   return (
     <>
-      {couches.map((c) => (
-        <div key={c.cle + ':' + c.n} className="so-couche" style={{ opacity: c.visible ? 1 : 0, transition: `opacity ${c.fondu}ms ease` }}>
-          <RenduScene scene={c.scene} n={c.n} miniature={miniature} />
+      {pageGardee && !miniature && (
+        <div
+          key={clePage(pageGardee)}
+          className="so-page-gardee"
+          aria-hidden={!cPage}
+          style={cPage
+            ? { zIndex: iPage + 1, opacity: cPage.visible ? 1 : 0, transition: `opacity ${cPage.fondu}ms ease` }
+            : { zIndex: 0, opacity: 0, visibility: 'hidden', pointerEvents: 'none' }}
+        >
+          <PagePleinEcran url={pageGardee} />
+        </div>
+      )}
+      {couches.map((c, i) => (
+        <div key={c.cle + ':' + c.n} className="so-couche" style={{ zIndex: i + 1, opacity: c.visible ? 1 : 0, transition: `opacity ${c.fondu}ms ease`, ...(gardee(c) ? { pointerEvents: 'none' as const } : {}) }}>
+          {!gardee(c) && <RenduScene scene={c.scene} n={c.n} miniature={miniature} />}
         </div>
       ))}
     </>
   );
 }
 
+/** Page web plein écran (scène « page »). */
+function PagePleinEcran({ url }: { url: string }) {
+  return <iframe className="so-iframe" src={url} title="page" allow="autoplay; camera; microphone; fullscreen" />;
+}
+
 export function RenduScene({ scene, n, miniature }: { scene: Scene; n: number; miniature: boolean }) {
   switch (scene.type) {
     case 'noir': return <div className="so-noir" />;
     case 'page': return miniature
-      ? <div className="so-noir" />
-      : <iframe src={scene.url} title="page" allow="autoplay; camera; microphone; fullscreen" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, background: '#000' }} />;
+      ? <div className="so-vignette-media"><span className="so-micro">{'PAGE · ' + hotePage(scene.url)}</span></div>
+      : <PagePleinEcran url={scene.url} />;
     case 'accueil-qr': return <SceneQr scene={scene} />;
     case 'streamer': return <SceneStreamer scene={scene} miniature={miniature} />;
     case 'vote': return <SceneVote scene={scene} miniature={miniature} />;
@@ -140,7 +194,15 @@ export function RenduScene({ scene, n, miniature }: { scene: Scene; n: number; m
     case 'titre': return <SceneTitre scene={scene} />;
     case 'image': return <SceneImage scene={scene} miniature={miniature} />;
     case 'video': return <SceneVideo scene={scene} n={n} miniature={miniature} />;
+    case 'mur': return <SceneMurServie scene={scene} />;
+    case 'visio': return <SceneVisio scene={scene} miniature={miniature} />;
   }
+}
+
+/** Le mur avec ses données vivantes (page de sortie) ; la vignette de la régie le dessine avec les seuls réglages. */
+function SceneMurServie({ scene }: { scene: Extract<Scene, { type: 'mur' }> }) {
+  const s = useContext(ContexteServices);
+  return <SceneMur scene={scene} donnees={s?.mur ?? null} traceQr={traceQr} />;
 }
 
 // ── QR d'accueil ────────────────────────────────────────────────────────────────────────────────────────────────

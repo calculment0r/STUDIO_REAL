@@ -9,16 +9,27 @@
 //   configurerSortie({ titre, adresse, code, consigne, secours })          → QR d'accueil, vidéo de secours
 //   precharger(['coupure_flux.mp4'])   → la sortie met la vidéo en mémoire avant la bascule
 //   surFinVideo(fn)                    → une vidéo « une seule fois » est finie sur la sortie
-// État observable : le magasin zustand `useSortie` (fenêtre fermée / ouverte / connectée, scène en cours…).
+//   choisirSourceSortie({ url, jeton }) → la sortie écoute le serveur de spectacle (acteur « scene ») ; null : canal local
+//   rechargerSortie()                  → la sortie se recharge (message `recharger`, ou sa fenêtre si elle est périmée)
+// État observable : le magasin zustand `useSortie` (fenêtre fermée / ouverte / connectée, scène en cours…) et les
+// RETOURS de la sortie : scène réellement vue (sceneVue, sceneVueComplete), écart publiée ≠ vue (ecart), version et
+// build annoncés (versionSortie, buildSortie), dernier refus (refus).
 import { create } from 'zustand';
 import type { StatutTransport, Transport } from './canal';
 import {
   BATTEMENT_MS, borneFondu, cleScene, configParDefaut, FONDU_DEFAUT_MS, lireMessageSortie, msgConfig, msgEtat, msgEvenement,
-  msgHeure, msgPrecharger, msgScene, PERTE_MS, adresseEntree,
-  type Cadrage, type ConfigSortie, type EtatScene, type EtatSortie, type EvenementScene, type Gabarit, type OptionVote, type Scene,
+  msgHeure, msgPrecharger, msgRecharger, msgScene, msgSource, PERTE_MS, adresseEntree, VERSION_SORTIE,
+  type Cadrage, type ConfigSortie, type EtatScene, type EtatSortie, type EvenementScene, type Gabarit, type OptionVote, type RaisonRefus,
+  type Scene, type SourceSpectacle, type TypeScene,
 } from './protocole';
 
 export type EtatFenetre = 'fermee' | 'ouverte' | 'connectee';
+
+/** Au-delà de ce délai, une scène publiée que la sortie ne montre toujours pas est un ÉCART (ms). */
+export const ECART_MS = 2000;
+
+/** Dernier refus d'un message par la sortie (autre version, scène inconnue). */
+export interface RefusSortie { raison: RaisonRefus; version: number; recu?: string; heure: number }
 
 export interface EtatRelais {
   fenetre: EtatFenetre;
@@ -38,8 +49,17 @@ export interface EtatRelais {
   config: ConfigSortie;
   /** ce que la sortie dit d'elle-même (flux, secours, médias, plein écran) */
   sortie: EtatSortie | null;
-  /** scène que la sortie dit montrer */
-  sceneVue: string | null;
+  /** TYPE de la scène que la sortie dit montrer (null : aucune, ou carte de refus) */
+  sceneVue: TypeScene | null;
+  /** la scène complète que la sortie dit montrer (sortie ≥ v2 ; null sinon) : la vignette la dessine */
+  sceneVueComplete: Scene | null;
+  /** la scène publiée diffère de la scène vue depuis plus de ECART_MS (comparées par cleScene) */
+  ecart: boolean;
+  /** version du protocole et build annoncés par la sortie (null : pas encore vue) */
+  versionSortie: number | null;
+  buildSortie: string | null;
+  /** dernier refus reçu de la sortie (null : aucun depuis son dernier démarrage) */
+  refus: RefusSortie | null;
   vuLe: number;
   finVideo: { asset: string; n: number; heure: number } | null;
   /** liaison par la salle du serveur (autre machine) */
@@ -59,7 +79,8 @@ const configEffective = (): ConfigSortie => ({ ...configParDefaut(titreProjet), 
 
 const etatInitial = (): EtatRelais => ({
   fenetre: 'fermee', scene: null, n: 0, fondu: FONDU_DEFAUT_MS, depuis: 0, autreRegie: false, mode: 'auto', etat: null, heureEtat: 0,
-  config: configEffective(), sortie: null, sceneVue: null, vuLe: 0, finVideo: null, salle: 'aucune', precharger: [],
+  config: configEffective(), sortie: null, sceneVue: null, sceneVueComplete: null, ecart: false, versionSortie: null, buildSortie: null,
+  refus: null, vuLe: 0, finVideo: null, salle: 'aucune', precharger: [],
 });
 export const useSortie = create<EtatRelais>(etatInitial);
 
@@ -112,7 +133,11 @@ let battement: ReturnType<typeof setInterval> | undefined;
 let utilisateurs = 0;
 /** référence de la fenêtre ouverte par ouvrirSortieScene (fenetre.ts) */
 let fenetreRef: { closed: boolean } | null = null;
-export const retenirFenetre = (w: { closed: boolean } | null) => { fenetreRef = w; majFenetre(); };
+/** recharge la fenêtre retenue (pour une sortie périmée, qui ne comprend pas le message `recharger`) */
+let rechargerFenetreRef: (() => void) | null = null;
+export const retenirFenetre = (w: { closed: boolean } | null, recharger?: () => void) => {
+  fenetreRef = w; rechargerFenetreRef = w ? recharger ?? null : null; majFenetre();
+};
 
 function diffuser(m: unknown) { for (const t of transports) t.envoyer(m); }
 
@@ -121,6 +146,24 @@ function majFenetre() {
   const vivante = Date.now() - s.vuLe < PERTE_MS;
   const fenetre: EtatFenetre = vivante ? 'connectee' : fenetreRef && !fenetreRef.closed ? 'ouverte' : 'fermee';
   if (fenetre !== s.fenetre) useSortie.setState({ fenetre });
+  majEcart();
+}
+
+/** Ce que la sortie dit montrer : clé complète (cleScene, sortie ≥ v2) ou seulement le type (sortie plus ancienne). */
+let vueRecue: { cle: string | null; type: TypeScene | null } = { cle: null, type: null };
+/** depuis quand la scène publiée diffère de la scène vue (0 : elles concordent) */
+let debutEcart = 0;
+
+/** Recalcule l'écart publiée ≠ vue (seulement quand la sortie répond). */
+function majEcart(maintenant = Date.now()) {
+  const s = useSortie.getState();
+  const vivante = maintenant - s.vuLe < PERTE_MS;
+  const differe = vivante && !!s.scene
+    && (vueRecue.cle !== null ? vueRecue.cle !== cleScene(s.scene) : vueRecue.type !== s.scene.type);
+  if (!differe) debutEcart = 0;
+  else if (!debutEcart) debutEcart = maintenant;
+  const ecart = differe && maintenant - debutEcart > ECART_MS;
+  if (ecart !== s.ecart) useSortie.setState({ ecart });
 }
 
 /** Renvoie tout l'état connu (à l'arrivée d'une sortie ou d'une nouvelle liaison). */
@@ -139,12 +182,29 @@ function recevoir(brut: unknown) {
   if (!m) return;
   const maintenant = Date.now();
   switch (m.t) {
-    case 'bonjour': useSortie.setState({ vuLe: maintenant }); rejouer(); break;
+    case 'bonjour':
+      // une sortie qui (re)démarre : ses refus passés ne valent plus
+      useSortie.setState({ vuLe: maintenant, versionSortie: m.version ?? m.v, buildSortie: m.build ?? null, refus: null });
+      rejouer();
+      break;
     case 'present': {
       const autreRegie = !!m.source && m.source !== SOURCE_REGIE;
-      useSortie.setState({ vuLe: maintenant, sceneVue: m.scene, autreRegie, ...(m.etat ? { sortie: m.etat } : {}) });
+      // une sortie < v2 n'envoie que le type : on compare alors les types
+      vueRecue = m.vue !== undefined ? { cle: m.vue ? cleScene(m.vue) : '', type: m.scene } : { cle: null, type: m.scene };
+      useSortie.setState({
+        vuLe: maintenant, sceneVue: m.scene, sceneVueComplete: m.vue ?? null, autreRegie, ...(m.etat ? { sortie: m.etat } : {}),
+        versionSortie: m.version ?? m.v, buildSortie: m.build ?? null,
+      });
       break;
     }
+    case 'refus':
+      // seuls les refus d'un message de NOTRE version et de NOTRE source (ou sans source) nous concernent
+      if ((m.versionRecue !== undefined && m.versionRecue !== VERSION_SORTIE) || (m.source && m.source !== SOURCE_REGIE)) break;
+      useSortie.setState({
+        vuLe: maintenant, versionSortie: m.version,
+        refus: { raison: m.raison, version: m.version, ...(m.recu ? { recu: m.recu } : {}), heure: maintenant },
+      });
+      break;
     case 'fin-video': {
       // la même fin peut arriver par le canal local ET par la salle : un seul signal
       const cle = `${m.id}|${m.asset}|${m.n}|${m.heure}`;
@@ -155,9 +215,28 @@ function recevoir(brut: unknown) {
       for (const f of finsVideo) f(m.asset, m.n);
       break;
     }
-    case 'au-revoir': useSortie.setState({ vuLe: 0, sortie: null, sceneVue: null }); break;
+    case 'au-revoir':
+      vueRecue = { cle: null, type: null };
+      useSortie.setState({ vuLe: 0, sortie: null, sceneVue: null, sceneVueComplete: null, versionSortie: null, buildSortie: null });
+      break;
   }
   majFenetre();
+}
+
+/** Recharge la sortie : message `recharger` (toute sortie ≥ v2, même machine ou salle) et, si la sortie annonce une
+ *  autre version (elle ne comprend pas ce message), rechargement direct de la fenêtre ouverte par cette régie. */
+export function rechargerSortie(): void {
+  diffuser(msgRecharger());
+  const v = useSortie.getState().versionSortie;
+  if (v !== null && v !== VERSION_SORTIE) rechargerFenetreRef?.();
+  useSortie.setState({ refus: null });
+}
+
+/** Dit à la sortie d'écouter le serveur de spectacle (elle y devient l’acteur « scene » : ses vues font la scène, le canal
+ *  local reste le secours), ou de revenir au canal local et à la salle (null). Même machine : le jeton ne quitte pas le
+ *  navigateur (BroadcastChannel). */
+export function choisirSourceSortie(spectacle: SourceSpectacle | null): void {
+  diffuser(msgSource(spectacle));
 }
 
 /** Branche un transport (local, salle) ; renvoie la fonction qui le retire. */
@@ -202,6 +281,7 @@ function envoyerScene(scene: Scene, fondu: number, forcer = false) {
   const depuis = Math.max(Date.now(), s.depuis + 1);
   useSortie.setState({ scene, n, fondu, depuis });
   diffuser(msgScene(scene, n, fondu, depuis, { source: SOURCE_REGIE, depuis }));
+  majEcart();
 }
 
 /** Montre une scène sur la sortie. Par défaut la commande est TENUE (mode manuel) jusqu'à relacherScene(). */
@@ -308,6 +388,7 @@ export function reinitialiserRelais(): void {
   for (const t of [...transports]) { desabonnements.get(t)?.(); transports.delete(t); }
   desabonnements.clear(); finsVideo.clear(); finsVues.length = 0;
   derniersPrecharges = []; dernierEtat = ''; chronoManuel = null; configPerso = {}; titreProjet = undefined; salleFlux = undefined; fenetreRef = null; rappelAuto = null;
+  rechargerFenetreRef = null; vueRecue = { cle: null, type: null }; debutEcart = 0;
   if (battement) clearInterval(battement);
   battement = undefined; utilisateurs = 0;
   useSortie.setState(etatInitial());

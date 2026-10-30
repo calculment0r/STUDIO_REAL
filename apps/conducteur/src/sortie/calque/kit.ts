@@ -11,7 +11,7 @@ const MASQUE = '#fff';
 
 // Caractères installés dans les polices bitmap : ASCII + Latin-1 (accents français) + ponctuation typographique.
 const CARACTERES: (string | string[])[] = [[' ', '~'], [' ', 'ÿ'], 'ŒœŸ’‘“”…–—€•★'];
-const HORS_POLICE = /[^ -~ -ÿŒœŸ’‘“”…–—€•★]/g;
+const HORS_POLICE = /[^ -~\u00A0-ÿŒœŸ’‘“”…–—€•★]/g;
 export const nettoyer = (s: string): string => String(s).replace(HORS_POLICE, '');
 
 export const EMOJIS = ['😂', '🔥', '👏', '😮', '🎉', '💀', '😍', '🥹', '✨', '💜', '🫶', '🤯'];

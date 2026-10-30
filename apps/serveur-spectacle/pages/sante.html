@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>STUDIO REAL · santé du spectacle</title>
+  <link rel="icon" href="data:,">
+  <!-- Le thème et Venus Rising sont servis par le serveur lui-même (/theme/) : la page marche sans build ni Internet. -->
+  <link rel="stylesheet" href="/theme/theme.css">
+  <script src="/theme/venus.js" defer></script>
+  <style>
+    /* Jetons seulement (packages/theme) : vert --gt, ambre --amb, rouge --rec, neutre --ink3. Aucune couleur en dur. */
+    body { margin: 0; min-height: 100vh; padding: var(--s6) var(--s4); }
+    main { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s4); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; }
+    h1 { margin: 0; font-family: var(--f-disp); font-weight: 700; font-size: 20px; letter-spacing: .12em; text-transform: uppercase; }
+
+    #global {
+      display: flex; align-items: center; gap: var(--s4); padding: var(--s5) var(--s5);
+      border-radius: var(--rayon); background: var(--tile); box-shadow: inset 0 0 0 1px var(--filet-14), inset 6px 0 0 var(--c);
+    }
+    #global .gros { font-family: var(--f-disp); font-weight: 700; font-size: 22px; letter-spacing: .1em; text-transform: uppercase; color: var(--c); }
+    #global .sous { font-size: 13px; color: var(--ink2); }
+
+    ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+    .ligne {
+      --c: var(--ink3);
+      display: grid; grid-template-columns: 14px 150px minmax(0, 1fr); align-items: center; column-gap: var(--s3); row-gap: 2px;
+      padding: var(--s3) var(--s4); border-radius: var(--rayon); background: var(--tile);
+      box-shadow: inset 0 0 0 1px var(--filet-12), inset 3px 0 0 var(--c);
+    }
+    .ligne[data-etat="ok"] { --c: var(--gt); }
+    .ligne[data-etat="attention"] { --c: var(--amb); }
+    .ligne[data-etat="alerte"] { --c: var(--rec); background: var(--rec-14); }
+    .ligne .sr-point { background: var(--c); }
+    .ligne[data-etat="alerte"] .sr-point { animation: srp 1s infinite; }
+    .nom { color: var(--ink2); }
+    .val { font-size: 15px; font-weight: 600; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+    .det { grid-column: 3; font-size: 12px; color: var(--ink3); min-width: 0; overflow-wrap: anywhere; }
+    #global, .ligne[data-etat="neutre"] .val { color: var(--ink2); }
+    #global[data-etat="ok"] { --c: var(--gt); }
+    #global[data-etat="attention"] { --c: var(--amb); }
+    #global[data-etat="alerte"] { --c: var(--rec); background: var(--rec-14); }
+    #global[data-etat="neutre"] { --c: var(--ink3); }
+    .ch { font-family: var(--f-chiffre); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    footer { display: flex; align-items: center; gap: var(--s5); flex-wrap: wrap; color: var(--ink3); font-size: 12px; }
+    footer label { display: inline-flex; align-items: center; gap: var(--s2); cursor: pointer; color: var(--ink2); }
+    footer input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--ort); }
+    footer a { color: var(--ort); }
+    @media (max-width: 560px) {
+      .ligne { grid-template-columns: 14px minmax(0, 1fr); }
+      .val, .det { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="sr-marque"><span class="sr-marque-carre"></span>
+        <span class="sr-marque-titres"><b class="sr-marque-nom">Studio Real</b><span class="sr-marque-sous">santé du spectacle</span></span></div>
+      <h1>Santé</h1>
+    </header>
+
+    <section id="global" data-etat="neutre" aria-live="polite">
+      <div><div class="gros" id="global-titre">Connexion…</div><div class="sous" id="global-sous"></div></div>
+    </section>
+
+    <ul id="lignes">
+      <li class="ligne" id="l-serveur" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Serveur</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-instantane" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Instantané</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-representation" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Représentation</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-telephones" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Téléphones</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-scene" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Écran scène</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-regie" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Régie</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-autres" data-etat="neutre" hidden><i class="sr-point"></i><span class="sr-micro nom">Autres acteurs</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-tunnel" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Tunnel</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-agents" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Agents</span><span class="val"></span><span class="det"></span></li>
+      <li class="ligne" id="l-disque" data-etat="neutre"><i class="sr-point"></i><span class="sr-micro nom">Disque</span><span class="val"></span><span class="det"></span></li>
+    </ul>
+
+    <footer>
+      <label><input type="checkbox" id="son"> Alerte sonore</label>
+      <a href="/checklist.html">Check-list J-1 · H-1 · H-0</a>
+      <span id="maj">dernière mesure : —</span>
+    </footer>
+  </main>
+
+  <script>
+  'use strict';
+  // Interroge /sante toutes les 2 s. Aucune donnée personnelle n'arrive ici (le serveur n'en met pas) ; tout est écrit
+  // avec textContent. Seuils (modifiables ici, en un seul endroit) :
+  var PERIODE_MS = 2000;
+  var SEUILS = {
+    instantaneOrangeMs: 5000, instantaneRougeMs: 15000,      // l'instantané est réécrit chaque seconde
+    tunnelRougeS: 60,                                         // tunnel muet : orange puis rouge au-delà de 60 s
+    disqueOrangeMo: 2000, disqueRougeMo: 1000,                // « plus de 1 Go libre »
+    chutePourcent: 20, chuteFenetreMs: 10000,                 // chute des téléphones : plus de 20 % en 10 s
+    serveurRougeApresMs: 6000                                 // sans réponse depuis 6 s : rouge
+  };
+  var ORDRE = { neutre: 0, ok: 1, attention: 2, alerte: 3 };
+
+  function el(id) { return document.getElementById(id); }
+  function ligne(id, etat, valeur, detail) {
+    var li = el('l-' + id);
+    li.dataset.etat = etat;
+    li.querySelector('.val').textContent = valeur;
+    li.querySelector('.det').textContent = detail || '';
+    li.querySelector('.det').hidden = !detail;
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function duree(s) {
+    s = Math.max(0, Math.round(s));
+    var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h > 0 ? h + ':' + pad(m) + ':' + pad(s % 60) : pad(m) + ':' + pad(s % 60);
+  }
+  function heure(ts) { return ts ? new Date(ts).toLocaleTimeString('fr-FR') : '—'; }
+  function pluriel(n, un, plusieurs) { return n + ' ' + (n > 1 ? plusieurs : un); }
+
+  var dernierSucces = Date.now();
+  var echecs = 0;
+  var historiqueTel = [];      // [{t, n}] pour détecter une chute
+  var etatsPrecedents = {};
+  var dernierSon = 0;
+
+  function evaluer(s) {
+    var etats = {};
+    var rep = s.representation || {};
+    var acteurs = rep.acteurs || {};
+    var connectes = rep.connectes || {};
+    var p = s.persistance || {};
+
+    // Serveur
+    var redem = s.redemarrages || 0;
+    ligne('serveur', redem > 0 ? 'attention' : 'ok',
+      'en marche depuis ' + duree(s.depuisS),
+      'version ' + (s.version || 'inconnue') + ' · redémarrages de la soirée : ' + redem + (redem > 0 ? ' (état repris de l’instantané)' : '') + ' · ' + pluriel((s.connexions || {}).total || 0, 'connexion', 'connexions'));
+    etats.serveur = redem > 0 ? 'attention' : 'ok';
+
+    // Instantané
+    var age = p.ageInstantaneMs;
+    var ei = age === null || age === undefined ? 'attention' : age >= SEUILS.instantaneRougeMs ? 'alerte' : age >= SEUILS.instantaneOrangeMs ? 'attention' : 'ok';
+    ligne('instantane', ei, age === null || age === undefined ? 'pas encore écrit' : 'il y a ' + (age / 1000).toFixed(1).replace('.', ',') + ' s',
+      ei === 'alerte' ? 'le disque n’est plus écrit : ne PAS redémarrer, voir la check-list' : 'repris tel quel si le serveur redémarre');
+    etats.instantane = ei;
+
+    // Représentation
+    var run = rep.run;
+    var lec = rep.lecture;
+    var er = !run ? 'attention' : rep.panique ? 'alerte' : rep.pause ? 'attention' : 'ok';
+    var texteRep = !run ? 'aucune représentation en cours' : run.id + ' · mode ' + run.mode;
+    var det = [];
+    if (lec) det.push('lecture : ' + lec.moment + ' › ' + lec.etape + ' · ' + duree(lec.t) + (lec.termine ? ' · terminée' : '') + (lec.attenteGo ? ' · attend le TOP' : ''));
+    if (rep.panique) det.push('PANIQUE ACTIVE');
+    else if (rep.pause) det.push('en pause');
+    var top = s.topRecu || {};
+    det.push(top.ilYaS === null || top.ilYaS === undefined ? 'aucun top reçu' : 'dernier top reçu à ' + heure(top.ts) + ' (il y a ' + duree(top.ilYaS) + ')');
+    ligne('representation', er, texteRep, det.join(' · '));
+    etats.representation = er;
+
+    // Téléphones du public (acteur « public »), avec détection de chute
+    var nTel = acteurs['public'] || 0;
+    var maintenant = Date.now();
+    historiqueTel.push({ t: maintenant, n: nTel });
+    historiqueTel = historiqueTel.filter(function (x) { return maintenant - x.t <= SEUILS.chuteFenetreMs; });
+    var max = historiqueTel.reduce(function (m, x) { return Math.max(m, x.n); }, 0);
+    var chute = max >= 5 && nTel < max * (1 - SEUILS.chutePourcent / 100);
+    var et = chute ? 'alerte' : nTel > 0 ? 'ok' : 'attention';
+    ligne('telephones', et, nTel > 0 ? pluriel(nTel, 'téléphone connecté', 'téléphones connectés') : 'aucun téléphone connecté',
+      chute ? 'chute de ' + Math.round((1 - nTel / max) * 100) + ' % en moins de ' + (SEUILS.chuteFenetreMs / 1000) + ' s (de ' + max + ' à ' + nTel + ')' : 'comptés d’après le serveur, sans identité');
+    etats.telephones = et;
+
+    // Écran scène (acteur « scene »)
+    var nScene = acteurs['scene'] || 0;
+    var es = nScene === 1 ? 'ok' : nScene === 0 ? 'alerte' : 'attention';
+    ligne('scene', es, nScene === 0 ? 'écran scène absent' : nScene === 1 ? 'connecté' : nScene + ' écrans scène connectés',
+      nScene === 0 ? 'ouvrir la sortie sur le projecteur (voir la check-list H-1)' : nScene > 1 ? 'un seul écran scène est attendu' : '');
+    etats.scene = es;
+
+    // Régie
+    var nRegie = connectes.regie || 0;
+    var eg = nRegie >= 1 ? 'ok' : 'alerte';
+    ligne('regie', eg, nRegie >= 1 ? 'connectée' : 'régie absente', nRegie > 1 ? pluriel(nRegie, 'session de régie', 'sessions de régie') : nRegie === 0 ? 'ouvrir le Conducteur par le script de lancement' : '');
+    etats.regie = eg;
+
+    // Autres acteurs (ministre, visio, etc.)
+    var autres = Object.keys(acteurs).filter(function (k) { return k !== 'public' && k !== 'scene'; }).sort();
+    el('l-autres').hidden = autres.length === 0;
+    if (autres.length) {
+      var manque = autres.filter(function (k) { return !acteurs[k]; });
+      ligne('autres', manque.length ? 'attention' : 'ok', autres.map(function (k) { return k + ' : ' + acteurs[k]; }).join(' · '), manque.length ? 'absents : ' + manque.join(', ') : '');
+      etats.autres = manque.length ? 'attention' : 'ok';
+    }
+
+    // Tunnel (sonde de l’adresse publique faite par le serveur)
+    var t = s.tunnel || {};
+    var ett, vt, dt;
+    if (!t.actif) {
+      ett = 'neutre';
+      vt = 'pas de tunnel';
+      dt = { 'aucun-tunnel': 'tunnel.type = aucun : le public n’atteint pas ce serveur depuis Internet', 'valeur-a-remplacer': 'l’adresse publique est encore la valeur exemple', 'adresse-locale': 'l’adresse publique est locale', 'pas-https': 'l’adresse publique n’est pas en https', 'adresse-illisible': 'adresse publique illisible' }[t.raison] || '';
+    } else if (t.etat === 'ok') {
+      ett = 'ok'; vt = 'joignable en ' + t.latenceMs + ' ms'; dt = t.adresse + ' · dernier aller-retour à ' + heure(t.dernierSucces);
+    } else if (t.etat === 'muet') {
+      ett = t.silenceDepuisS >= SEUILS.tunnelRougeS ? 'alerte' : 'attention';
+      vt = 'tunnel muet depuis ' + duree(t.silenceDepuisS); dt = t.adresse + ' · cause : ' + (t.erreur || 'inconnue') + ' · le public ne nous atteint plus (la salle, elle, marche)';
+    } else {
+      ett = 'attention'; vt = 'première sonde en cours'; dt = t.adresse;
+    }
+    ligne('tunnel', ett, vt, dt);
+    etats.tunnel = ett;
+
+    // Agents
+    var agents = rep.agents || {};
+    var ids = Object.keys(agents).sort();
+    if (!ids.length) { ligne('agents', 'neutre', 'aucun agent', 'normal tant qu’aucun figurant n’est lancé'); etats.agents = 'neutre'; }
+    else {
+      var ea = 'ok';
+      var textes = ids.map(function (k) {
+        var a = agents[k];
+        if (!a.connectes && a.enAttente) ea = 'alerte'; else if (!a.connectes || a.enAttente > 3) { if (ea !== 'alerte') ea = 'attention'; }
+        return k + ' : ' + (a.connectes ? 'connecté' : 'absent') + (a.enAttente ? ', ' + a.enAttente + ' commande(s) en attente' : '');
+      });
+      ligne('agents', ea, textes.join(' · '), '');
+      etats.agents = ea;
+    }
+
+    // Disque
+    var libre = p.disqueLibreMo;
+    var ed = libre === null || libre === undefined ? 'attention' : libre < SEUILS.disqueRougeMo ? 'alerte' : libre < SEUILS.disqueOrangeMo ? 'attention' : 'ok';
+    ligne('disque', ed, libre === null || libre === undefined ? 'espace inconnu' : (libre >= 1024 ? (libre / 1024).toFixed(1).replace('.', ',') + ' Go' : libre + ' Mo') + ' libres',
+      'dossier des journaux' + (p.octetsJournal !== null && p.octetsJournal !== undefined ? ' · journal de la représentation : ' + (p.octetsJournal / 1024).toFixed(0) + ' Ko' : ''));
+    etats.disque = ed;
+    return etats;
+  }
+
+  function injoignable() {
+    var depuis = Date.now() - dernierSucces;
+    var etat = depuis >= SEUILS.serveurRougeApresMs ? 'alerte' : 'attention';
+    ligne('serveur', etat, 'injoignable depuis ' + duree(depuis / 1000), 'la page réessaie toutes les 2 s · si le script de lancement est ouvert, il relance le serveur seul (superviseur)');
+    return { serveur: etat };
+  }
+
+  function global(etats) {
+    var pire = 'ok';
+    var aSurveiller = [];
+    Object.keys(etats).forEach(function (k) {
+      if (ORDRE[etats[k]] > ORDRE[pire]) pire = etats[k];
+      if (etats[k] === 'alerte' || etats[k] === 'attention') aSurveiller.push(k);
+    });
+    var g = el('global');
+    g.dataset.etat = pire;
+    el('global-titre').textContent = pire === 'ok' ? 'Tout est vert' : pire === 'attention' ? 'À surveiller' : 'Problème';
+    el('global-sous').textContent = aSurveiller.length ? 'maillons concernés : ' + aSurveiller.join(', ') : 'tous les maillons répondent';
+    document.title = (pire === 'alerte' ? '[ROUGE] ' : pire === 'attention' ? '[ORANGE] ' : '') + 'STUDIO REAL · santé du spectacle';
+    return pire;
+  }
+
+  // Alerte sonore : un bip quand un maillon PASSE au rouge, répété toutes les 8 s tant qu’il en reste un.
+  var audio = null;
+  function bip() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'square'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, audio.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.25, audio.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.35);
+      o.connect(g); g.connect(audio.destination);
+      o.start(); o.stop(audio.currentTime + 0.4);
+    } catch (e) { /* pas de son possible : l’écran reste l’alerte */ }
+  }
+  function alerteSonore(etats) {
+    var rouges = Object.keys(etats).filter(function (k) { return etats[k] === 'alerte'; });
+    var nouveau = rouges.some(function (k) { return etatsPrecedents[k] !== 'alerte'; });
+    etatsPrecedents = etats;
+    if (!el('son').checked || !rouges.length) return;
+    var maintenant = Date.now();
+    if (nouveau || maintenant - dernierSon >= 8000) { dernierSon = maintenant; bip(); }
+  }
+
+  function tour() {
+    var ctl = new AbortController();
+    var delai = setTimeout(function () { ctl.abort(); }, 1500);
+    fetch('/sante', { cache: 'no-store', signal: ctl.signal })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (s) {
+        clearTimeout(delai);
+        dernierSucces = Date.now(); echecs = 0;
+        var etats = evaluer(s);
+        global(etats); alerteSonore(etats);
+        el('maj').textContent = 'dernière mesure : ' + heure(s.maintenant || Date.now());
+      })
+      .catch(function () {
+        clearTimeout(delai);
+        echecs++;
+        var etats = injoignable();
+        global(etats); alerteSonore(etats);
+      });
+  }
+
+  try { el('son').checked = localStorage.getItem('sante-son') === '1'; } catch (e) { /* stockage indisponible */ }
+  el('son').addEventListener('change', function () {
+    try { localStorage.setItem('sante-son', el('son').checked ? '1' : '0'); } catch (e) { /* rien */ }
+    if (el('son').checked) bip();   // le geste de l’utilisateur débloque le son et confirme qu’on l’entend
+  });
+  tour();
+  setInterval(tour, PERIODE_MS);
+  </script>
+</body>
+</html>

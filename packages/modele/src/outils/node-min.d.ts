@@ -9,3 +9,6 @@ declare module 'node:path' {
   export function dirname(chemin: string): string;
   export function relative(de: string, vers: string): string;
 }
+declare module 'node:url' {
+  export function fileURLToPath(adresse: string | URL): string;
+}

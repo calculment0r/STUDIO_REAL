@@ -1,0 +1,27 @@
+{
+  "name": "telephone",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "L'application téléphone de STUDIO_REAL (public par le QR, téléphones nommés) : construite dans dist/, servie par le serveur de spectacle sous /t/.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p . && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@studio-real/modele": "*",
+    "@studio-real/protocole": "*",
+    "@studio-real/theme": "*",
+    "@studio-real/ui-telephone": "*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}
